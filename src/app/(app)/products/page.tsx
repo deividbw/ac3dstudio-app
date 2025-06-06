@@ -17,6 +17,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTrigger, // Added DialogTrigger
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -27,7 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger as AlertDialogPrimitiveTrigger, // Renamed to avoid conflict if used, though likely not
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductForm } from './components/ProductForm';
@@ -164,8 +165,8 @@ export default function ProductsPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-                {filaments.length === 0 && <p>Nenhum filamento cadastrado. Por favor, vá para <Button variant="link" asChild><a href="/servicos/cadastros">Cadastros &gt; Filamentos</a></Button>.</p>}
-                {printers.length === 0 && <p>Nenhuma impressora cadastrada. Por favor, vá para <Button variant="link" asChild><a href="/servicos/cadastros">Cadastros &gt; Impressoras</a></Button>.</p>}
+                {filaments.length === 0 && <p>Nenhum filamento cadastrado. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Filamentos</Link></Button>.</p>}
+                {printers.length === 0 && <p>Nenhuma impressora cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Impressoras</Link></Button>.</p>}
             </CardContent>
         </Card>
        </div>
@@ -253,11 +254,11 @@ export default function ProductsPage() {
                           <Edit className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
+                          <AlertDialogPrimitiveTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600" title="Excluir Produto">
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
+                          </AlertDialogPrimitiveTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
@@ -291,3 +292,5 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+    
