@@ -21,13 +21,13 @@ export default function ServicosPage() {
           icon={ClipboardList} 
           title="Pedidos" 
           bgColor="bg-blue-500 hover:bg-blue-600" 
-          href="/servicos/pedidos" 
+          href="/servicos/pedidos" // Placeholder, adjust as needed
         />
         <ServiceCategoryCard 
           icon={SlidersHorizontal} 
           title="Parâmetros" 
           bgColor="bg-purple-600 hover:bg-purple-700" 
-          href="/servicos/parametros" 
+          href="/servicos/parametros" // Placeholder, adjust as needed
         />
       </div>
     </div>
