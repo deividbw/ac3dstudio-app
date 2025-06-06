@@ -35,6 +35,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
         ...filament,
+        // Garante que valores numéricos opcionais sejam undefined se null/undefined no 'filament'
         temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
         temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
         pesoRoloGramas: filament.pesoRoloGramas ?? undefined,
@@ -43,12 +44,12 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
       } : {
       tipo: "",
       cor: "",
-      densidade: 1.24, 
+      densidade: 1.24, // Valor padrão positivo
       marca: "",
       modelo: "",
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
-      pesoRoloGramas: 1000, 
+      pesoRoloGramas: 1000, // Valor padrão se novo, mas pode ser undefined
       precoRolo: undefined,
       precoPorKg: undefined,
     },
@@ -56,8 +57,6 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
-      // A validação Zod já ocorreu. 'values' contém os dados validados pelo schema.
-      // O schema.refine garante que ou 'precoPorKg' é fornecido, ou 'pesoRoloGramas' e 'precoRolo' são.
       let finalPrecoPorKg: number;
 
       if (values.precoPorKg !== undefined) {
@@ -65,39 +64,46 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
       } else if (values.pesoRoloGramas !== undefined && values.precoRolo !== undefined) {
         finalPrecoPorKg = (Number(values.precoRolo) / Number(values.pesoRoloGramas)) * 1000;
       } else {
-        // Esta condição teoricamente não deveria ser atingida se o Zod refine funcionou.
-        // Se `precoPorKg` é `undefined` e um dos `pesoRoloGramas` ou `precoRolo` também é,
-        // o `refine` deveria ter falhado. Por segurança, e para garantir `Filament.precoPorKg: number`:
-        console.warn("Cálculo de preço por Kg inconsistente ou dados faltando apesar da validação Zod. Usando 0 como fallback.");
-        finalPrecoPorKg = 0; 
+        // Se o refine falhou em garantir isso, ou se precoPorKg não foi calculado e os campos do rolo não estão presentes
+        // o schema deveria ter pego. Mas para garantir que `precoPorKg` seja um número no tipo Filament:
+        // A validação Zod com .refine deve impedir que esta situação ocorra.
+        // Se ocorrer, significa que o refine não está funcionando como esperado.
+        // A action espera que precoPorKg seja um número.
+        // Vamos garantir que é um número aqui, mesmo que signifique 0 se os dados estiverem incompletos.
+        // No entanto, o schema deve garantir que a gente tenha dados para calcular ou o precoPorKg direto.
+        toast({
+          title: "Erro de Dados",
+          description: "Não foi possível determinar o preço por Kg. Verifique os dados do rolo ou forneça o preço por Kg diretamente.",
+          variant: "destructive",
+        });
+        console.error("Cálculo de preço por Kg inconsistente ou dados faltando.", values);
+        // Isso não deveria acontecer se o schema.refine estiver correto e os campos forem obrigatórios condicionalmente.
+        // Se `precoPorKg` for opcional, e `pesoRoloGramas` e `precoRolo` também, então pode ser 0.
+        // No entanto, nosso schema exige um deles.
+        // Para satisfazer o tipo `Filament.precoPorKg: number` na action, se o schema falhar, definimos 0.
+        finalPrecoPorKg = 0; // Fallback improvável.
       }
 
-      const dataForAction = {
-        // Garantir que estamos passando os campos corretos e convertidos para as actions
+      // Construir o payload para a action
+      // Omit 'id' pois as actions geram/usam o id separadamente.
+      const dataForAction: Omit<Filament, 'id'> = {
         tipo: values.tipo,
         cor: values.cor,
-        densidade: Number(values.densidade), // Já é coerce no schema, mas para garantir
-        marca: values.marca,
-        modelo: values.modelo,
-        temperaturaBicoIdeal: values.temperaturaBicoIdeal, // Já é coerce no schema
-        temperaturaMesaIdeal: values.temperaturaMesaIdeal, // Já é coerce no schema
-        pesoRoloGramas: values.pesoRoloGramas, // Já é coerce no schema
-        precoRolo: values.precoRolo, // Já é coerce no schema
-        precoPorKg: finalPrecoPorKg, // Garantido como número aqui
+        densidade: Number(values.densidade),
+        marca: values.marca || undefined, // Garante que strings vazias se tornem undefined se o campo for opcional
+        modelo: values.modelo || undefined,
+        temperaturaBicoIdeal: values.temperaturaBicoIdeal, // Já é coerce.number().optional()
+        temperaturaMesaIdeal: values.temperaturaMesaIdeal,
+        pesoRoloGramas: values.pesoRoloGramas,
+        precoRolo: values.precoRolo,
+        precoPorKg: finalPrecoPorKg, // Agora é um número
       };
-
-      // Remover 'id' dos dados se estiver presente, pois as actions lidam com ele.
-      // As actions esperam Omit<Filament, 'id'> ou Partial<Omit<Filament, 'id'>>
-      const payload = { ...dataForAction }; 
-      // `values.id` pode existir se o schema tiver `id: z.string().optional()` e o form for reutilizado.
-      // No entanto, `FilamentSchema` não tem `id` no `z.object({})`, então `values.id` não existirá.
-      // Isso é bom, pois as actions não querem `id` no payload.
 
       let actionResult;
       if (filament && filament.id) { // Modo Edição
-        actionResult = await updateFilament(filament.id, payload as Partial<Omit<Filament, 'id'>>);
+        actionResult = await updateFilament(filament.id, dataForAction);
       } else { // Modo Criação
-        actionResult = await createFilament(payload as Omit<Filament, 'id'>);
+        actionResult = await createFilament(dataForAction);
       }
 
       if (actionResult.success && actionResult.filament) {
@@ -105,7 +111,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
           title: filament ? "Filamento Atualizado" : "Filamento Criado",
           description: `O filamento "${actionResult.filament.tipo} (${actionResult.filament.cor})" foi salvo. Preço/kg: R$ ${actionResult.filament.precoPorKg.toFixed(2)}.`,
         });
-        onSuccess(actionResult.filament); // Passa o filamento retornado pela action
+        onSuccess(actionResult.filament);
       } else {
         toast({
           title: "Erro ao Salvar",
@@ -131,9 +137,9 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
           {filament ? "Modifique os detalhes do filamento." : "Preencha as informações do novo filamento."}
         </DialogDescription>
       </DialogHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <ScrollArea className="max-h-[60vh] p-1 pr-3">
+      <Form {...form} className="flex-grow flex flex-col min-h-0"> {/* Permite que Form e form interno cresçam */}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
+          <ScrollArea className="flex-grow min-h-0 p-1 pr-3"> {/* ScrollArea ocupa espaço entre header e footer do form */}
             <div className="space-y-4 py-4">
               <FormField
                 control={form.control}
@@ -282,7 +288,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
               />
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 flex-shrink-0"> {/* Footer não deve encolher */}
             <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
             </DialogClose>

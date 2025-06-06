@@ -87,7 +87,7 @@ export function FilamentsTab() {
               Adicionar Filamento
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
             <FilamentForm 
               filament={editingFilament} 
               onSuccess={handleFormSuccess}
@@ -132,3 +132,4 @@ export function FilamentsTab() {
     </div>
   );
 }
+
