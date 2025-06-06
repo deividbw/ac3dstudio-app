@@ -31,7 +31,7 @@ import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
 
 interface FilamentFormProps {
   filament?: Filament | null;
-  brands: Brand[]; // Add brands prop
+  brands: Brand[];
   onSuccess: (filament: Filament) => void;
   onCancel: () => void;
 }
@@ -148,14 +148,17 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value ?? ""}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value ?? ""}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione uma marca" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhuma</SelectItem>
+                          {/* <SelectItem value="">Nenhuma</SelectItem> REMOVED */}
                           {brands.map((brand) => (
                             <SelectItem key={brand.id} value={brand.id}>
                               {brand.nome}

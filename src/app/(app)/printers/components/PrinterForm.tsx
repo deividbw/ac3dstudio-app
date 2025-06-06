@@ -31,7 +31,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PrinterFormProps {
   printer?: Printer | null;
-  brands: Brand[]; // Add brands prop
+  brands: Brand[]; 
   onSuccess: (printer: Printer) => void;
   onCancel: () => void;
 }
@@ -145,14 +145,17 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value ?? ""}>
+                       <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value ?? ""}
+                        >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione uma marca" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhuma</SelectItem>
+                          {/* <SelectItem value="">Nenhuma</SelectItem> REMOVED */}
                           {brands.map((brand) => (
                             <SelectItem key={brand.id} value={brand.id}>
                               {brand.nome}
