@@ -1,0 +1,51 @@
+// MOCK ACTIONS - In a real app, these would interact with a database.
+"use server";
+
+import type { Printer } from "@/lib/types";
+import { PrinterSchema } from "@/lib/schemas";
+
+let mockPrinters: Printer[] = [
+  { id: "1", nome: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
+  { id: "2", nome: "Prusa MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
+];
+
+export async function getPrinters(): Promise<Printer[]> {
+  return mockPrinters;
+}
+
+export async function getPrinterById(id: string): Promise<Printer | undefined> {
+  return mockPrinters.find(p => p.id === id);
+}
+
+export async function createPrinter(data: Omit<Printer, 'id'>): Promise<{ success: boolean, printer?: Printer, error?: string }> {
+  const validation = PrinterSchema.safeParse(data);
+  if (!validation.success) {
+    return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
+  }
+  const newPrinter: Printer = { ...validation.data, id: String(Date.now()) };
+  mockPrinters.push(newPrinter);
+  return { success: true, printer: newPrinter };
+}
+
+export async function updatePrinter(id: string, data: Partial<Omit<Printer, 'id'>>): Promise<{ success: boolean, printer?: Printer, error?: string }> {
+  const existingPrinter = mockPrinters.find(p => p.id === id);
+  if (!existingPrinter) {
+    return { success: false, error: "Impressora não encontrada" };
+  }
+  const updatedData = { ...existingPrinter, ...data };
+  const validation = PrinterSchema.safeParse(updatedData);
+  if (!validation.success) {
+    return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
+  }
+  mockPrinters = mockPrinters.map(p => p.id === id ? validation.data as Printer : p);
+  return { success: true, printer: validation.data as Printer };
+}
+
+export async function deletePrinter(id: string): Promise<{ success: boolean, error?: string }> {
+  const initialLength = mockPrinters.length;
+  mockPrinters = mockPrinters.filter(p => p.id !== id);
+  if (mockPrinters.length === initialLength) {
+    return { success: false, error: "Impressora não encontrada" };
+  }
+  return { success: true };
+}
