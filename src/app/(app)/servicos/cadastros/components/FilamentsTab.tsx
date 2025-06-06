@@ -18,15 +18,21 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { PageHeader } from '@/components/PageHeader'; // Reusing PageHeader for title and button
-import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm'; // Adjusted path
-import { FilamentCard } from './FilamentCard';
+import { PageHeader } from '@/components/PageHeader';
+import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
 import type { Filament } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-// Mock actions (replace with actual server actions)
-import { getFilaments as mockGetFilaments, createFilament as mockCreateFilament, updateFilament as mockUpdateFilament, deleteFilament as mockDeleteFilament } from '@/lib/actions/filament.actions';
+import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament } from '@/lib/actions/filament.actions';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from '@/components/ui/card';
 
 export function FilamentsTab() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
@@ -44,9 +50,7 @@ export function FilamentsTab() {
     loadFilaments();
   }, [loadFilaments]);
 
-  const handleFormSuccess = async (filament: Filament) => {
-    // The form submission logic itself (create/update) is inside FilamentForm or called by it.
-    // This callback is mainly to refresh the list and close the dialog.
+  const handleFormSuccess = () => {
     loadFilaments();
     setIsFormOpen(false);
     setEditingFilament(null);
@@ -71,7 +75,12 @@ export function FilamentsTab() {
     } else {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir o filamento.", variant: "destructive" });
     }
-    setDeletingFilamentId(null); // Close dialog
+    setDeletingFilamentId(null);
+  };
+
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined || value === null) return "N/A";
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   return (
@@ -79,7 +88,7 @@ export function FilamentsTab() {
       <PageHeader title="Gerenciar Filamentos">
         <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
           setIsFormOpen(isOpen);
-          if (!isOpen) setEditingFilament(null); // Reset editing state when dialog closes
+          if (!isOpen) setEditingFilament(null);
         }}>
           <DialogTrigger asChild>
             <Button size="sm" onClick={() => { setEditingFilament(null); setIsFormOpen(true); }}>
@@ -97,24 +106,50 @@ export function FilamentsTab() {
         </Dialog>
       </PageHeader>
 
-      {filaments.length === 0 ? (
-        <div className="p-6 text-center text-muted-foreground border rounded-lg shadow-sm bg-card">
-          Nenhum filamento cadastrado ainda. Clique em "Adicionar Filamento" para começar.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filaments.map((filament) => (
-            <FilamentCard 
-              key={filament.id} 
-              filament={filament} 
-              onEdit={openEditDialog}
-              onDelete={openDeleteDialog}
-            />
-          ))}
-        </div>
-      )}
+      <Card className="shadow-lg">
+        <CardContent className="p-0">
+          {filaments.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">
+              Nenhum filamento cadastrado ainda. Clique em "Adicionar Filamento" para começar.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Marca</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Cor</TableHead>
+                  <TableHead className="text-right">Preço/Kg</TableHead>
+                  <TableHead className="text-right">Densidade</TableHead>
+                  <TableHead className="w-[100px] text-center">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filaments.map((filament) => (
+                  <TableRow key={filament.id}>
+                    <TableCell className="font-medium">{filament.marca || "N/A"}</TableCell>
+                    <TableCell>{filament.tipo}</TableCell>
+                    <TableCell>{filament.cor}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(filament.precoPorKg)}</TableCell>
+                    <TableCell className="text-right">{filament.densidade} g/cm³</TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="ghost" size="icon" className="hover:text-primary mr-1" onClick={() => openEditDialog(filament)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialogTrigger asChild>
+                         <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => openDeleteDialog(filament.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* AlertDialog for Delete Confirmation */}
       <AlertDialog open={!!deletingFilamentId} onOpenChange={(isOpen) => { if (!isOpen) setDeletingFilamentId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -132,4 +167,3 @@ export function FilamentsTab() {
     </div>
   );
 }
-
