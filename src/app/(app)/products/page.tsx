@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link'; // Added missing import
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, DollarSign, Download, PackageSearch, AlertTriangle } from 'lucide-react';
@@ -17,7 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogTrigger, // Added DialogTrigger
+  DialogTrigger, 
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -28,7 +29,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger as AlertDialogPrimitiveTrigger, // Renamed to avoid conflict if used, though likely not
+  AlertDialogTrigger as AlertDialogPrimitiveTrigger, 
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductForm } from './components/ProductForm';
@@ -292,5 +293,7 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+    
 
     
