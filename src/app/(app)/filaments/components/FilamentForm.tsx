@@ -34,14 +34,13 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
         ...filament,
-        // Garantir que campos numéricos opcionais sejam undefined se não presentes
         temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
         temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
       } : {
       tipo: "",
       cor: "",
       densidade: 1.24, 
-      marca: undefined, // Usar undefined para campos opcionais
+      marca: undefined,
       modelo: undefined,
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
@@ -50,11 +49,10 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
-      // Remove 'id' for create/update actions as it's handled separately or generated
       const dataForAction: Omit<Filament, 'id'> = {
         tipo: values.tipo,
         cor: values.cor,
-        densidade: Number(values.densidade), // Zod coerce já deve tratar, mas explícito
+        densidade: Number(values.densidade),
         marca: values.marca || undefined,
         modelo: values.modelo || undefined,
         temperaturaBicoIdeal: values.temperaturaBicoIdeal ? Number(values.temperaturaBicoIdeal) : undefined,
@@ -72,7 +70,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
         toast({
           title: filament ? "Filamento Atualizado" : "Filamento Criado",
           description: `O filamento "${actionResult.filament.tipo} (${actionResult.filament.cor})" foi salvo.`,
-          variant: "success", // Usar a nova variante de sucesso
+          variant: "success",
         });
         onSuccess(actionResult.filament);
       } else {
@@ -103,60 +101,66 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
       <Form {...form} className="flex-grow flex flex-col min-h-0">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
           <ScrollArea className="flex-grow min-h-0 p-1 pr-3"> 
-            <div className="space-y-4 py-2">
+            <div className="space-y-3 py-2"> {/* Reduzido space-y para 3 */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="tipo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo do Filamento*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: PLA, ABS" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cor*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Branco, Preto" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="marca"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marca</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Voolt" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="modelo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Modelo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: PLA+" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
               <FormField
-                control={form.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo do Filamento*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: PLA, ABS, PETG" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cor*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Branco, Preto, Azul" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="marca"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Marca</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Voolt, 3D Lab" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="modelo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Modelo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: PLA+, Standard" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
                 control={form.control}
                 name="densidade"
                 render={({ field }) => (
@@ -171,36 +175,39 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="temperaturaBicoIdeal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Temperatura Ideal do Bico (°C)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Ex: 210" {...field} 
-                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="temperaturaMesaIdeal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Temperatura Ideal da Mesa (°C)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Ex: 60" {...field} 
-                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="temperaturaBicoIdeal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Temp. Bico Ideal (°C)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Ex: 210" {...field} 
+                               value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                               onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="temperaturaMesaIdeal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Temp. Mesa Ideal (°C)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Ex: 60" {...field} 
+                               value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                               onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
           </ScrollArea>
           <DialogFooter className="pt-4 flex-shrink-0"> 
