@@ -19,8 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger as AlertDialogPrimitiveTrigger, // Renamed to avoid conflict if any
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"; // Removed AlertDialogPrimitiveTrigger (AlertDialogTrigger) import
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
 import type { Filament, Brand } from '@/lib/types';
@@ -157,7 +156,7 @@ export function FilamentsTab() {
           </div>
 
           <div className="mb-3 text-sm text-muted-foreground">
-            Exibindo {filteredFilaments.length} de {filaments.length} filamento(s).
+             Exibindo {filteredFilaments.length} de {filaments.length} filamento(s).
           </div>
 
           {filteredFilaments.length === 0 && filaments.length > 0 ? (
@@ -166,7 +165,7 @@ export function FilamentsTab() {
             </div>
           ) : filteredFilaments.length === 0 && filaments.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">
-              Nenhum filamento cadastrado ainda.
+              Nenhum filamento cadastrado ainda. Clique em "Adicionar Filamento" para começar.
             </div>
           ) : (
             <Table>
@@ -176,7 +175,7 @@ export function FilamentsTab() {
                   <TableHead className="px-2 py-2 font-semibold uppercase">Tipo</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Cor</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Modelo</TableHead>
-                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Preço (R$/Kg)</TableHead> {/* RE-ADDED */}
+                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Preço (R$/Kg)</TableHead>
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Densidade</TableHead>
                   <TableHead className="w-[100px] px-2 py-2 text-center font-semibold uppercase">Ações</TableHead>
                 </TableRow>
@@ -188,7 +187,7 @@ export function FilamentsTab() {
                     <TableCell className="px-2 py-1.5">{filament.tipo}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.cor}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.modelo || "N/A"}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-right">{formatCurrency(filament.precoPorKg)}</TableCell> {/* RE-ADDED */}
+                    <TableCell className="px-2 py-1.5 text-right">{formatCurrency(filament.precoPorKg)}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{filament.densidade} g/cm³</TableCell>
                     <TableCell className="px-2 py-1.5 text-center">
                       <Button
@@ -199,16 +198,14 @@ export function FilamentsTab() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <AlertDialogPrimitiveTrigger asChild>
-                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400"
-                          onClick={() => openDeleteDialog(filament.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogPrimitiveTrigger>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400"
+                        onClick={() => openDeleteDialog(filament.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -228,10 +225,11 @@ export function FilamentsTab() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeletingFilamentId(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
 }
+
