@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import Link from 'next/link'; // Added missing import
+import Link from 'next/link';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, DollarSign, Download, PackageSearch, AlertTriangle } from 'lucide-react';
@@ -34,17 +34,19 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductForm } from './components/ProductForm';
 import { CostDisplayDialog } from './components/CostDisplayDialog';
-import type { Product, Filament, Printer, ProductCost } from '@/lib/types';
+import type { Product, Filament, Printer, ProductCost, Brand } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { exportToCsv } from '@/lib/csv-export';
 import { getProducts as mockGetProducts, deleteProduct as mockDeleteProduct } from '@/lib/actions/product.actions';
 import { getFilaments as mockGetFilaments } from '@/lib/actions/filament.actions';
 import { getPrinters as mockGetPrinters } from '@/lib/actions/printer.actions';
+import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; // Import getBrands
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -55,18 +57,16 @@ export default function ProductsPage() {
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
-    // console.log("Loading data for ProductsPage...");
-    const [productsData, filamentsData, printersData] = await Promise.all([
+    const [productsData, filamentsData, printersData, brandsData] = await Promise.all([
       mockGetProducts(),
       mockGetFilaments(),
-      mockGetPrinters()
+      mockGetPrinters(),
+      mockGetBrands() // Fetch brands
     ]);
-    // console.log("Fetched Products:", productsData);
-    // console.log("Fetched Filaments:", filamentsData);
-    // console.log("Fetched Printers:", printersData);
     setProducts(productsData);
     setFilaments(filamentsData);
     setPrinters(printersData);
+    setBrands(brandsData); // Set brands state
   }, []);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export default function ProductsPage() {
   }, [loadData]);
 
   const handleFormSuccess = (productData: Product) => {
-    loadData(); // Reload all products to reflect changes
+    loadData(); 
     setIsFormOpen(false);
     setEditingProduct(null);
   };
@@ -89,20 +89,13 @@ export default function ProductsPage() {
     }
   };
 
-  // Called from ProductForm when a cost is calculated
   const handleCostCalculatedInForm = (cost: ProductCost) => {
     if (editingProduct) {
-      // Update the product being edited with the new cost, so it can be saved
       setEditingProduct(prev => prev ? { ...prev, custoCalculado: cost } : null);
-      // Also update the main products list for immediate display if needed, though save is primary
       setProducts(prevProducts => 
         prevProducts.map(p => p.id === editingProduct.id ? { ...p, custoCalculado: cost } : p)
       );
     }
-    // If it's a new product, the form internally holds the cost until save.
-    // This callback can be used to immediately show the cost dialog for the newly calculated cost.
-    // However, the product isn't "real" yet until saved.
-    // For simplicity, CostDisplayDialog is typically shown for existing products.
   };
   
   const handleShowCost = (product: Product) => {
@@ -110,7 +103,7 @@ export default function ProductsPage() {
       setCurrentProductForCostDisplay(product);
       setIsCostDisplayOpen(true);
     } else {
-      toast({ title: "Custo Não Calculado", description: "Edite o produto e clique em 'Calcular Custo' para estimar os custos de produção.", variant: "default" });
+      toast({ title: "Custo Não Calculado", description: "Edite o produto e preencha os campos para calcular o custo de produção.", variant: "default" });
     }
   };
 
@@ -147,14 +140,14 @@ export default function ProductsPage() {
   };
 
   const openNewDialog = () => {
-    setEditingProduct(null); // Clear any editing state
+    setEditingProduct(null); 
     setIsFormOpen(true);
   };
   
-  const hasRequiredDataForProducts = filaments.length > 0 && printers.length > 0;
+  const hasRequiredDataForProducts = filaments.length > 0 && printers.length > 0 && brands.length > 0;
 
 
-  if (!hasRequiredDataForProducts && (filaments.length === 0 || printers.length === 0)) {
+  if (!hasRequiredDataForProducts && (filaments.length === 0 || printers.length === 0 || brands.length === 0)) {
     return (
        <div className="space-y-6">
         <PageHeader title="Gerenciar Produtos e Custos" />
@@ -162,12 +155,13 @@ export default function ProductsPage() {
             <CardHeader>
                 <CardTitle className="flex items-center"><AlertTriangle className="mr-2 h-6 w-6 text-destructive" /> Dados Incompletos</CardTitle>
                 <CardDescription>
-                    Para gerenciar produtos e calcular custos, é necessário primeiro cadastrar filamentos e impressoras.
+                    Para gerenciar produtos e calcular custos, é necessário primeiro cadastrar filamentos, impressoras e marcas.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
                 {filaments.length === 0 && <p>Nenhum filamento cadastrado. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Filamentos</Link></Button>.</p>}
                 {printers.length === 0 && <p>Nenhuma impressora cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Impressoras</Link></Button>.</p>}
+                {brands.length === 0 && <p>Nenhuma marca cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Marcas</Link></Button>.</p>}
             </CardContent>
         </Card>
        </div>
@@ -184,7 +178,7 @@ export default function ProductsPage() {
         </Button>
         <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
           setIsFormOpen(isOpen);
-          if (!isOpen) setEditingProduct(null); // Clear editing state when dialog closes
+          if (!isOpen) setEditingProduct(null); 
         }}>
           <DialogTrigger asChild>
             <Button size="sm" onClick={openNewDialog}>
@@ -197,6 +191,7 @@ export default function ProductsPage() {
               product={editingProduct} 
               filaments={filaments}
               printers={printers}
+              brands={brands} // Pass brands to ProductForm
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
               onCostCalculated={handleCostCalculatedInForm}
@@ -293,7 +288,5 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    
 
     
