@@ -18,7 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Adicionado AlertDialogTrigger aqui
+  // AlertDialogTrigger, // Removido pois o AlertDialog é controlado manualmente.
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
@@ -137,11 +137,10 @@ export function FilamentsTab() {
                       <Button variant="ghost" size="icon" className="hover:text-primary mr-1" onClick={() => openEditDialog(filament)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <AlertDialogTrigger asChild>
-                         <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => openDeleteDialog(filament.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
+                      {/* AlertDialogTrigger foi removido daqui */}
+                      <Button variant="ghost" size="icon" className="hover:text-destructive" onClick={() => openDeleteDialog(filament.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
