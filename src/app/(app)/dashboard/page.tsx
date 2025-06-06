@@ -1,6 +1,8 @@
+
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation'; // Importar useRouter
 import { Icons } from '@/lib/constants';
 import { FeatureCard } from '@/components/FeatureCard';
 import { ShortcutCard } from '@/components/ShortcutCard';
@@ -15,7 +17,7 @@ const iconColors = {
   financeiro: "bg-green-500",
   clientes: "bg-orange-500",
   pecasEstoque: "bg-blue-500",
-  servicos: "bg-indigo-500",
+  servicos: "bg-indigo-500", // Cor para o card de Serviços
   novoPedido: "bg-primary",
   novoRecebimento: "bg-green-500",
   novoCompromisso: "bg-accent",
@@ -24,6 +26,8 @@ const iconColors = {
 
 
 export default function DashboardPage() {
+  const router = useRouter(); // Inicializar o router
+
   return (
     <div className="space-y-6">
       {/* Main Features Grid */}
@@ -33,7 +37,12 @@ export default function DashboardPage() {
         <FeatureCard icon={Icons.DollarSign} title="Financeiro" iconBgColor={iconColors.financeiro} />
         <FeatureCard icon={Icons.Users} title="Clientes" iconBgColor={iconColors.clientes} />
         <FeatureCard icon={Icons.PackageSearch} title="Peças & estoque" iconBgColor={iconColors.pecasEstoque} />
-        <FeatureCard icon={Icons.Settings2} title="Serviços" iconBgColor={iconColors.servicos} />
+        <FeatureCard 
+          icon={Icons.Settings2} 
+          title="Serviços" 
+          iconBgColor={iconColors.servicos} 
+          onClick={() => router.push('/servicos')} // Adicionar onClick para navegação
+        />
       </div>
 
       {/* Atalhos Section */}
