@@ -5,19 +5,20 @@ export const FilamentSchema = z.object({
   id: z.string().optional(),
   tipo: z.string().min(1, { message: "Tipo é obrigatório" }),
   cor: z.string().min(1, { message: "Cor é obrigatória" }),
-  precoPorKg: z.coerce.number().positive({ message: "Preço por Kg deve ser positivo" }).optional(), // Será calculado ou pode ser direto
+  // precoPorKg: z.coerce.number().positive({ message: "Preço por Kg deve ser positivo" }).optional(), // Removido
   densidade: z.coerce.number().positive({ message: "Densidade deve ser positiva" }),
 
   marca: z.string().optional(),
   modelo: z.string().optional(),
   temperaturaBicoIdeal: z.coerce.number().optional(),
   temperaturaMesaIdeal: z.coerce.number().optional(),
-  pesoRoloGramas: z.coerce.number().positive({message: "Peso do rolo deve ser positivo"}).optional(),
-  precoRolo: z.coerce.number().positive({message: "Preço do rolo deve ser positivo"}).optional(),
-}).refine(data => data.precoPorKg || (data.pesoRoloGramas && data.precoRolo), {
-  message: "Informe o Preço por Kg ou o Peso e Preço do Rolo",
-  path: ["precoPorKg"], // Path to highlight if error occurs, can be adjusted
+  // pesoRoloGramas: z.coerce.number().positive({message: "Peso do rolo deve ser positivo"}).optional(), // Removido
+  // precoRolo: z.coerce.number().positive({message: "Preço do rolo deve ser positivo"}).optional(), // Removido
 });
+// .refine(data => data.precoPorKg || (data.pesoRoloGramas && data.precoRolo), { // Removido refine
+//   message: "Informe o Preço por Kg ou o Peso e Preço do Rolo",
+//   path: ["precoPorKg"], 
+// });
 
 
 export const PrinterSchema = z.object({
@@ -39,4 +40,3 @@ export const ProductSchema = z.object({
   pesoGramas: z.coerce.number().positive({ message: "Peso deve ser positivo" }),
   imageUrl: z.string().url({ message: "URL da imagem inválida" }).optional().or(z.literal('')),
 });
-

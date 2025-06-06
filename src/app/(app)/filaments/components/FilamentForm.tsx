@@ -13,7 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
+  // FormDescription, // Removido pois não há mais campos com descrição
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
@@ -35,81 +35,42 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
         ...filament,
-        // Garante que valores numéricos opcionais sejam undefined se null/undefined no 'filament'
         temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
         temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
-        pesoRoloGramas: filament.pesoRoloGramas ?? undefined,
-        precoRolo: filament.precoRolo ?? undefined,
-        precoPorKg: filament.precoPorKg ?? undefined,
       } : {
       tipo: "",
       cor: "",
-      densidade: 1.24, // Valor padrão positivo
+      densidade: 1.24, 
       marca: "",
       modelo: "",
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
-      pesoRoloGramas: 1000, // Valor padrão se novo, mas pode ser undefined
-      precoRolo: undefined,
-      precoPorKg: undefined,
     },
   });
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
-      let finalPrecoPorKg: number;
-
-      if (values.precoPorKg !== undefined) {
-        finalPrecoPorKg = Number(values.precoPorKg);
-      } else if (values.pesoRoloGramas !== undefined && values.precoRolo !== undefined) {
-        finalPrecoPorKg = (Number(values.precoRolo) / Number(values.pesoRoloGramas)) * 1000;
-      } else {
-        // Se o refine falhou em garantir isso, ou se precoPorKg não foi calculado e os campos do rolo não estão presentes
-        // o schema deveria ter pego. Mas para garantir que `precoPorKg` seja um número no tipo Filament:
-        // A validação Zod com .refine deve impedir que esta situação ocorra.
-        // Se ocorrer, significa que o refine não está funcionando como esperado.
-        // A action espera que precoPorKg seja um número.
-        // Vamos garantir que é um número aqui, mesmo que signifique 0 se os dados estiverem incompletos.
-        // No entanto, o schema deve garantir que a gente tenha dados para calcular ou o precoPorKg direto.
-        toast({
-          title: "Erro de Dados",
-          description: "Não foi possível determinar o preço por Kg. Verifique os dados do rolo ou forneça o preço por Kg diretamente.",
-          variant: "destructive",
-        });
-        console.error("Cálculo de preço por Kg inconsistente ou dados faltando.", values);
-        // Isso não deveria acontecer se o schema.refine estiver correto e os campos forem obrigatórios condicionalmente.
-        // Se `precoPorKg` for opcional, e `pesoRoloGramas` e `precoRolo` também, então pode ser 0.
-        // No entanto, nosso schema exige um deles.
-        // Para satisfazer o tipo `Filament.precoPorKg: number` na action, se o schema falhar, definimos 0.
-        finalPrecoPorKg = 0; // Fallback improvável.
-      }
-
-      // Construir o payload para a action
-      // Omit 'id' pois as actions geram/usam o id separadamente.
       const dataForAction: Omit<Filament, 'id'> = {
         tipo: values.tipo,
         cor: values.cor,
         densidade: Number(values.densidade),
-        marca: values.marca || undefined, // Garante que strings vazias se tornem undefined se o campo for opcional
+        marca: values.marca || undefined,
         modelo: values.modelo || undefined,
-        temperaturaBicoIdeal: values.temperaturaBicoIdeal, // Já é coerce.number().optional()
+        temperaturaBicoIdeal: values.temperaturaBicoIdeal,
         temperaturaMesaIdeal: values.temperaturaMesaIdeal,
-        pesoRoloGramas: values.pesoRoloGramas,
-        precoRolo: values.precoRolo,
-        precoPorKg: finalPrecoPorKg, // Agora é um número
       };
 
       let actionResult;
-      if (filament && filament.id) { // Modo Edição
+      if (filament && filament.id) { 
         actionResult = await updateFilament(filament.id, dataForAction);
-      } else { // Modo Criação
+      } else { 
         actionResult = await createFilament(dataForAction);
       }
 
       if (actionResult.success && actionResult.filament) {
         toast({
           title: filament ? "Filamento Atualizado" : "Filamento Criado",
-          description: `O filamento "${actionResult.filament.tipo} (${actionResult.filament.cor})" foi salvo. Preço/kg: R$ ${actionResult.filament.precoPorKg.toFixed(2)}.`,
+          description: `O filamento "${actionResult.filament.tipo} (${actionResult.filament.cor})" foi salvo.`,
         });
         onSuccess(actionResult.filament);
       } else {
@@ -137,10 +98,10 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
           {filament ? "Modifique os detalhes do filamento." : "Preencha as informações do novo filamento."}
         </DialogDescription>
       </DialogHeader>
-      <Form {...form} className="flex-grow flex flex-col min-h-0"> {/* Permite que Form e form interno cresçam */}
+      <Form {...form} className="flex-grow flex flex-col min-h-0">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
-          <ScrollArea className="flex-grow min-h-0 p-1 pr-3"> {/* ScrollArea ocupa espaço entre header e footer do form */}
-            <div className="space-y-4 py-4">
+          <ScrollArea className="flex-grow min-h-0 p-1 pr-3"> 
+            <div className="space-y-4 py-2"> {/* Reduzido py-4 para py-2 */}
               <FormField
                 control={form.control}
                 name="tipo"
@@ -210,54 +171,6 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
               />
               <FormField
                 control={form.control}
-                name="pesoRoloGramas"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Peso do Rolo (g)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="1" placeholder="Ex: 1000" {...field} 
-                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}/>
-                    </FormControl>
-                     <FormDescription>Usado para calcular o preço por Kg se não informado diretamente.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="precoRolo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço do Rolo (R$)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 100.50" {...field} 
-                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}/>
-                    </FormControl>
-                    <FormDescription>Usado para calcular o preço por Kg se não informado diretamente.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="precoPorKg"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço por Kg (R$)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 100.50 (Opcional se Preço/Peso do Rolo informados)" {...field} 
-                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}/>
-                    </FormControl>
-                    <FormDescription>Calculado automaticamente se Peso e Preço do Rolo forem fornecidos.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="temperaturaBicoIdeal"
                 render={({ field }) => (
                   <FormItem>
@@ -288,7 +201,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
               />
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 flex-shrink-0"> {/* Footer não deve encolher */}
+          <DialogFooter className="pt-4 flex-shrink-0"> 
             <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
@@ -299,5 +212,3 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
     </>
   );
 }
-
-    

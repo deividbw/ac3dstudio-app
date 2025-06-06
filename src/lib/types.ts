@@ -3,7 +3,7 @@ export interface Filament {
   id: string;
   tipo: string; // Ex: PLA, ABS, PETG
   cor: string;
-  precoPorKg: number; // Preço de compra do filamento por Kg
+  // precoPorKg: number; // Removido
   densidade: number; // g/cm³, usado para calcular peso a partir do volume se necessário
 
   // Novos campos baseados na imagem
@@ -12,8 +12,8 @@ export interface Filament {
   temperaturaBicoIdeal?: number; // em °C
   temperaturaMesaIdeal?: number; // em °C
   // Para cálculo de custo por grama, pode ser útil ter um peso/valor de referência do rolo
-  pesoRoloGramas?: number; // Peso do rolo padrão, ex: 1000g
-  precoRolo?: number; // Preço do rolo padrão
+  // pesoRoloGramas?: number; // Removido
+  // precoRolo?: number; // Removido
 }
 
 export interface Printer {
@@ -44,4 +44,3 @@ export interface ProductCost {
   additionalCostEstimate: number;
   totalCost: number;
 }
-
