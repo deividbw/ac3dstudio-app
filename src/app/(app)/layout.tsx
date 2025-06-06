@@ -1,4 +1,5 @@
-import { AppSidebar } from '@/components/AppSidebar';
+import { MobileTopBar } from '@/components/MobileTopBar';
+import { BottomNav } from '@/components/BottomNav';
 import React from 'react';
 
 export default function AppLayout({
@@ -7,11 +8,15 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto p-6 pl-[calc(theme(spacing.64)_+_theme(spacing.6))]">
+    <div className="flex min-h-screen flex-col bg-background">
+      <MobileTopBar />
+      <main className="flex-1 overflow-y-auto p-4 pb-20"> {/* Added pb-20 for bottom nav space */}
         {children}
       </main>
+      {/* Button absolutely positioned above BottomNav */}
+      {/* This button is context-specific to dashboard, ideally passed via slot or context if needed globally */}
+      {/* For now, it will be part of the dashboard page layout */}
+      <BottomNav />
     </div>
   );
 }
