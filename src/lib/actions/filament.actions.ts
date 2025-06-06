@@ -10,27 +10,21 @@ let mockFilaments: Filament[] = [
     id: "1", 
     tipo: "PLA", 
     cor: "Branco", 
-    // precoPorKg: 100, // Removido
     densidade: 1.24,
-    marca: "Voolt",
+    marcaId: "1", // Voolt
     modelo: "PLA+",
     temperaturaBicoIdeal: 210,
     temperaturaMesaIdeal: 60,
-    // pesoRoloGramas: 1000, // Removido
-    // precoRolo: 100, // Removido
   },
   { 
     id: "2", 
     tipo: "ABS", 
     cor: "Preto", 
-    // precoPorKg: 120, // Removido
     densidade: 1.04,
-    marca: "3D Lab",
+    marcaId: "2", // 3D Lab
     modelo: "Standard",
     temperaturaBicoIdeal: 230,
     temperaturaMesaIdeal: 80,
-    // pesoRoloGramas: 1000, // Removido
-    // precoRolo: 120, // Removido
   },
 ];
 

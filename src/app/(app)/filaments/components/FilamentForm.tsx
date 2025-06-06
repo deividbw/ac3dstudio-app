@@ -15,32 +15,42 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { FilamentSchema } from "@/lib/schemas";
-import type { Filament } from "@/lib/types";
+import type { Filament, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
 
 interface FilamentFormProps {
   filament?: Filament | null;
+  brands: Brand[]; // Add brands prop
   onSuccess: (filament: Filament) => void;
   onCancel: () => void;
 }
 
-export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProps) {
+export function FilamentForm({ filament, brands, onSuccess, onCancel }: FilamentFormProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof FilamentSchema>>({
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
         ...filament,
+        marcaId: filament.marcaId ?? undefined,
+        modelo: filament.modelo ?? undefined,
         temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
         temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
       } : {
       tipo: "",
       cor: "",
       densidade: 1.24, 
-      marca: undefined,
+      marcaId: undefined,
       modelo: undefined,
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
@@ -53,7 +63,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
         tipo: values.tipo,
         cor: values.cor,
         densidade: Number(values.densidade),
-        marca: values.marca || undefined,
+        marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         temperaturaBicoIdeal: values.temperaturaBicoIdeal ? Number(values.temperaturaBicoIdeal) : undefined,
         temperaturaMesaIdeal: values.temperaturaMesaIdeal ? Number(values.temperaturaMesaIdeal) : undefined,
@@ -69,7 +79,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
       if (actionResult.success && actionResult.filament) {
         toast({
           title: filament ? "Filamento Atualizado" : "Filamento Criado",
-          description: `O filamento "${actionResult.filament.tipo} (${actionResult.filament.cor})" foi salvo.`,
+          description: `O filamento foi salvo.`,
           variant: "success",
         });
         onSuccess(actionResult.filament);
@@ -101,7 +111,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
       <Form {...form} className="flex-grow flex flex-col min-h-0">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
           <ScrollArea className="flex-grow min-h-0 p-1 pr-3"> 
-            <div className="space-y-3 py-2"> {/* Reduzido space-y para 3 */}
+            <div className="space-y-3 py-2">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -134,13 +144,25 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="marca"
+                  name="marcaId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Voolt" {...field} value={field.value ?? ""} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value ?? ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma marca" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Nenhuma</SelectItem>
+                          {brands.map((brand) => (
+                            <SelectItem key={brand.id} value={brand.id}>
+                              {brand.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

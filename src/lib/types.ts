@@ -4,8 +4,7 @@ export interface Filament {
   tipo: string; // Ex: PLA, ABS, PETG
   cor: string;
   densidade: number; // g/cm³, usado para calcular peso a partir do volume se necessário
-
-  marca?: string;
+  marcaId?: string; // ID da marca
   modelo?: string; // Ex: PLA+, Standard
   temperaturaBicoIdeal?: number; // em °C
   temperaturaMesaIdeal?: number; // em °C
@@ -14,7 +13,7 @@ export interface Filament {
 export interface Printer {
   id: string;
   nome: string;
-  marca?: string;
+  marcaId?: string; // ID da marca
   modelo?: string;
   custoAquisicao: number;
   consumoEnergiaHora: number; // kWh
@@ -42,3 +41,7 @@ export interface ProductCost {
   totalCost: number;
 }
 
+export interface Brand {
+  id: string;
+  nome: string;
+}

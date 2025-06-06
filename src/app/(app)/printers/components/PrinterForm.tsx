@@ -15,31 +15,43 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { PrinterSchema } from "@/lib/schemas";
-import type { Printer } from "@/lib/types";
+import type { Printer, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createPrinter, updatePrinter } from '@/lib/actions/printer.actions';
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PrinterFormProps {
   printer?: Printer | null;
+  brands: Brand[]; // Add brands prop
   onSuccess: (printer: Printer) => void;
   onCancel: () => void;
 }
 
-export function PrinterForm({ printer, onSuccess, onCancel }: PrinterFormProps) {
+export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFormProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof PrinterSchema>>({
     resolver: zodResolver(PrinterSchema),
-    defaultValues: printer || {
+    defaultValues: printer ? {
+      ...printer,
+      marcaId: printer.marcaId ?? undefined,
+      modelo: printer.modelo ?? undefined,
+    } : {
       nome: "",
-      marca: undefined,
+      marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
-      consumoEnergiaHora: 0.1, // Default to a small positive value
+      consumoEnergiaHora: 0.1,
       taxaDepreciacaoHora: 0,
-      custoEnergiaKwh: 0.75, // Default to a common value
+      custoEnergiaKwh: 0.75,
     },
   });
 
@@ -47,7 +59,7 @@ export function PrinterForm({ printer, onSuccess, onCancel }: PrinterFormProps) 
     try {
       const dataForAction: Omit<Printer, 'id'> = {
         nome: values.nome,
-        marca: values.marca || undefined,
+        marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
         consumoEnergiaHora: Number(values.consumoEnergiaHora),
@@ -129,13 +141,25 @@ export function PrinterForm({ printer, onSuccess, onCancel }: PrinterFormProps) 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="marca"
+                  name="marcaId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Creality, Prusa" {...field} value={field.value ?? ""} />
-                      </FormControl>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value ?? ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma marca" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Nenhuma</SelectItem>
+                          {brands.map((brand) => (
+                            <SelectItem key={brand.id} value={brand.id}>
+                              {brand.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

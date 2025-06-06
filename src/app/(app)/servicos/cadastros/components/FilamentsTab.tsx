@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
-import type { Filament } from '@/lib/types';
+import type { Filament, Brand } from '@/lib/types'; // Import Brand
 import { useToast } from '@/hooks/use-toast';
 import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament } from '@/lib/actions/filament.actions';
+import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; // Import getBrands
 import {
   Table,
   TableBody,
@@ -37,6 +38,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function FilamentsTab() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
   const [deletingFilamentId, setDeletingFilamentId] = useState<string | null>(null);
@@ -46,25 +48,35 @@ export function FilamentsTab() {
   const [filterTipo, setFilterTipo] = useState("");
   const [filterModelo, setFilterModelo] = useState("");
 
-  const loadFilaments = useCallback(async () => {
-    const data = await mockGetFilaments(); 
-    setFilaments(data);
+  const loadData = useCallback(async () => { // Renamed from loadFilaments
+    const [filamentsData, brandsData] = await Promise.all([
+      mockGetFilaments(),
+      mockGetBrands()
+    ]);
+    setFilaments(filamentsData);
+    setBrands(brandsData);
   }, []);
 
   useEffect(() => {
-    loadFilaments();
-  }, [loadFilaments]);
+    loadData();
+  }, [loadData]);
+
+  const getBrandNameById = useCallback((brandId?: string) => {
+    if (!brandId) return "N/A";
+    const brand = brands.find(b => b.id === brandId);
+    return brand ? brand.nome : "Desconhecida";
+  }, [brands]);
 
   const filteredFilaments = useMemo(() => {
     return filaments.filter(f => 
-      (filterMarca === "" || f.marca?.toLowerCase().includes(filterMarca.toLowerCase())) &&
+      (filterMarca === "" || getBrandNameById(f.marcaId).toLowerCase().includes(filterMarca.toLowerCase())) &&
       (filterTipo === "" || f.tipo.toLowerCase().includes(filterTipo.toLowerCase())) &&
       (filterModelo === "" || f.modelo?.toLowerCase().includes(filterModelo.toLowerCase()))
     );
-  }, [filaments, filterMarca, filterTipo, filterModelo]);
+  }, [filaments, filterMarca, filterTipo, filterModelo, getBrandNameById]);
 
   const handleFormSuccess = () => {
-    loadFilaments();
+    loadData();
     setIsFormOpen(false);
     setEditingFilament(null);
   };
@@ -84,7 +96,7 @@ export function FilamentsTab() {
     const result = await mockDeleteFilament(deletingFilamentId);
     if (result.success) {
       toast({ title: "Sucesso", description: "Filamento excluído." });
-      loadFilaments();
+      loadData();
     } else {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir o filamento.", variant: "destructive" });
     }
@@ -107,6 +119,7 @@ export function FilamentsTab() {
           <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
             <FilamentForm 
               filament={editingFilament} 
+              brands={brands} // Pass brands to form
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingFilament(null); }}
             />
@@ -164,7 +177,7 @@ export function FilamentsTab() {
               <TableBody>
                 {filteredFilaments.map((filament) => (
                   <TableRow key={filament.id}>
-                    <TableCell className="font-medium px-2 py-1.5">{filament.marca || "N/A"}</TableCell>
+                    <TableCell className="font-medium px-2 py-1.5">{getBrandNameById(filament.marcaId)}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.tipo}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.cor}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.modelo || "N/A"}</TableCell>

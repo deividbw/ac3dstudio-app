@@ -1,3 +1,4 @@
+
 // MOCK ACTIONS - In a real app, these would interact with a database.
 "use server";
 
@@ -5,8 +6,8 @@ import type { Printer } from "@/lib/types";
 import { PrinterSchema } from "@/lib/schemas";
 
 let mockPrinters: Printer[] = [
-  { id: "1", nome: "Ender 3 V2", marca: "Creality", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
-  { id: "2", nome: "Prusa MK3S+", marca: "Prusa", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
+  { id: "1", nome: "Ender 3 V2", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
+  { id: "2", nome: "Prusa MK3S+", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
 ];
 
 export async function getPrinters(): Promise<Printer[]> {
@@ -35,10 +36,9 @@ export async function updatePrinter(id: string, data: Partial<Omit<Printer, 'id'
   
   const dataWithPotentiallyEmptyStrings = { ...existingPrinter, ...data };
   
-  // Ensure optional string fields are undefined if empty before validation
   const cleanedData = {
     ...dataWithPotentiallyEmptyStrings,
-    marca: dataWithPotentiallyEmptyStrings.marca?.trim() === '' ? undefined : dataWithPotentiallyEmptyStrings.marca,
+    // marcaId will be handled by the select, so it's either a valid ID string or undefined
     modelo: dataWithPotentiallyEmptyStrings.modelo?.trim() === '' ? undefined : dataWithPotentiallyEmptyStrings.modelo,
   };
 
@@ -47,7 +47,7 @@ export async function updatePrinter(id: string, data: Partial<Omit<Printer, 'id'
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
   
-  const finalData = validation.data as Printer; // Zod output should be clean
+  const finalData = validation.data as Printer; 
   mockPrinters = mockPrinters.map(p => p.id === id ? finalData : p);
   return { success: true, printer: finalData };
 }
@@ -60,4 +60,3 @@ export async function deletePrinter(id: string): Promise<{ success: boolean, err
   }
   return { success: true };
 }
-
