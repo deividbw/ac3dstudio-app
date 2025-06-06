@@ -8,6 +8,7 @@ export interface Filament {
   modelo?: string; // Ex: PLA+, Standard
   temperaturaBicoIdeal?: number; // em °C
   temperaturaMesaIdeal?: number; // em °C
+  precoPorKg?: number; // R$/kg - RE-ADDED FOR COST CALCULATION
 }
 
 export interface Printer {
@@ -21,6 +22,14 @@ export interface Printer {
   custoEnergiaKwh: number; // R$/kWh
 }
 
+export interface ProductCost {
+  materialCost: number;
+  energyCost: number;
+  depreciationCost: number;
+  additionalCostEstimate: number;
+  totalCost: number;
+}
+
 export interface Product {
   id:string;
   nome: string;
@@ -31,14 +40,6 @@ export interface Product {
   pesoGramas: number; // gramas
   imageUrl?: string;
   custoCalculado?: ProductCost;
-}
-
-export interface ProductCost {
-  materialCost: number;
-  energyCost: number;
-  depreciationCost: number;
-  additionalCostEstimate: number;
-  totalCost: number;
 }
 
 export interface Brand {

@@ -19,13 +19,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger as AlertDialogPrimitiveTrigger, // Renamed to avoid conflict if any
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
-import type { Filament, Brand } from '@/lib/types'; // Import Brand
+import type { Filament, Brand } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament } from '@/lib/actions/filament.actions';
-import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; // Import getBrands
+import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
 import {
   Table,
   TableBody,
@@ -38,7 +39,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function FilamentsTab() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
   const [deletingFilamentId, setDeletingFilamentId] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export function FilamentsTab() {
   const [filterTipo, setFilterTipo] = useState("");
   const [filterModelo, setFilterModelo] = useState("");
 
-  const loadData = useCallback(async () => { // Renamed from loadFilaments
+  const loadData = useCallback(async () => {
     const [filamentsData, brandsData] = await Promise.all([
       mockGetFilaments(),
       mockGetBrands()
@@ -68,10 +69,10 @@ export function FilamentsTab() {
   }, [brands]);
 
   const filteredFilaments = useMemo(() => {
-    return filaments.filter(f => 
+    return filaments.filter(f =>
       (filterMarca === "" || getBrandNameById(f.marcaId).toLowerCase().includes(filterMarca.toLowerCase())) &&
       (filterTipo === "" || f.tipo.toLowerCase().includes(filterTipo.toLowerCase())) &&
-      (filterModelo === "" || f.modelo?.toLowerCase().includes(filterModelo.toLowerCase()))
+      (filterModelo === "" || (f.modelo && f.modelo.toLowerCase().includes(filterModelo.toLowerCase())))
     );
   }, [filaments, filterMarca, filterTipo, filterModelo, getBrandNameById]);
 
@@ -92,15 +93,20 @@ export function FilamentsTab() {
 
   const confirmDelete = async () => {
     if (!deletingFilamentId) return;
-    
+
     const result = await mockDeleteFilament(deletingFilamentId);
     if (result.success) {
-      toast({ title: "Sucesso", description: "Filamento excluído." });
+      toast({ title: "Sucesso", description: "Filamento excluído.", variant: "success" });
       loadData();
     } else {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir o filamento.", variant: "destructive" });
     }
     setDeletingFilamentId(null);
+  };
+  
+  const formatCurrency = (value?: number) => {
+    if (value === undefined || value === null || Number.isNaN(value)) return "N/A";
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   return (
@@ -117,9 +123,9 @@ export function FilamentsTab() {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
-            <FilamentForm 
-              filament={editingFilament} 
-              brands={brands} // Pass brands to form
+            <FilamentForm
+              filament={editingFilament}
+              brands={brands}
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingFilament(null); }}
             />
@@ -130,21 +136,21 @@ export function FilamentsTab() {
       <Card className="shadow-md">
         <CardContent className="p-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
-            <Input 
-              placeholder="Filtrar por marca..." 
-              value={filterMarca} 
+            <Input
+              placeholder="Filtrar por marca..."
+              value={filterMarca}
               onChange={e => setFilterMarca(e.target.value)}
               className="h-9"
             />
-            <Input 
-              placeholder="Filtrar por tipo..." 
-              value={filterTipo} 
+            <Input
+              placeholder="Filtrar por tipo..."
+              value={filterTipo}
               onChange={e => setFilterTipo(e.target.value)}
               className="h-9"
             />
-            <Input 
-              placeholder="Filtrar por modelo..." 
-              value={filterModelo} 
+            <Input
+              placeholder="Filtrar por modelo..."
+              value={filterModelo}
               onChange={e => setFilterModelo(e.target.value)}
               className="h-9"
             />
@@ -153,7 +159,7 @@ export function FilamentsTab() {
           <div className="mb-3 text-sm text-muted-foreground">
             Exibindo {filteredFilaments.length} de {filaments.length} filamento(s).
           </div>
-      
+
           {filteredFilaments.length === 0 && filaments.length > 0 ? (
              <div className="p-6 text-center text-muted-foreground">
               Nenhum filamento encontrado com os filtros aplicados.
@@ -170,6 +176,7 @@ export function FilamentsTab() {
                   <TableHead className="px-2 py-2 font-semibold uppercase">Tipo</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Cor</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Modelo</TableHead>
+                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Preço (R$/Kg)</TableHead> {/* RE-ADDED */}
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Densidade</TableHead>
                   <TableHead className="w-[100px] px-2 py-2 text-center font-semibold uppercase">Ações</TableHead>
                 </TableRow>
@@ -181,24 +188,27 @@ export function FilamentsTab() {
                     <TableCell className="px-2 py-1.5">{filament.tipo}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.cor}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.modelo || "N/A"}</TableCell>
+                    <TableCell className="px-2 py-1.5 text-right">{formatCurrency(filament.precoPorKg)}</TableCell> {/* RE-ADDED */}
                     <TableCell className="px-2 py-1.5 text-right">{filament.densidade} g/cm³</TableCell>
                     <TableCell className="px-2 py-1.5 text-center">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="mr-1 h-8 w-8 text-yellow-500 hover:bg-yellow-100 hover:text-yellow-600 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-400" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="mr-1 h-8 w-8 text-yellow-500 hover:bg-yellow-100 hover:text-yellow-600 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-400"
                         onClick={() => openEditDialog(filament)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400"
-                        onClick={() => openDeleteDialog(filament.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <AlertDialogPrimitiveTrigger asChild>
+                         <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400"
+                          onClick={() => openDeleteDialog(filament.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogPrimitiveTrigger>
                     </TableCell>
                   </TableRow>
                 ))}

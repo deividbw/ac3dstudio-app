@@ -1,3 +1,4 @@
+
 // MOCK ACTIONS - In a real app, these would interact with a database.
 "use server";
 
@@ -7,21 +8,32 @@ import { productCostCalculation, type ProductCostCalculationInput } from '@/ai/f
 
 let mockProducts: Product[] = [
   { 
-    id: "1", 
-    nome: "Peça de Teste 1", 
-    descricao: "Uma peça simples para testar calibração.",
-    filamentoId: "1", // PLA Branco
+    id: "prod_1", 
+    nome: "Suporte Articulado para Celular", 
+    descricao: "Suporte de mesa articulado para celular, impresso em PLA resistente.",
+    filamentoId: "1", // PLA Branco Voolt (precoPorKg: 120.50)
     impressoraId: "1", // Ender 3 V2
-    tempoImpressaoHoras: 2.5,
-    pesoGramas: 50,
+    tempoImpressaoHoras: 3.5,
+    pesoGramas: 75,
     imageUrl: "https://placehold.co/300x200.png",
-    custoCalculado: {
-      materialCost: 5.00,
-      energyCost: 0.38,
-      depreciationCost: 1.25,
-      additionalCostEstimate: 2.00,
-      totalCost: 8.63
+    custoCalculado: { // Exemplo de custo (seria calculado via Genkit)
+      materialCost: (75/1000) * 120.50, // 9.0375
+      energyCost: 0.2 * 0.75 * 3.5, // 0.525
+      depreciationCost: 0.5 * 3.5, // 1.75
+      additionalCostEstimate: 3.00,
+      totalCost: 9.0375 + 0.525 + 1.75 + 3.00 // 14.3125
     }
+  },
+  { 
+    id: "prod_2", 
+    nome: "Vaso Decorativo Geométrico", 
+    descricao: "Vaso para plantas pequenas com design geométrico moderno, impresso em PETG.",
+    filamentoId: "3", // PETG Vermelho Voolt (precoPorKg: 150.75)
+    impressoraId: "2", // Prusa MK3S+
+    tempoImpressaoHoras: 5,
+    pesoGramas: 120,
+    imageUrl: "https://placehold.co/300x200.png",
+    // custoCalculado: undefined, // A ser calculado
   },
 ];
 
@@ -38,19 +50,21 @@ export async function createProduct(data: Omit<Product, 'id' | 'custoCalculado'>
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
-  const newProduct: Product = { ...validation.data, id: String(Date.now()) };
+  const newProduct: Product = { ...validation.data, id: `prod_${String(Date.now())}` }; // Add custoCalculado undefined
   mockProducts.push(newProduct);
   return { success: true, product: newProduct };
 }
 
-export async function updateProduct(id: string, data: Partial<Omit<Product, 'id' | 'custoCalculado'>>): Promise<{ success: boolean, product?: Product, error?: string }> {
+export async function updateProduct(id: string, data: Partial<Omit<Product, 'id'>>): Promise<{ success: boolean, product?: Product, error?: string }> {
   const existingProduct = mockProducts.find(p => p.id === id);
   if (!existingProduct) {
     return { success: false, error: "Produto não encontrado" };
   }
-  const updatedData = { ...existingProduct, ...data, custoCalculado: existingProduct.custoCalculado }; // Preserve custoCalculado if not recalculating
   
-  const validation = ProductSchema.safeParse(updatedData); // Validate all fields including IDs
+  // Preserve existing custoCalculado unless it's explicitly part of the update (which it shouldn't be from the form save directly)
+  const updatedData = { ...existingProduct, ...data }; 
+  
+  const validation = ProductSchema.safeParse(updatedData);
    if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
@@ -71,15 +85,20 @@ export async function deleteProduct(id: string): Promise<{ success: boolean, err
 export async function calculateProductCostAction(productId: string, calculationInput: ProductCostCalculationInput): Promise<{ success: boolean, cost?: ProductCost, error?: string}> {
   try {
     const costOutput = await productCostCalculation(calculationInput);
-    // Update the product in mockDB with the new cost
+    
     const productIndex = mockProducts.findIndex(p => p.id === productId);
     if (productIndex !== -1) {
       mockProducts[productIndex].custoCalculado = costOutput;
       return { success: true, cost: costOutput };
+    } else {
+      // This case is for new products not yet saved, where productId might be temporary.
+      // The cost is returned, and the calling component should handle associating it
+      // with the product data before final save.
+      return { success: true, cost: costOutput };
     }
-    return { success: false, error: "Produto não encontrado para atualizar custo."};
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in AI cost calculation:", error);
-    return { success: false, error: "Falha ao calcular custo com IA." };
+    const errorMessage = error.message || "Falha ao calcular custo com IA.";
+    return { success: false, error: errorMessage };
   }
 }

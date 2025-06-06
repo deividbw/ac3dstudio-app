@@ -10,6 +10,7 @@ export const FilamentSchema = z.object({
   modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   temperaturaBicoIdeal: z.coerce.number().optional(),
   temperaturaMesaIdeal: z.coerce.number().optional(),
+  precoPorKg: z.coerce.number().nonnegative({ message: "Preço por Kg não pode ser negativo" }).optional(), // RE-ADDED
 });
 
 

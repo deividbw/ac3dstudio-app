@@ -15,6 +15,7 @@ let mockFilaments: Filament[] = [
     modelo: "PLA+",
     temperaturaBicoIdeal: 210,
     temperaturaMesaIdeal: 60,
+    precoPorKg: 120.50, // RE-ADDED
   },
   { 
     id: "2", 
@@ -25,6 +26,18 @@ let mockFilaments: Filament[] = [
     modelo: "Standard",
     temperaturaBicoIdeal: 230,
     temperaturaMesaIdeal: 80,
+    precoPorKg: 110.00, // RE-ADDED
+  },
+  { 
+    id: "3", 
+    tipo: "PETG", 
+    cor: "Vermelho Translúcido", 
+    densidade: 1.27,
+    marcaId: "1", // Voolt
+    modelo: "Premium",
+    temperaturaBicoIdeal: 240,
+    temperaturaMesaIdeal: 70,
+    precoPorKg: 150.75, // RE-ADDED
   },
 ];
 
@@ -53,10 +66,30 @@ export async function updateFilament(id: string, data: Partial<Omit<Filament, 'i
     return { success: false, error: "Filamento não encontrado" };
   }
   
-  let updatedData = { ...existingFilament, ...data };
+  // Ensure optional numeric fields are numbers or undefined, not empty strings
+  const cleanedData = { ...data };
+  if ('precoPorKg' in cleanedData && (cleanedData.precoPorKg === null || cleanedData.precoPorKg === undefined || String(cleanedData.precoPorKg).trim() === '')) {
+    cleanedData.precoPorKg = undefined;
+  } else if ('precoPorKg' in cleanedData) {
+    cleanedData.precoPorKg = Number(cleanedData.precoPorKg);
+  }
+  if ('temperaturaBicoIdeal' in cleanedData && (cleanedData.temperaturaBicoIdeal === null || cleanedData.temperaturaBicoIdeal === undefined || String(cleanedData.temperaturaBicoIdeal).trim() === '')) {
+    cleanedData.temperaturaBicoIdeal = undefined;
+  } else if ('temperaturaBicoIdeal' in cleanedData) {
+    cleanedData.temperaturaBicoIdeal = Number(cleanedData.temperaturaBicoIdeal);
+  }
+  if ('temperaturaMesaIdeal' in cleanedData && (cleanedData.temperaturaMesaIdeal === null || cleanedData.temperaturaMesaIdeal === undefined || String(cleanedData.temperaturaMesaIdeal).trim() === '')) {
+    cleanedData.temperaturaMesaIdeal = undefined;
+  } else if ('temperaturaMesaIdeal' in cleanedData) {
+    cleanedData.temperaturaMesaIdeal = Number(cleanedData.temperaturaMesaIdeal);
+  }
 
-  const validation = FilamentSchema.safeParse(updatedData);
+
+  let mergedData = { ...existingFilament, ...cleanedData };
+
+  const validation = FilamentSchema.safeParse(mergedData);
   if (!validation.success) {
+    console.error("Validation errors:", validation.error.errors);
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
   

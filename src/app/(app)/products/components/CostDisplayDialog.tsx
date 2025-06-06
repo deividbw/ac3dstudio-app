@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -36,7 +37,7 @@ export function CostDisplayDialog({ isOpen, onOpenChange, cost, productName }: C
             Detalhes do custo de produção estimado para o produto.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 py-4">
+        <div className="space-y-2 py-4 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Custo de Material:</span>
             <span className="font-medium">{formatCurrency(cost.materialCost)}</span>
@@ -50,11 +51,11 @@ export function CostDisplayDialog({ isOpen, onOpenChange, cost, productName }: C
             <span className="font-medium">{formatCurrency(cost.depreciationCost)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Custos Adicionais (Estimados):</span>
+            <span className="text-muted-foreground">Custos Adicionais (Estimados pela IA):</span>
             <span className="font-medium">{formatCurrency(cost.additionalCostEstimate)}</span>
           </div>
-          <Separator className="my-2" />
-          <div className="flex justify-between text-lg">
+          <Separator className="my-3" />
+          <div className="flex justify-between text-base">
             <span className="font-semibold text-foreground">Custo Total Estimado:</span>
             <span className="font-bold text-primary">{formatCurrency(cost.totalCost)}</span>
           </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,9 +28,10 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose
 import { ProductSchema } from "@/lib/schemas";
 import type { Product, Filament, Printer, ProductCost } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { calculateProductCostAction } from '@/lib/actions/product.actions';
+import { calculateProductCostAction, createProduct, updateProduct } from '@/lib/actions/product.actions';
 import type { ProductCostCalculationInput } from '@/ai/flows/product-cost-calculation';
 import { Loader2, Calculator } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -37,12 +39,13 @@ interface ProductFormProps {
   printers: Printer[];
   onSuccess: (product: Product) => void;
   onCancel: () => void;
-  onCostCalculated: (productId: string, cost: ProductCost) => void;
+  onCostCalculated: (cost: ProductCost) => void; // Simplified: form passes calculated cost back
 }
 
 export function ProductForm({ product, filaments, printers, onSuccess, onCancel, onCostCalculated }: ProductFormProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
+  const [calculatedCostForDisplay, setCalculatedCostForDisplay] = useState<ProductCost | undefined>(product?.custoCalculado);
 
   const form = useForm<z.infer<typeof ProductSchema>>({
     resolver: zodResolver(ProductSchema),
@@ -53,30 +56,49 @@ export function ProductForm({ product, filaments, printers, onSuccess, onCancel,
       impressoraId: "",
       tempoImpressaoHoras: 0,
       pesoGramas: 0,
-      imageUrl: "https://placehold.co/300x200.png",
+      imageUrl: "",
     },
   });
 
-  const currentProductId = product?.id || ""; // For cost calculation if editing
-
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
     try {
-      const resultProduct: Product = {
+      const dataToSave = {
         ...values,
-        id: product?.id || String(Date.now()), // Keep existing ID or generate new
         tempoImpressaoHoras: Number(values.tempoImpressaoHoras),
         pesoGramas: Number(values.pesoGramas),
-        custoCalculado: product?.custoCalculado, // Preserve existing cost if any
+        imageUrl: values.imageUrl || undefined,
       };
-      toast({
-        title: product ? "Produto Atualizado" : "Produto Criado",
-        description: `O produto "${resultProduct.nome}" foi salvo com sucesso.`,
-      });
-      onSuccess(resultProduct);
+
+      let actionResult;
+      let finalProductData: Product;
+
+      if (product && product.id) {
+        actionResult = await updateProduct(product.id, { ...dataToSave, custoCalculado: calculatedCostForDisplay || product.custoCalculado });
+        finalProductData = actionResult.product!;
+      } else {
+        actionResult = await createProduct({ ...dataToSave, custoCalculado: calculatedCostForDisplay });
+        finalProductData = actionResult.product!;
+      }
+      
+      if (actionResult.success && finalProductData) {
+        toast({
+          title: product ? "Produto Atualizado" : "Produto Criado",
+          description: `O produto "${finalProductData.nome}" foi salvo.`,
+          variant: "success",
+        });
+        onSuccess(finalProductData);
+      } else {
+         toast({
+          title: "Erro ao Salvar",
+          description: actionResult.error || "Não foi possível salvar o produto.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
+      console.error("Erro no formulário onSubmit:", error);
       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao salvar o produto.",
+        title: "Erro Inesperado",
+        description: "Ocorreu um erro inesperado ao processar o formulário.",
         variant: "destructive",
       });
     }
@@ -84,19 +106,22 @@ export function ProductForm({ product, filaments, printers, onSuccess, onCancel,
 
   const handleCalculateCost = async () => {
     const values = form.getValues();
-    const validation = ProductSchema.safeParse(values);
-    if (!validation.success) {
-      toast({ title: "Dados Inválidos", description: "Por favor, corrija os erros no formulário antes de calcular.", variant: "destructive"});
-      // Trigger validation display
-      form.trigger();
+    // Trigger validation for all fields before attempting calculation
+    const isValid = await form.trigger(); 
+    if (!isValid) {
+      toast({ title: "Dados Inválidos", description: "Por favor, corrija os erros no formulário antes de calcular o custo.", variant: "destructive"});
       return;
     }
 
     const selectedFilament = filaments.find(f => f.id === values.filamentoId);
     const selectedPrinter = printers.find(p => p.id === values.impressoraId);
 
-    if (!selectedFilament || !selectedPrinter) {
-      toast({ title: "Seleção Inválida", description: "Filamento ou impressora não selecionados ou inválidos.", variant: "destructive" });
+    if (!selectedFilament || !selectedFilament.precoPorKg) {
+      toast({ title: "Filamento Inválido", description: "Selecione um filamento com Preço/Kg definido.", variant: "destructive" });
+      return;
+    }
+    if (!selectedPrinter) {
+      toast({ title: "Impressora Inválida", description: "Selecione uma impressora.", variant: "destructive" });
       return;
     }
 
@@ -111,23 +136,38 @@ export function ProductForm({ product, filaments, printers, onSuccess, onCancel,
       additionalDetails: values.descricao || `Cálculo para produto: ${values.nome}`,
     };
 
-    const result = await calculateProductCostAction(currentProductId || String(Date.now()), calculationInput); // Pass a temporary ID if new
+    // Use a temporary ID if product is new, or actual ID if editing
+    const currentProductId = product?.id || `temp_${Date.now()}`; 
+    const result = await calculateProductCostAction(currentProductId, calculationInput);
     setIsCalculating(false);
 
     if (result.success && result.cost) {
-      toast({ title: "Custo Calculado", description: `Custo para "${values.nome}" calculado com sucesso.` });
-      if (currentProductId) { // Only call if product actually exists (is being edited)
-         onCostCalculated(currentProductId, result.cost);
-      } else {
-        // For new products, we'd ideally save the product first then calculate, or store cost temporarily.
-        // For this mock, we'll just show a toast. A better flow would be to save then calc.
-         toast({ title: "Custo Calculado (Novo Produto)", description: `Custo total: ${result.cost.totalCost.toFixed(2)}. Salve o produto para associar este custo.` });
-      }
-      // Potentially update form or state with calculated cost if UI needs to reflect it immediately before save
+      toast({ title: "Custo Calculado", description: `Custo para "${values.nome}" estimado com sucesso. Salve o produto para manter este custo.`, variant: "success" });
+      setCalculatedCostForDisplay(result.cost); // Store for display and potential save
+      onCostCalculated(result.cost); // Notify parent page
     } else {
       toast({ title: "Erro no Cálculo", description: result.error || "Não foi possível calcular o custo.", variant: "destructive" });
+      setCalculatedCostForDisplay(undefined);
     }
   };
+  
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined) return "N/A";
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  const handleNumericInputChange = (field: any, value: string, isFloat = false) => {
+    if (value.trim() === '') {
+      field.onChange(undefined); // Set to undefined if empty
+    } else {
+      const num = isFloat ? parseFloat(value) : parseInt(value, 10);
+      field.onChange(Number.isNaN(num) ? undefined : num);
+    }
+  };
+  
+  const getNumericFieldValue = (value: number | undefined | null) => {
+      return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
+  }
 
 
   return (
@@ -135,132 +175,157 @@ export function ProductForm({ product, filaments, printers, onSuccess, onCancel,
       <DialogHeader>
         <DialogTitle className="font-headline">{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
         <DialogDescription>
-          {product ? "Modifique os detalhes do produto." : "Preencha as informações do novo produto."}
+          {product ? "Modifique os detalhes do produto e recalcule o custo se necessário." : "Preencha as informações do novo produto e calcule o custo."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-          <FormField
-            control={form.control}
-            name="nome"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome do Produto</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ex: Suporte de Celular, Vaso Decorativo" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="descricao"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Descrição (Opcional)</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Detalhes sobre o produto, material, etc." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={form.control}
-            name="imageUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>URL da Imagem (Opcional)</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://exemplo.com/imagem.png" {...field} />
-                </FormControl>
-                {field.value && <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-20 w-20 object-cover rounded-md border" />}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="filamentoId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Filamento Utilizado</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
+        <ScrollArea className="flex-grow min-h-0 p-1 pr-3">
+          <div className="space-y-3 py-2">
+            <FormField
+              control={form.control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Produto*</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um filamento" />
-                    </SelectTrigger>
+                    <Input placeholder="Ex: Suporte de Celular Articulado" {...field} />
                   </FormControl>
-                  <SelectContent>
-                    {filaments.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.tipo} - {f.cor} (R$ {f.precoPorKg.toFixed(2)}/kg)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="impressoraId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Impressora Utilizada</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="descricao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma impressora" />
-                    </SelectTrigger>
+                    <Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} value={field.value ?? ""} />
                   </FormControl>
-                  <SelectContent>
-                    {printers.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL da Imagem (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://placehold.co/300x200.png" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  {field.value && <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-32 object-cover rounded-md border" />}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="filamentoId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Filamento Utilizado*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um filamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filaments.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.tipo} - {f.cor} {f.marcaId ? `(${f.marcaId})` : ''} {/* Show brand if available, improve later */}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="impressoraId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Impressora Utilizada*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma impressora" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {printers.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="pesoGramas"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Material Usado (g)*</FormLabel>
+                    <FormControl>
+                       <Input type="number" step="0.1" placeholder="Ex: 50.5" 
+                              value={getNumericFieldValue(field.value)}
+                              onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="tempoImpressaoHoras"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tempo Produção (h)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" placeholder="Ex: 2.5" 
+                             value={getNumericFieldValue(field.value)}
+                             onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            {calculatedCostForDisplay && (
+              <div className="mt-4 p-3 border rounded-md bg-muted/50 space-y-1 text-sm">
+                <h4 className="font-medium text-foreground mb-1">Previsão de Custos do Produto:</h4>
+                <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span>{formatCurrency(calculatedCostForDisplay.materialCost)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Custo Energia:</span> <span>{formatCurrency(calculatedCostForDisplay.energyCost)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Custo Depreciação:</span> <span>{formatCurrency(calculatedCostForDisplay.depreciationCost)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Custos Adicionais (IA):</span> <span>{formatCurrency(calculatedCostForDisplay.additionalCostEstimate)}</span></div>
+                <div className="flex justify-between font-semibold text-primary"><span >Custo Total (sem lucro):</span> <span>{formatCurrency(calculatedCostForDisplay.totalCost)}</span></div>
+              </div>
             )}
-          />
-          <FormField
-            control={form.control}
-            name="tempoImpressaoHoras"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tempo de Impressão (Horas)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="Ex: 2.5" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="pesoGramas"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Peso do Produto (Gramas)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.1" placeholder="Ex: 50.5" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={handleCalculateCost} disabled={isCalculating || !form.formState.isValid}>
+
+          </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 flex-shrink-0">
+            <Button type="button" variant="outline" onClick={handleCalculateCost} disabled={isCalculating}>
               {isCalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Calculator className="mr-2 h-4 w-4" />}
               Calcular Custo
             </Button>
             <DialogClose asChild>
-              <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
             <Button type="submit" variant="default" disabled={isCalculating}>Salvar Produto</Button>
           </DialogFooter>

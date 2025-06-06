@@ -26,8 +26,8 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose
 import { FilamentSchema } from "@/lib/schemas";
 import type { Filament, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FilamentFormProps {
   filament?: Filament | null;
@@ -41,38 +41,56 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
   const form = useForm<z.infer<typeof FilamentSchema>>({
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
-        ...filament,
-        marcaId: filament.marcaId ?? undefined,
-        modelo: filament.modelo ?? undefined,
-        temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
-        temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
-      } : {
+      ...filament,
+      marcaId: filament.marcaId ?? undefined,
+      modelo: filament.modelo ?? undefined,
+      temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
+      temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
+      precoPorKg: filament.precoPorKg ?? undefined, // RE-ADDED
+    } : {
       tipo: "",
       cor: "",
-      densidade: 1.24, 
+      densidade: 1.24,
       marcaId: undefined,
       modelo: undefined,
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
+      precoPorKg: undefined, // RE-ADDED
     },
   });
 
+  const handleNumericInputChange = (field: any, value: string, isFloat = false) => {
+    if (value.trim() === '') {
+      field.onChange(undefined);
+    } else {
+      const num = isFloat ? parseFloat(value) : parseInt(value, 10);
+      field.onChange(Number.isNaN(num) ? undefined : num);
+    }
+  };
+  
+  const getNumericFieldValue = (value: number | undefined | null) => {
+      return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
+  }
+
+
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
-      const dataForAction: Omit<Filament, 'id'> = {
+      // Ensure numeric fields are correctly typed or undefined
+      const dataForAction = {
         tipo: values.tipo,
         cor: values.cor,
         densidade: Number(values.densidade),
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
-        temperaturaBicoIdeal: values.temperaturaBicoIdeal ? Number(values.temperaturaBicoIdeal) : undefined,
-        temperaturaMesaIdeal: values.temperaturaMesaIdeal ? Number(values.temperaturaMesaIdeal) : undefined,
+        temperaturaBicoIdeal: values.temperaturaBicoIdeal !== undefined ? Number(values.temperaturaBicoIdeal) : undefined,
+        temperaturaMesaIdeal: values.temperaturaMesaIdeal !== undefined ? Number(values.temperaturaMesaIdeal) : undefined,
+        precoPorKg: values.precoPorKg !== undefined ? Number(values.precoPorKg) : undefined, // RE-ADDED
       };
 
       let actionResult;
-      if (filament && filament.id) { 
+      if (filament && filament.id) {
         actionResult = await updateFilament(filament.id, dataForAction);
-      } else { 
+      } else {
         actionResult = await createFilament(dataForAction);
       }
 
@@ -110,7 +128,7 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
       </DialogHeader>
       <Form {...form} className="flex-grow flex flex-col min-h-0">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
-          <ScrollArea className="flex-grow min-h-0 p-1 pr-3"> 
+          <ScrollArea className="flex-grow min-h-0 p-1 pr-3">
             <div className="space-y-3 py-2">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -148,8 +166,8 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Marca</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         value={field.value ?? ""}
                       >
                         <FormControl>
@@ -158,7 +176,6 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {/* <SelectItem value="">Nenhuma</SelectItem> REMOVED */}
                           {brands.map((brand) => (
                             <SelectItem key={brand.id} value={brand.id}>
                               {brand.nome}
@@ -185,21 +202,39 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
                 />
               </div>
               
-              <FormField
-                control={form.control}
-                name="densidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Densidade (g/cm³)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 1.24" {...field} 
-                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="densidade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Densidade (g/cm³)*</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 1.24" 
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value, true)}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="precoPorKg"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preço (R$/Kg)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 120.50" 
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -209,9 +244,9 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
                     <FormItem>
                       <FormLabel>Temp. Bico Ideal (°C)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Ex: 210" {...field} 
-                               value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                               onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
+                        <Input type="number" placeholder="Ex: 210"
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value, false)}/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -224,9 +259,9 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
                     <FormItem>
                       <FormLabel>Temp. Mesa Ideal (°C)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Ex: 60" {...field} 
-                               value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
-                               onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
+                        <Input type="number" placeholder="Ex: 60"
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value, false)}/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -235,7 +270,7 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 flex-shrink-0"> 
+          <DialogFooter className="pt-4 flex-shrink-0">
             <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
