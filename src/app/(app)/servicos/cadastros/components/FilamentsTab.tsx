@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react'; // Filter icon removido pois não usado
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  // AlertDialogTrigger, // Removido pois não usado diretamente aqui
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
@@ -137,21 +136,29 @@ export function FilamentsTab() {
               className="h-9"
             />
           </div>
+
+          <div className="mb-3 text-sm text-muted-foreground">
+            Exibindo {filteredFilaments.length} de {filaments.length} filamento(s).
+          </div>
       
-          {filteredFilaments.length === 0 ? (
+          {filteredFilaments.length === 0 && filaments.length > 0 ? (
+             <div className="p-6 text-center text-muted-foreground">
+              Nenhum filamento encontrado com os filtros aplicados.
+            </div>
+          ) : filteredFilaments.length === 0 && filaments.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">
-              Nenhum filamento encontrado com os filtros aplicados, ou nenhum filamento cadastrado.
+              Nenhum filamento cadastrado ainda.
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-2 py-2">Marca</TableHead>
-                  <TableHead className="px-2 py-2">Tipo</TableHead>
-                  <TableHead className="px-2 py-2">Cor</TableHead>
-                  <TableHead className="px-2 py-2">Modelo</TableHead>
-                  <TableHead className="px-2 py-2 text-right">Densidade</TableHead>
-                  <TableHead className="w-[80px] px-2 py-2 text-center">Ações</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold uppercase">Marca</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold uppercase">Tipo</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold uppercase">Cor</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold uppercase">Modelo</TableHead>
+                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Densidade</TableHead>
+                  <TableHead className="w-[100px] px-2 py-2 text-center font-semibold uppercase">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
