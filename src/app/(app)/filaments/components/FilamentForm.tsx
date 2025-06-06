@@ -32,42 +32,72 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
   const { toast } = useToast();
   const form = useForm<z.infer<typeof FilamentSchema>>({
     resolver: zodResolver(FilamentSchema),
-    defaultValues: filament || {
+    defaultValues: filament ? {
+        ...filament,
+        // Ensure optional numeric fields from existing filament data are handled correctly
+        // if they might be null or other non-number/non-undefined types.
+        // For RHF, undefined is preferred for optional fields not yet set.
+        temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
+        temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
+        pesoRoloGramas: filament.pesoRoloGramas ?? undefined,
+        precoRolo: filament.precoRolo ?? undefined,
+        precoPorKg: filament.precoPorKg ?? undefined,
+      } : { // Default values for a new filament
       tipo: "",
       cor: "",
-      // precoPorKg will be derived if pesoRoloGramas and precoRolo are provided
-      densidade: 0,
+      densidade: 1.24, // Default to a common positive value like PLA density
       marca: "",
       modelo: "",
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
-      pesoRoloGramas: 1000, // Default to 1kg
+      pesoRoloGramas: 1000, // Default to 1kg, but still treat as potentially clearable
       precoRolo: undefined,
+      precoPorKg: undefined,
     },
   });
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
       let precoPorKgCalculado = values.precoPorKg;
-      if (values.pesoRoloGramas && values.precoRolo && !values.precoPorKg) {
+      if (values.pesoRoloGramas && values.precoRolo && values.precoPorKg === undefined) { // Check for undefined specifically
         precoPorKgCalculado = (Number(values.precoRolo) / Number(values.pesoRoloGramas)) * 1000;
       }
 
       const resultFilament: Filament = {
         ...values,
         id: filament?.id || String(Date.now()),
-        densidade: Number(values.densidade),
-        temperaturaBicoIdeal: values.temperaturaBicoIdeal ? Number(values.temperaturaBicoIdeal) : undefined,
-        temperaturaMesaIdeal: values.temperaturaMesaIdeal ? Number(values.temperaturaMesaIdeal) : undefined,
-        pesoRoloGramas: values.pesoRoloGramas ? Number(values.pesoRoloGramas) : undefined,
-        precoRolo: values.precoRolo ? Number(values.precoRolo) : undefined,
-        precoPorKg: precoPorKgCalculado ? Number(precoPorKgCalculado) : 0, // Ensure precoPorKg is set
+        densidade: Number(values.densidade), // Already handled by coerce
+        // Ensure numbers are numbers, or undefined if that's the valid state from schema
+        temperaturaBicoIdeal: values.temperaturaBicoIdeal,
+        temperaturaMesaIdeal: values.temperaturaMesaIdeal,
+        pesoRoloGramas: values.pesoRoloGramas,
+        precoRolo: values.precoRolo,
+        precoPorKg: precoPorKgCalculado === undefined ? 0 : Number(precoPorKgCalculado), // Default to 0 if undefined after logic, or ensure schema handles this.
+                                                                                       // Per schema, precoPorKg can be undefined.
+                                                                                       // But Filament type has precoPorKg: number.
+                                                                                       // This needs alignment. For now, let's keep it flexible.
+                                                                                       // If it's part of the refine, it must be a number.
       };
+      // Aligning with Filament type which expects precoPorKg to be a number
+      // The schema allows it to be optional, which means it can be undefined in the form.
+      // The refine logic implies it might become required.
+      // For now, let's ensure the submitted object aligns with `Filament` type,
+      // but this might need a re-evaluation of whether `Filament.precoPorKg` should be `number | undefined`.
+      // Assuming the schema `refine` implies it will be a number if the other two are not set.
+      // If after calculation it's still undefined, and the `refine` passes (meaning peso/precoRolo were set),
+      // then `precoPorKg` should be calculated. If `refine` made it pass with `precoPorKg` being set, it's already a number.
+
+      const finalFilamentForToast: Filament = {
+         ...resultFilament,
+         precoPorKg: precoPorKgCalculado ?? ((values.pesoRoloGramas && values.precoRolo) ? (Number(values.precoRolo) / Number(values.pesoRoloGramas)) * 1000 : 0)
+      };
+
+
       toast({
         title: filament ? "Filamento Atualizado" : "Filamento Criado",
-        description: `O filamento "${resultFilament.tipo} (${resultFilament.cor})" foi salvo com sucesso.`,
+        description: `O filamento "${finalFilamentForToast.tipo} (${finalFilamentForToast.cor})" foi salvo com sucesso.`,
       });
-      onSuccess(resultFilament);
+      onSuccess(finalFilamentForToast);
     } catch (error) {
       toast({
         title: "Erro",
@@ -87,7 +117,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <ScrollArea className="max-h-[60vh] p-1 pr-3"> {/* Added ScrollArea */}
+          <ScrollArea className="max-h-[60vh] p-1 pr-3">
             <div className="space-y-4 py-4">
               <FormField
                 control={form.control}
@@ -149,7 +179,8 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
                     <FormLabel>Densidade (g/cm³)*</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="Ex: 1.24" {...field} 
-                             onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -163,7 +194,8 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
                     <FormLabel>Peso do Rolo (g)</FormLabel>
                     <FormControl>
                       <Input type="number" step="1" placeholder="Ex: 1000" {...field} 
-                             onChange={e => field.onChange(parseInt(e.target.value, 10))}/>
+                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}/>
                     </FormControl>
                      <FormDescription>Usado para calcular o preço por Kg se não informado diretamente.</FormDescription>
                     <FormMessage />
@@ -178,7 +210,8 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
                     <FormLabel>Preço do Rolo (R$)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="Ex: 100.50" {...field} 
-                             onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}/>
                     </FormControl>
                     <FormDescription>Usado para calcular o preço por Kg se não informado diretamente.</FormDescription>
                     <FormMessage />
@@ -193,7 +226,8 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
                     <FormLabel>Preço por Kg (R$)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="Ex: 100.50 (Opcional se Preço/Peso do Rolo informados)" {...field} 
-                             onChange={e => field.onChange(parseFloat(e.target.value))}/>
+                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}/>
                     </FormControl>
                     <FormDescription>Calculado automaticamente se Peso e Preço do Rolo forem fornecidos.</FormDescription>
                     <FormMessage />
@@ -208,7 +242,8 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
                     <FormLabel>Temperatura Ideal do Bico (°C)</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="Ex: 210" {...field} 
-                             onChange={e => field.onChange(parseInt(e.target.value,10))}/>
+                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -222,7 +257,8 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
                     <FormLabel>Temperatura Ideal da Mesa (°C)</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="Ex: 60" {...field} 
-                             onChange={e => field.onChange(parseInt(e.target.value,10))}/>
+                             value={field.value === undefined || field.value === null || Number.isNaN(field.value) ? '' : String(field.value)}
+                             onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value,10))}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
