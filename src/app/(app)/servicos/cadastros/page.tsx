@@ -6,8 +6,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layers, Printer, Package } from 'lucide-react'; // Icons for tabs
 import { FilamentsTab } from './components/FilamentsTab';
-// Placeholder components for other tabs - create these later
-// import { PrintersTab } from './components/PrintersTab'; 
+import { PrintersTab } from './components/PrintersTab'; 
 // import { ProductsTab } from './components/ProductsTab';
 
 export default function CadastrosPage() {
@@ -33,10 +32,7 @@ export default function CadastrosPage() {
           <FilamentsTab />
         </TabsContent>
         <TabsContent value="impressoras">
-          <div className="p-6 text-center text-muted-foreground border rounded-lg shadow-sm bg-card">
-            Gerenciamento de Impressoras (Em breve)
-          </div>
-          {/* <PrintersTab /> */}
+           <PrintersTab />
         </TabsContent>
         <TabsContent value="produtos">
           <div className="p-6 text-center text-muted-foreground border rounded-lg shadow-sm bg-card">
@@ -48,3 +44,4 @@ export default function CadastrosPage() {
     </div>
   );
 }
+

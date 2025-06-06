@@ -5,25 +5,19 @@ export const FilamentSchema = z.object({
   id: z.string().optional(),
   tipo: z.string().min(1, { message: "Tipo é obrigatório" }),
   cor: z.string().min(1, { message: "Cor é obrigatória" }),
-  // precoPorKg: z.coerce.number().positive({ message: "Preço por Kg deve ser positivo" }).optional(), // Removido
   densidade: z.coerce.number().positive({ message: "Densidade deve ser positiva" }),
-
-  marca: z.string().optional(),
-  modelo: z.string().optional(),
+  marca: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
+  modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   temperaturaBicoIdeal: z.coerce.number().optional(),
   temperaturaMesaIdeal: z.coerce.number().optional(),
-  // pesoRoloGramas: z.coerce.number().positive({message: "Peso do rolo deve ser positivo"}).optional(), // Removido
-  // precoRolo: z.coerce.number().positive({message: "Preço do rolo deve ser positivo"}).optional(), // Removido
 });
-// .refine(data => data.precoPorKg || (data.pesoRoloGramas && data.precoRolo), { // Removido refine
-//   message: "Informe o Preço por Kg ou o Peso e Preço do Rolo",
-//   path: ["precoPorKg"], 
-// });
 
 
 export const PrinterSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(1, { message: "Nome é obrigatório" }),
+  marca: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
+  modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   custoAquisicao: z.coerce.number().nonnegative({ message: "Custo de aquisição não pode ser negativo" }),
   consumoEnergiaHora: z.coerce.number().positive({ message: "Consumo de energia deve ser positivo" }),
   taxaDepreciacaoHora: z.coerce.number().nonnegative({ message: "Taxa de depreciação não pode ser negativa" }),
@@ -40,3 +34,4 @@ export const ProductSchema = z.object({
   pesoGramas: z.coerce.number().positive({ message: "Peso deve ser positivo" }),
   imageUrl: z.string().url({ message: "URL da imagem inválida" }).optional().or(z.literal('')),
 });
+

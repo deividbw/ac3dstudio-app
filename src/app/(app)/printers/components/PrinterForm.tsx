@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,6 +19,8 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose
 import { PrinterSchema } from "@/lib/schemas";
 import type { Printer } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { createPrinter, updatePrinter } from '@/lib/actions/printer.actions';
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PrinterFormProps {
   printer?: Printer | null;
@@ -31,36 +34,71 @@ export function PrinterForm({ printer, onSuccess, onCancel }: PrinterFormProps) 
     resolver: zodResolver(PrinterSchema),
     defaultValues: printer || {
       nome: "",
+      marca: undefined,
+      modelo: undefined,
       custoAquisicao: 0,
-      consumoEnergiaHora: 0,
+      consumoEnergiaHora: 0.1, // Default to a small positive value
       taxaDepreciacaoHora: 0,
-      custoEnergiaKwh: 0,
+      custoEnergiaKwh: 0.75, // Default to a common value
     },
   });
 
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
     try {
-      const resultPrinter: Printer = {
-        ...values,
-        id: printer?.id || String(Date.now()),
+      const dataForAction: Omit<Printer, 'id'> = {
+        nome: values.nome,
+        marca: values.marca || undefined,
+        modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
         consumoEnergiaHora: Number(values.consumoEnergiaHora),
         taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
         custoEnergiaKwh: Number(values.custoEnergiaKwh),
       };
-      toast({
-        title: printer ? "Impressora Atualizada" : "Impressora Criada",
-        description: `A impressora "${resultPrinter.nome}" foi salva com sucesso.`,
-      });
-      onSuccess(resultPrinter);
+
+      let actionResult;
+      if (printer && printer.id) { 
+        actionResult = await updatePrinter(printer.id, dataForAction);
+      } else { 
+        actionResult = await createPrinter(dataForAction);
+      }
+
+      if (actionResult.success && actionResult.printer) {
+        toast({
+          title: printer ? "Impressora Atualizada" : "Impressora Criada",
+          description: `A impressora "${actionResult.printer.nome}" foi salva.`,
+          variant: "success",
+        });
+        onSuccess(actionResult.printer);
+      } else {
+        toast({
+          title: "Erro ao Salvar",
+          description: actionResult.error || "Não foi possível salvar a impressora.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
-       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao salvar a impressora.",
+      console.error("Erro no formulário onSubmit:", error);
+      toast({
+        title: "Erro Inesperado",
+        description: "Ocorreu um erro inesperado ao processar o formulário.",
         variant: "destructive",
       });
     }
   }
+  
+  const handleNumericInputChange = (field: any, value: string) => {
+    if (value === '') {
+      field.onChange(undefined);
+    } else {
+      const num = parseFloat(value);
+      field.onChange(Number.isNaN(num) ? undefined : num);
+    }
+  };
+  
+  const getNumericFieldValue = (value: number | undefined | null) => {
+      return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
+  }
+
 
   return (
     <>
@@ -70,78 +108,125 @@ export function PrinterForm({ printer, onSuccess, onCancel }: PrinterFormProps) 
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
         </DialogDescription>
       </DialogHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-          <FormField
-            control={form.control}
-            name="nome"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome da Impressora</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ex: Ender 3, Prusa MK3" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="custoAquisicao"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Custo de Aquisição (R$)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="Ex: 1500.00" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="consumoEnergiaHora"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Consumo de Energia (kWh)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="Ex: 0.2" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="taxaDepreciacaoHora"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Taxa de Depreciação (R$/hora)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="Ex: 0.50" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="custoEnergiaKwh"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Custo de Energia (R$/kWh)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="Ex: 0.75" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <DialogFooter>
+      <Form {...form} className="flex-grow flex flex-col min-h-0">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
+          <ScrollArea className="flex-grow min-h-0 p-1 pr-3">
+            <div className="space-y-3 py-2">
+              <FormField
+                control={form.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome da Impressora*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Ender 3, Prusa MK3" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="marca"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marca</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Creality, Prusa" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="modelo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Modelo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: V2, MK3S+" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="custoAquisicao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custo Aquisição (R$)*</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 1500.00" 
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="consumoEnergiaHora"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Consumo Energia (kWh)*</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 0.2" 
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="taxaDepreciacaoHora"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Depreciação (R$/hora)*</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 0.50" 
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="custoEnergiaKwh"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custo Energia (R$/kWh)*</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 0.75" 
+                               value={getNumericFieldValue(field.value)}
+                               onChange={e => handleNumericInputChange(field, e.target.value)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 flex-shrink-0">
              <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
-            <Button type="submit">Salvar Impressora</Button>
+            <Button type="submit" variant="default">Salvar Impressora</Button>
           </DialogFooter>
         </form>
       </Form>

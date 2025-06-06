@@ -5,8 +5,8 @@ import type { Printer } from "@/lib/types";
 import { PrinterSchema } from "@/lib/schemas";
 
 let mockPrinters: Printer[] = [
-  { id: "1", nome: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
-  { id: "2", nome: "Prusa MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
+  { id: "1", nome: "Ender 3 V2", marca: "Creality", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
+  { id: "2", nome: "Prusa MK3S+", marca: "Prusa", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
 ];
 
 export async function getPrinters(): Promise<Printer[]> {
@@ -22,7 +22,7 @@ export async function createPrinter(data: Omit<Printer, 'id'>): Promise<{ succes
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
-  const newPrinter: Printer = { ...validation.data, id: String(Date.now()) };
+  const newPrinter: Printer = { ...validation.data, id: String(Date.now()) } as Printer;
   mockPrinters.push(newPrinter);
   return { success: true, printer: newPrinter };
 }
@@ -32,13 +32,24 @@ export async function updatePrinter(id: string, data: Partial<Omit<Printer, 'id'
   if (!existingPrinter) {
     return { success: false, error: "Impressora não encontrada" };
   }
-  const updatedData = { ...existingPrinter, ...data };
-  const validation = PrinterSchema.safeParse(updatedData);
+  
+  const dataWithPotentiallyEmptyStrings = { ...existingPrinter, ...data };
+  
+  // Ensure optional string fields are undefined if empty before validation
+  const cleanedData = {
+    ...dataWithPotentiallyEmptyStrings,
+    marca: dataWithPotentiallyEmptyStrings.marca?.trim() === '' ? undefined : dataWithPotentiallyEmptyStrings.marca,
+    modelo: dataWithPotentiallyEmptyStrings.modelo?.trim() === '' ? undefined : dataWithPotentiallyEmptyStrings.modelo,
+  };
+
+  const validation = PrinterSchema.safeParse(cleanedData);
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
-  mockPrinters = mockPrinters.map(p => p.id === id ? validation.data as Printer : p);
-  return { success: true, printer: validation.data as Printer };
+  
+  const finalData = validation.data as Printer; // Zod output should be clean
+  mockPrinters = mockPrinters.map(p => p.id === id ? finalData : p);
+  return { success: true, printer: finalData };
 }
 
 export async function deletePrinter(id: string): Promise<{ success: boolean, error?: string }> {
@@ -49,3 +60,4 @@ export async function deletePrinter(id: string): Promise<{ success: boolean, err
   }
   return { success: true };
 }
+
