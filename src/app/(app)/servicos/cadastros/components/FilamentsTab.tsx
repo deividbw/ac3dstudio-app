@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Filter } from 'lucide-react';
+import { PlusCircle, Edit, Trash2 } from 'lucide-react'; // Filter icon removido pois não usado
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  // AlertDialogTrigger, // Removido pois não usado diretamente aqui
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
@@ -92,7 +93,7 @@ export function FilamentsTab() {
   };
 
   return (
-    <div className="space-y-4"> {/* Reduzido space-y-6 para space-y-4 */}
+    <div className="space-y-4">
       <PageHeader title="Gerenciar Filamentos">
         <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
           setIsFormOpen(isOpen);
@@ -162,11 +163,21 @@ export function FilamentsTab() {
                     <TableCell className="px-2 py-1.5">{filament.modelo || "N/A"}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{filament.densidade} g/cm³</TableCell>
                     <TableCell className="px-2 py-1.5 text-center">
-                      <Button variant="ghost" size="icon" className="mr-1 h-8 w-8" onClick={() => openEditDialog(filament)}>
-                        <Edit className="h-4 w-4 text-yellow-500 hover:text-yellow-600" />
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="mr-1 h-8 w-8 text-yellow-500 hover:bg-yellow-100 hover:text-yellow-600 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-400" 
+                        onClick={() => openEditDialog(filament)}
+                      >
+                        <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDeleteDialog(filament.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500 hover:text-red-600" />
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400"
+                        onClick={() => openDeleteDialog(filament.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

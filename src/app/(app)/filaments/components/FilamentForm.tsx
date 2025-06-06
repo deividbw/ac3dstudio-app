@@ -13,7 +13,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  // FormDescription, // Removido pois não há mais campos com descrição
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
@@ -35,14 +34,15 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
         ...filament,
+        // Garantir que campos numéricos opcionais sejam undefined se não presentes
         temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
         temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
       } : {
       tipo: "",
       cor: "",
       densidade: 1.24, 
-      marca: "",
-      modelo: "",
+      marca: undefined, // Usar undefined para campos opcionais
+      modelo: undefined,
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
     },
@@ -50,14 +50,15 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
+      // Remove 'id' for create/update actions as it's handled separately or generated
       const dataForAction: Omit<Filament, 'id'> = {
         tipo: values.tipo,
         cor: values.cor,
-        densidade: Number(values.densidade),
+        densidade: Number(values.densidade), // Zod coerce já deve tratar, mas explícito
         marca: values.marca || undefined,
         modelo: values.modelo || undefined,
-        temperaturaBicoIdeal: values.temperaturaBicoIdeal,
-        temperaturaMesaIdeal: values.temperaturaMesaIdeal,
+        temperaturaBicoIdeal: values.temperaturaBicoIdeal ? Number(values.temperaturaBicoIdeal) : undefined,
+        temperaturaMesaIdeal: values.temperaturaMesaIdeal ? Number(values.temperaturaMesaIdeal) : undefined,
       };
 
       let actionResult;
@@ -71,6 +72,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
         toast({
           title: filament ? "Filamento Atualizado" : "Filamento Criado",
           description: `O filamento "${actionResult.filament.tipo} (${actionResult.filament.cor})" foi salvo.`,
+          variant: "success", // Usar a nova variante de sucesso
         });
         onSuccess(actionResult.filament);
       } else {
@@ -101,7 +103,7 @@ export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProp
       <Form {...form} className="flex-grow flex flex-col min-h-0">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
           <ScrollArea className="flex-grow min-h-0 p-1 pr-3"> 
-            <div className="space-y-4 py-2"> {/* Reduzido py-4 para py-2 */}
+            <div className="space-y-4 py-2">
               <FormField
                 control={form.control}
                 name="tipo"
