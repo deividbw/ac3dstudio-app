@@ -17,7 +17,7 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 25%;
 
-    --primary: 258 70% 55%; /* Purple from image */
+    --primary: 145 60% 40%; /* New Green */
     --primary-foreground: 0 0% 100%; /* White */
 
     --secondary: 240 10% 92%; /* Lighter gray for secondary elements */
@@ -26,7 +26,7 @@ body {
     --muted: 240 10% 90%;
     --muted-foreground: 240 7% 55%; /* Muted text color */
 
-    --accent: 170 50% 50%; /* Teal from image (e.g., Agenda icon) */
+    --accent: 170 50% 50%; /* Teal from image (e.g., Agenda icon) - Kept as is, can be changed if needed */
     --accent-foreground: 0 0% 100%; /* White */
 
     --destructive: 0 84.2% 60.2%;
@@ -34,7 +34,7 @@ body {
 
     --border: 240 10% 88%; /* Slightly darker border */
     --input: 240 10% 88%;
-    --ring: 258 70% 65%; /* Ring color related to primary */
+    --ring: 145 60% 50%; /* Ring color related to new primary green */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -46,12 +46,12 @@ body {
     /* Sidebar specific colors (updated but less relevant for new UI) */
     --sidebar-background: 240 10% 95%; 
     --sidebar-foreground: 240 10% 30%;
-    --sidebar-primary: 258 70% 55%; 
+    --sidebar-primary: 145 60% 40%; /* New Green for sidebar consistency */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 10% 90%;
     --sidebar-accent-foreground: 240 10% 20%;
     --sidebar-border: 240 10% 85%;
-    --sidebar-ring: 258 70% 65%;
+    --sidebar-ring: 145 60% 50%; /* New Green for sidebar ring consistency */
   }
 
   .dark {
@@ -65,8 +65,8 @@ body {
     --popover: 240 10% 15%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 258 70% 60%; 
-    --primary-foreground: 0 0% 10%; 
+    --primary: 145 60% 45%; /* Dark theme adjusted Green */
+    --primary-foreground: 0 0% 100%; /* White for dark theme green button */
 
     --secondary: 240 10% 20%;
     --secondary-foreground: 0 0% 98%;
@@ -82,16 +82,16 @@ body {
 
     --border: 240 10% 20%;
     --input: 240 10% 20%;
-    --ring: 258 70% 65%;
+    --ring: 145 60% 55%; /* Dark theme ring */
 
     --sidebar-background: 240 10% 12%;
     --sidebar-foreground: 0 0% 95.9%;
-    --sidebar-primary: 258 70% 60%;
-    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-primary: 145 60% 45%; /* Dark theme adjusted Green */
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 10% 20%;
     --sidebar-accent-foreground: 0 0% 95.9%;
     --sidebar-border: 240 10% 20%;
-    --sidebar-ring: 258 70% 65%;
+    --sidebar-ring: 145 60% 55%; /* Dark theme ring */
   }
 }
 
