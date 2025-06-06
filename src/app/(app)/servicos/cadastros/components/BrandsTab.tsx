@@ -8,6 +8,7 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
+  DialogTrigger, // Added DialogTrigger import
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -78,7 +79,7 @@ export function BrandsTab() {
     
     const result = await mockDeleteBrand(deletingBrandId);
     if (result.success) {
-      toast({ title: "Sucesso", description: "Marca excluída." });
+      toast({ title: "Sucesso", description: "Marca excluída.", variant: "success" });
       loadBrands();
     } else {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir a marca.", variant: "destructive" });
