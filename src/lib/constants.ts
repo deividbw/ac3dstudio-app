@@ -5,7 +5,7 @@ import {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings
+  WalletCards, CalendarX2, TrendingDown, Settings as SettingsIcon // Renamed import
 } from 'lucide-react';
 
 // Interface para itens de navegação, reutilizada do AppSidebar
@@ -82,12 +82,13 @@ export const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
   { href: '/benefits', icon: PercentSquare, label: 'Benefícios' },
 ];
 
+// Icons object can still be used by other components not experiencing this issue
 export const Icons = {
   LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare,
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings
+  WalletCards, CalendarX2, TrendingDown, Settings: SettingsIcon
 };
 
 export interface SummaryCardConfig {
@@ -104,7 +105,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'orcamentosConcluidos', 
     title: 'Orçamentos Concluídos Hoje', 
-    icon: Icons.CalendarCheck2, // Changed to use Icons object
+    icon: CalendarCheck2, // Direct import
     iconBgColor: "bg-green-100 dark:bg-green-900",
     iconTextColor: "text-green-600 dark:text-green-400",
     mainValueColorClass: 'text-green-600 dark:text-green-400',
@@ -113,7 +114,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresAReceber',
     title: 'Valores a Receber Hoje',
-    icon: Icons.Hourglass, // Changed to use Icons object
+    icon: Hourglass, // Direct import
     iconBgColor: "bg-blue-100 dark:bg-blue-900",
     iconTextColor: "text-blue-600 dark:text-blue-400",
     mainValueColorClass: 'text-blue-600 dark:text-blue-400',
@@ -122,7 +123,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresRecebidos',
     title: 'Valores Recebidos Hoje',
-    icon: Icons.WalletCards, // Changed to use Icons object
+    icon: WalletCards, // Direct import
     iconBgColor: "bg-emerald-100 dark:bg-emerald-900",
     iconTextColor: "text-emerald-600 dark:text-emerald-400",
     mainValueColorClass: 'text-emerald-600 dark:text-emerald-400',
@@ -131,7 +132,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'orcamentosCancelados', 
     title: 'Orçamentos Cancelados Hoje', 
-    icon: Icons.CalendarX2, // Changed to use Icons object
+    icon: CalendarX2, // Direct import
     iconBgColor: "bg-red-100 dark:bg-red-900",
     iconTextColor: "text-red-600 dark:text-red-400",
     mainValueColorClass: 'text-red-600 dark:text-red-400',
@@ -140,7 +141,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresEmAtraso',
     title: 'Valores em Atraso',
-    icon: Icons.TrendingDown, // Changed to use Icons object
+    icon: TrendingDown, // Direct import
     iconBgColor: "bg-amber-100 dark:bg-amber-900",
     iconTextColor: "text-amber-600 dark:text-amber-400",
     mainValueColorClass: 'text-amber-600 dark:text-amber-400',
@@ -161,28 +162,28 @@ export const ALL_SHORTCUT_CARDS_CONFIG: ShortcutCardConfig[] = [
   {
     id: 'novoOrcamento', 
     label: 'Criar novo orçamento', 
-    icon: FilePlus2,
+    icon: FilePlus2, // Direct import
     iconBgColor: 'bg-primary', 
     defaultVisible: true,
   },
   {
     id: 'novoRecebimento',
     label: 'Novo recebimento',
-    icon: WalletMinimal,
+    icon: WalletMinimal, // Direct import
     iconBgColor: 'bg-green-500',
     defaultVisible: true,
   },
   {
     id: 'novoCompromisso',
     label: 'Novo compromisso',
-    icon: CalendarPlus,
+    icon: CalendarPlus, // Direct import
     iconBgColor: 'bg-accent', 
     defaultVisible: true,
   },
   {
     id: 'novoCliente',
     label: 'Novo cliente',
-    icon: UserPlus,
+    icon: UserPlus, // Direct import
     iconBgColor: 'bg-orange-500',
     defaultVisible: true,
   },
