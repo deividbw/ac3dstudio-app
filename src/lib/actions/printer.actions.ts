@@ -5,11 +5,12 @@
 import type { Printer } from "@/lib/types";
 import { PrinterSchema } from "@/lib/schemas";
 
-const DEFAULT_ENERGY_COST_KWH = 0.75;
+// DEFAULT_ENERGY_COST_KWH is no longer defined here.
+// It will be fetched from global settings by the PrinterForm for new printers.
 
 let mockPrinters: Printer[] = [
-  { id: "1", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, taxaDepreciacaoHora: 0.50, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH, vidaUtilAnos: 3, horasTrabalhoDia: 8 },
-  { id: "2", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH, vidaUtilAnos: 5, horasTrabalhoDia: 12 },
+  { id: "1", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, taxaDepreciacaoHora: 0.50, custoEnergiaKwh: 0.75, vidaUtilAnos: 3, horasTrabalhoDia: 8 },
+  { id: "2", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75, vidaUtilAnos: 5, horasTrabalhoDia: 12 },
 ];
 
 export async function getPrinters(): Promise<Printer[]> {
@@ -21,12 +22,9 @@ export async function getPrinterById(id: string): Promise<Printer | undefined> {
 }
 
 export async function createPrinter(data: Omit<Printer, 'id'>): Promise<{ success: boolean, printer?: Printer, error?: string }> {
-  const dataWithDefault = {
-    ...data,
-    custoEnergiaKwh: data.custoEnergiaKwh ?? DEFAULT_ENERGY_COST_KWH,
-    horasTrabalhoDia: data.horasTrabalhoDia ?? 8, 
-  };
-  const validation = PrinterSchema.safeParse(dataWithDefault);
+  // The PrinterForm is now responsible for setting a default custoEnergiaKwh if it's a new printer
+  // by fetching the global default.
+  const validation = PrinterSchema.safeParse(data);
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
@@ -41,6 +39,8 @@ export async function updatePrinter(id: string, data: Partial<Omit<Printer, 'id'
     return { success: false, error: "Impressora não encontrada" };
   }
   
+  // If custoEnergiaKwh is not provided in `data`, it retains its existing value.
+  // The form won't typically allow editing this directly anymore, but this handles partial updates.
   const dataToUpdate = {
     ...data,
     custoEnergiaKwh: data.custoEnergiaKwh ?? existingPrinter.custoEnergiaKwh,
@@ -72,3 +72,4 @@ export async function deletePrinter(id: string): Promise<{ success: boolean, err
   }
   return { success: true };
 }
+

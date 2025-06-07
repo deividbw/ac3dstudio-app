@@ -23,7 +23,7 @@ export const PrinterSchema = z.object({
   taxaDepreciacaoHora: z.coerce.number().nonnegative({ message: "Taxa de depreciação não pode ser negativa" }),
   vidaUtilAnos: z.coerce.number().int({ message: "Vida útil deve ser um número inteiro" }).nonnegative({ message: "Vida útil não pode ser negativa" }),
   horasTrabalhoDia: z.coerce.number().int({ message: "Horas de trabalho por dia deve ser um número inteiro"}).positive({message: "Horas de trabalho por dia deve ser um número positivo"}),
-  custoEnergiaKwh: z.coerce.number().nonnegative({ message: "Custo de energia por kWh não pode ser negativo" }).optional(), // Mantido para consistência, mas não no formulário
+  custoEnergiaKwh: z.coerce.number().nonnegative({ message: "Custo de energia por kWh não pode ser negativo" }).optional(),
 });
 
 export const ProductSchema = z.object({

@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type * as z from "zod";
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react'; // Added useState
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ import { PrinterSchema } from "@/lib/schemas";
 import type { Printer, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createPrinter, updatePrinter } from '@/lib/actions/printer.actions';
+import { getKwhValue } from '@/lib/actions/powerOverride.actions'; // Import getKwhValue
 import { Separator } from "@/components/ui/separator";
 
 interface PrinterFormProps {
@@ -39,6 +40,8 @@ interface PrinterFormProps {
 
 export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFormProps) {
   const { toast } = useToast();
+  const [defaultKwhForNew, setDefaultKwhForNew] = useState<number | undefined>(undefined);
+
   const form = useForm<z.infer<typeof PrinterSchema>>({
     resolver: zodResolver(PrinterSchema),
     defaultValues: printer ? {
@@ -48,6 +51,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       vidaUtilAnos: printer.vidaUtilAnos ?? 0,
       horasTrabalhoDia: printer.horasTrabalhoDia ?? 8,
       taxaDepreciacaoHora: printer.taxaDepreciacaoHora ?? 0,
+      custoEnergiaKwh: printer.custoEnergiaKwh, // Will be set by useEffect if new
     } : {
       marcaId: undefined,
       modelo: undefined,
@@ -55,8 +59,26 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       vidaUtilAnos: 0,
       horasTrabalhoDia: 8,
       taxaDepreciacaoHora: 0,
+      custoEnergiaKwh: undefined, // Initialize as undefined for new printers
     },
   });
+
+  useEffect(() => {
+    if (!printer) { // Only for new printers
+      const fetchDefaultKwh = async () => {
+        try {
+          const globalKwh = await getKwhValue();
+          setDefaultKwhForNew(globalKwh);
+          form.setValue("custoEnergiaKwh", globalKwh);
+        } catch (error) {
+          console.error("Failed to fetch default kWh value:", error);
+          // Optionally set a fallback if API fails, or rely on schema default if any
+        }
+      };
+      fetchDefaultKwh();
+    }
+  }, [printer, form.setValue, form]);
+
 
   const custoAquisicaoWatched = form.watch("custoAquisicao");
   const vidaUtilAnosWatched = form.watch("vidaUtilAnos");
@@ -84,6 +106,17 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
 
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
     try {
+      // Ensure custoEnergiaKwh is set for new printers if not already
+      let custoEnergiaFinal = values.custoEnergiaKwh;
+      if (!printer && custoEnergiaFinal === undefined && defaultKwhForNew !== undefined) {
+        custoEnergiaFinal = defaultKwhForNew;
+      } else if (!printer && custoEnergiaFinal === undefined) {
+        // Fallback if fetch failed and still undefined (should ideally not happen)
+        const globalKwhFallback = await getKwhValue(); // Fetch again as a last resort
+        custoEnergiaFinal = globalKwhFallback;
+      }
+
+
       const dataForActionBase = {
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
@@ -91,21 +124,22 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         vidaUtilAnos: Number(values.vidaUtilAnos),
         horasTrabalhoDia: Number(values.horasTrabalhoDia),
         taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
+        custoEnergiaKwh: custoEnergiaFinal, // Use the determined final value
       };
 
       let actionResult;
       if (printer && printer.id) {
+        // For updates, custoEnergiaKwh comes from `values` which reflects form.watch or initial printer data
         const dataForUpdate: Partial<Omit<Printer, 'id'>> = {
           ...dataForActionBase,
-          custoEnergiaKwh: printer.custoEnergiaKwh,
         };
         actionResult = await updatePrinter(printer.id, dataForUpdate);
       } else {
+        // For creates, custoEnergiaKwh is set by the logic above
         const dataForCreate: Omit<Printer, 'id'> = {
           ...dataForActionBase,
-          custoEnergiaKwh: undefined, 
         };
-        actionResult = await createPrinter(dataForCreate);
+        actionResult = await createPrinter(dataForCreate as Omit<Printer, 'id'>);
       }
 
       if (actionResult.success && actionResult.printer) {
@@ -150,6 +184,9 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
   const getGenericNumericFieldValue = (value: number | undefined | null) => {
       return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
+  
+  const currentKwhDisplayValue = form.watch("custoEnergiaKwh") ?? defaultKwhForNew;
+
 
   return (
     <>
@@ -157,8 +194,8 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         <DialogTitle className="font-headline">{printer ? "Editar Impressora" : "Adicionar Nova Impressora"}</DialogTitle>
         <DialogDescription>
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
-          O custo de energia por kWh é um valor padrão do sistema (R$ {printer?.custoEnergiaKwh?.toFixed(2) || 'N/A'}).
-          A potência de consumo é definida em Configurações por tipo de filamento e impressora.
+          O custo de energia por kWh padrão (R$ {currentKwhDisplayValue !== undefined ? currentKwhDisplayValue.toFixed(2) : 'N/A'}) é definido em Configurações do Sistema e aplicado a novas impressoras.
+          A potência de consumo é gerenciada em "Configurações > Potência Consumida por Tipo de Filamento e Impressora".
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -286,7 +323,17 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                   </FormItem>
                 )}
               />
-
+             <FormField // Hidden field to store custoEnergiaKwh, managed by useEffect for new printers
+                control={form.control}
+                name="custoEnergiaKwh"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
           </div>
           <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
@@ -300,3 +347,4 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     </>
   );
 }
+

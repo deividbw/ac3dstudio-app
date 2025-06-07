@@ -36,10 +36,10 @@ import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField
 import { getPrinters } from '@/lib/actions/printer.actions';
 import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
-import { getPowerOverrides, savePowerOverride } from '@/lib/actions/powerOverride.actions'; // Import actions for power overrides
+import { getPowerOverrides, savePowerOverride, getKwhValue, saveKwhValue as saveGlobalKwhValue } from '@/lib/actions/powerOverride.actions';
 
 export default function ConfiguracoesPage() {
-  const [kwhValue, setKwhValue] = useState("0.75"); // Default to 0.75
+  const [kwhValue, setKwhValue] = useState("0.75"); 
   const { toast } = useToast();
 
   const [printers, setPrinters] = useState<Printer[]>([]);
@@ -57,16 +57,18 @@ export default function ConfiguracoesPage() {
 
   const loadConfigData = useCallback(async () => {
     try {
-      const [printersData, filamentTypesData, brandsData, powerOverridesData] = await Promise.all([
+      const [printersData, filamentTypesData, brandsData, powerOverridesData, currentKwhValue] = await Promise.all([
         getPrinters(),
         getFilamentTypes(),
         getBrands(),
-        getPowerOverrides(), // Fetch power overrides
+        getPowerOverrides(),
+        getKwhValue(),
       ]);
       setPrinters(printersData);
       setFilamentTypes(filamentTypesData);
       setBrands(brandsData);
-      setConfiguredOverrides(powerOverridesData); // Set power overrides to state
+      setConfiguredOverrides(powerOverridesData);
+      setKwhValue(currentKwhValue.toString());
     } catch (error) {
       console.error("Failed to load data:", error);
       toast({
@@ -95,14 +97,30 @@ export default function ConfiguracoesPage() {
   }, [getBrandNameById]);
 
 
-  const handleSaveKwh = () => {
-    // In a real app, this would be saved to a backend or global config store
-    console.log("Salvar valor kWh:", kwhValue);
-    toast({
-      title: "Configuração Salva",
-      description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}. (Simulação de salvamento)`,
-      variant: "success",
-    });
+  const handleSaveKwh = async () => {
+    const numericKwh = parseFloat(kwhValue);
+    if (isNaN(numericKwh) || numericKwh < 0) {
+      toast({
+        title: "Valor Inválido",
+        description: "O valor do kWh deve ser um número não negativo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const result = await saveGlobalKwhValue(numericKwh);
+    if (result.success) {
+      toast({
+        title: "Configuração Salva",
+        description: `Valor do kWh padrão atualizado para R$ ${numericKwh.toFixed(2)}.`,
+        variant: "success",
+      });
+    } else {
+      toast({
+        title: "Erro ao Salvar",
+        description: result.error || "Não foi possível salvar o valor do kWh.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveSpecificPowerConsumption = async () => {
@@ -425,3 +443,4 @@ export default function ConfiguracoesPage() {
     </div>
   );
 }
+
