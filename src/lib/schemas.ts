@@ -45,3 +45,8 @@ export const BrandSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(1, { message: "Nome da marca é obrigatório" }).max(100, { message: "Nome da marca deve ter no máximo 100 caracteres" }),
 });
+
+export const FilamentTypeSchema = z.object({
+  id: z.string().optional(),
+  nome: z.string().min(1, { message: "Nome do tipo de filamento é obrigatório" }).max(50, { message: "Nome do tipo deve ter no máximo 50 caracteres" }),
+});

@@ -59,3 +59,7 @@ export interface Brand {
   nome: string;
 }
 
+export interface FilamentType {
+  id: string;
+  nome: string; // Ex: PLA, ABS, PETG, TPU
+}
