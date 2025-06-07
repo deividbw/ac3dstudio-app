@@ -1,4 +1,3 @@
-
 // MOCK ACTIONS - In a real app, these would interact with a database.
 "use server";
 
@@ -50,7 +49,6 @@ export async function createProduct(data: Omit<Product, 'id'>): Promise<{ succes
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
-  // Ao criar, o custoCalculado já vem de data (que é values + custoCalculado do form)
   const newProduct: Product = { ...validation.data, id: `prod_${String(Date.now())}` } as Product; 
   mockProducts.push(newProduct);
   return { success: true, product: newProduct };
@@ -82,14 +80,11 @@ export async function deleteProduct(id: string): Promise<{ success: boolean, err
   return { success: true };
 }
 
-export async function calculateProductCostAction(productId: string, calculationInput: ProductCostCalculationInput): Promise<{ success: boolean, cost?: ProductCost, error?: string}> {
+export async function calculateProductCostAction(calculationInput: ProductCostCalculationInput): Promise<{ success: boolean, cost?: ProductCost, error?: string}> {
   try {
     const costOutput = await productCostCalculation(calculationInput);
-    // Não modificar mockProducts aqui. Apenas retornar o custo.
-    // O form irá lidar com a exibição e inclusão no objeto a ser salvo.
     return { success: true, cost: costOutput };
-  } catch (error: any)
-{
+  } catch (error: any) {
     console.error("Error in AI cost calculation:", error);
     const errorMessage = error.message || "Falha ao calcular custo com IA.";
     return { success: false, error: errorMessage };

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,7 +30,6 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateProductCostAction, createProduct, updateProduct } from '@/lib/actions/product.actions';
 import type { ProductCostCalculationInput } from '@/ai/flows/product-cost-calculation';
 import { Loader2 } from "lucide-react";
-// Removed ScrollArea import as it's no longer used here for main scrolling
 
 interface ProductFormProps {
   product?: Product | null;
@@ -71,14 +69,18 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     const currentValues = form.getValues();
     
     if (!currentValues.filamentoId || !currentValues.impressoraId || !currentValues.pesoGramas || !currentValues.tempoImpressaoHoras || 
-        currentValues.pesoGramas <= 0 || currentValues.tempoImpressaoHoras <= 0) {
-      setCalculatedCostForDisplay(undefined);
+        Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
+      if (calculatedCostForDisplay !== undefined) {
+        setCalculatedCostForDisplay(undefined);
+      }
       return;
     }
 
     const isValid = await form.trigger(["filamentoId", "impressoraId", "pesoGramas", "tempoImpressaoHoras"]);
     if (!isValid) {
-      setCalculatedCostForDisplay(undefined);
+      if (calculatedCostForDisplay !== undefined) {
+        setCalculatedCostForDisplay(undefined);
+      }
       return;
     }
 
@@ -86,14 +88,15 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     const selectedPrinter = printers.find(p => p.id === currentValues.impressoraId);
 
     if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
-      if (!isCalculating) {
-          // toast({ title: "Dados Incompletos", description: "Selecione um filamento com Preço/Kg válido.", variant: "default" });
+      if (calculatedCostForDisplay !== undefined) {
+          setCalculatedCostForDisplay(undefined);
       }
-      setCalculatedCostForDisplay(undefined);
       return;
     }
     if (!selectedPrinter) {
-      setCalculatedCostForDisplay(undefined);
+      if (calculatedCostForDisplay !== undefined) {
+          setCalculatedCostForDisplay(undefined);
+      }
       return;
     }
 
@@ -109,8 +112,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
         additionalDetails: currentValues.descricao || `Cálculo para produto: ${currentValues.nome || product?.nome || 'Novo Produto'}`,
       };
 
-      const currentProductId = product?.id || `temp_${Date.now()}`;
-      const result = await calculateProductCostAction(currentProductId, calculationInput);
+      const result = await calculateProductCostAction(calculationInput);
 
       if (result.success && result.cost) {
         setCalculatedCostForDisplay(result.cost);
@@ -118,23 +120,24 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
         toast({ title: "Erro no Cálculo Automático", description: result.error || "Não foi possível calcular o custo.", variant: "destructive" });
         setCalculatedCostForDisplay(undefined);
       }
-    } catch (error) {
-        toast({ title: "Erro Inesperado no Cálculo", description: "Ocorreu um erro ao tentar calcular o custo.", variant: "destructive" });
+    } catch (error: any) {
+        toast({ title: "Erro Inesperado no Cálculo", description: error.message || "Ocorreu um erro ao tentar calcular o custo.", variant: "destructive" });
         setCalculatedCostForDisplay(undefined);
     } finally {
         setIsCalculating(false);
     }
-  }, [form, filaments, printers, product, toast, isCalculating, setCalculatedCostForDisplay, setIsCalculating]); 
+  }, [form, filaments, printers, product, toast, setCalculatedCostForDisplay, setIsCalculating, calculatedCostForDisplay]); 
 
   useEffect(() => {
     const { filamentoId, impressoraId, pesoGramas, tempoImpressaoHoras } = form.getValues();
-    if (filamentoId && impressoraId && pesoGramas && tempoImpressaoHoras && pesoGramas > 0 && tempoImpressaoHoras > 0) {
+    if (filamentoId && impressoraId && pesoGramas && tempoImpressaoHoras && Number(pesoGramas) > 0 && Number(tempoImpressaoHoras) > 0) {
       triggerAutomaticCostCalculation();
     } else {
-      setCalculatedCostForDisplay(undefined);
+       if (calculatedCostForDisplay !== undefined) { // Only clear if it was previously set
+        setCalculatedCostForDisplay(undefined);
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, triggerAutomaticCostCalculation, setCalculatedCostForDisplay]); 
+  }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, triggerAutomaticCostCalculation, calculatedCostForDisplay, form, setCalculatedCostForDisplay]);
 
 
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
@@ -209,9 +212,8 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col"> {/* Removed min-h-0 and overflow-hidden */}
-          {/* Content area, no ScrollArea component, DialogContent will scroll */}
-          <div className="px-6 py-4 space-y-3"> {/* This div now holds the form content */}
+        <form onSubmit={form.handleSubmit(onSubmit)}> 
+          <div className="px-6 py-4 space-y-3"> 
             <FormField
               control={form.control}
               name="nome"
@@ -355,7 +357,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                 </p>
               )}
             </div>
-          </div> {/* End of form content div */}
+          </div> 
           
           <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-background z-10">
             <DialogClose asChild>
