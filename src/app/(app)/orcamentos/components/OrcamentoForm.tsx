@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// ScrollArea is removed as DialogContent will handle scrolling
 import { OrcamentoSchema, OrcamentoItemSchema } from "@/lib/schemas";
 import type { Orcamento, Product, OrcamentoStatus, OrcamentoItem as OrcamentoItemType } from "@/lib/types";
 import { OrcamentoStatusOptions } from "@/lib/types";
@@ -176,166 +176,165 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <ScrollArea className="max-h-[calc(80vh-180px)] p-1 pr-3"> {/* Ajuste de altura */}
-            <div className="p-6 space-y-4">
-              <FormField
-                control={form.control}
-                name="nomeOrcamento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Orçamento*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Projeto Website XPTO" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="clienteNome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Cliente*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: João da Silva" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* ScrollArea removed, scrolling handled by DialogContent with overflow-y-auto */}
+          <div className="p-6 space-y-4">
+            <FormField
+              control={form.control}
+              name="nomeOrcamento"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Orçamento*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Projeto Website XPTO" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="clienteNome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Cliente*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: João da Silva" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <div className="space-y-3 pt-3 border-t">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-md font-semibold">Itens do Orçamento</h4>
-                  <Button type="button" size="sm" variant="outline" onClick={handleAddItem}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
-                  </Button>
-                </div>
-                {fields.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-[1fr_auto_auto] gap-3 items-start p-3 border rounded-md">
-                    <FormField
-                      control={form.control}
-                      name={`itens.${index}.produtoId`}
-                      render={({ field }) => (
-                        <FormItem>
-                           {index === 0 && <FormLabel>Produto*</FormLabel>}
-                          <Select
-                            onValueChange={(value) => {
-                                field.onChange(value);
-                                const produtoSelecionado = products.find(p => p.id === value);
-                                if (produtoSelecionado) {
-                                    form.setValue(`itens.${index}.produtoNome`, produtoSelecionado.nome);
-                                    form.setValue(`itens.${index}.valorUnitario`, produtoSelecionado.custoDetalhado?.precoVendaCalculado || 0);
-                                }
-                            }}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione um produto" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id} disabled={!product.custoDetalhado?.precoVendaCalculado}>
-                                  {product.nome} {product.custoDetalhado?.precoVendaCalculado ? `(R$ ${product.custoDetalhado.precoVendaCalculado.toFixed(2)})` : '(Preço Indef.)'}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`itens.${index}.quantidade`}
-                      render={({ field }) => (
-                        <FormItem>
-                          {index === 0 && <FormLabel>Qtd*</FormLabel>}
+            <div className="space-y-3 pt-3 border-t">
+              <div className="flex justify-between items-center">
+                <h4 className="text-md font-semibold">Itens do Orçamento</h4>
+                <Button type="button" size="sm" variant="outline" onClick={handleAddItem}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Item
+                </Button>
+              </div>
+              {fields.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-[1fr_auto_auto] gap-3 items-start p-3 border rounded-md">
+                  <FormField
+                    control={form.control}
+                    name={`itens.${index}.produtoId`}
+                    render={({ field }) => (
+                      <FormItem>
+                         {index === 0 && <FormLabel>Produto*</FormLabel>}
+                        <Select
+                          onValueChange={(value) => {
+                              field.onChange(value);
+                              const produtoSelecionado = products.find(p => p.id === value);
+                              if (produtoSelecionado) {
+                                  form.setValue(`itens.${index}.produtoNome`, produtoSelecionado.nome);
+                                  form.setValue(`itens.${index}.valorUnitario`, produtoSelecionado.custoDetalhado?.precoVendaCalculado || 0);
+                              }
+                          }}
+                          value={field.value}
+                        >
                           <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              step="1"
-                              placeholder="1"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 1)}
-                              className="w-20"
-                            />
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um produto" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex items-end h-full">
-                     {index === 0 && <FormLabel>&nbsp;</FormLabel> /* Spacer for alignment */}
-                     <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10 h-9 w-9 mt-1"
-                        onClick={() => remove(index)}
-                        disabled={fields.length <= 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                          <SelectContent>
+                            {products.map((product) => (
+                              <SelectItem key={product.id} value={product.id} disabled={!product.custoDetalhado?.precoVendaCalculado}>
+                                {product.nome} {product.custoDetalhado?.precoVendaCalculado ? `(R$ ${product.custoDetalhado.precoVendaCalculado.toFixed(2)})` : '(Preço Indef.)'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`itens.${index}.quantidade`}
+                    render={({ field }) => (
+                      <FormItem>
+                        {index === 0 && <FormLabel>Qtd*</FormLabel>}
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="1"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 1)}
+                            className="w-20"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex items-end h-full">
+                   {index === 0 && <FormLabel>&nbsp;</FormLabel> /* Spacer for alignment */}
+                   <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 h-9 w-9 mt-1"
+                      onClick={() => remove(index)}
+                      disabled={fields.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                ))}
-              </div>
-
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status do Orçamento*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {OrcamentoStatusOptions.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="observacao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observação</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Detalhes adicionais sobre o orçamento..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="pt-4 border-t">
-                <h4 className="text-md font-semibold text-right">
-                    Valor Total do Orçamento: 
-                    <span className="text-primary ml-2">
-                        {calculateTotalOrcamento().toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </span>
-                </h4>
-              </div>
-
+                </div>
+              ))}
             </div>
-          </ScrollArea>
+
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status do Orçamento*</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {OrcamentoStatusOptions.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="observacao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observação</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Detalhes adicionais sobre o orçamento..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="pt-4 border-t">
+              <h4 className="text-md font-semibold text-right">
+                  Valor Total do Orçamento: 
+                  <span className="text-primary ml-2">
+                      {calculateTotalOrcamento().toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
+              </h4>
+            </div>
+
+          </div>
           <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
             <DialogClose asChild>
               <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

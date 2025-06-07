@@ -149,7 +149,7 @@ export default function OrcamentosPage() {
             </Button>
           </DialogTrigger>
           {isFormOpen && ( // Renderiza o formulário condicionalmente para garantir que `products` esteja carregado
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 overflow-y-auto">
                 <OrcamentoForm
                     orcamento={editingOrcamento}
                     products={products}
