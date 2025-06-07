@@ -30,7 +30,7 @@ import { createPrinter, updatePrinter } from '@/lib/actions/printer.actions';
 
 interface PrinterFormProps {
   printer?: Printer | null;
-  brands: Brand[]; 
+  brands: Brand[];
   onSuccess: (printer: Printer) => void;
   onCancel: () => void;
 }
@@ -41,44 +41,56 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     resolver: zodResolver(PrinterSchema),
     defaultValues: printer ? {
       ...printer,
-      // nome: printer.nome ?? undefined, // Nome foi removido
       marcaId: printer.marcaId ?? undefined,
       modelo: printer.modelo ?? undefined,
-      custoEnergiaKwh: printer.custoEnergiaKwh, 
+      // custoEnergiaKwh é gerenciado no backend/mock
+      vidaUtilAnos: printer.vidaUtilAnos ?? 0,
     } : {
-      // nome: undefined, 
       marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
       consumoEnergiaHora: 0.1, // Em kWh (ex: 100W -> 0.1 kWh)
       taxaDepreciacaoHora: 0,
+      vidaUtilAnos: 0,
       // custoEnergiaKwh será definido por padrão na action para novas impressoras
     },
   });
 
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
     try {
-      const dataForAction: Omit<Printer, 'id'> = {
-        // nome: values.nome, // Nome foi removido
+      // Base data from the form, excluding custoEnergiaKwh which is handled by actions or preserved
+      const dataForActionBase = {
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
-        consumoEnergiaHora: Number(values.consumoEnergiaHora), // Este valor já está em kWh devido à conversão no input
+        consumoEnergiaHora: Number(values.consumoEnergiaHora), // Este valor já está em kWh
         taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
-        custoEnergiaKwh: printer ? printer.custoEnergiaKwh : values.custoEnergiaKwh, 
+        vidaUtilAnos: Number(values.vidaUtilAnos),
       };
 
       let actionResult;
-      if (printer && printer.id) { 
-        actionResult = await updatePrinter(printer.id, dataForAction);
-      } else { 
-        actionResult = await createPrinter(dataForAction);
+      if (printer && printer.id) {
+        // For updates, explicitly pass the existing custoEnergiaKwh to preserve it,
+        // as it's not part of the form values.
+        const dataForUpdate: Partial<Omit<Printer, 'id'>> = {
+          ...dataForActionBase,
+          custoEnergiaKwh: printer.custoEnergiaKwh,
+        };
+        actionResult = await updatePrinter(printer.id, dataForUpdate);
+      } else {
+        // For creates, custoEnergiaKwh will be set to default by the createPrinter action.
+        // We pass it as undefined so the action knows to apply its default.
+        const dataForCreate: Omit<Printer, 'id'> = {
+          ...dataForActionBase,
+          custoEnergiaKwh: undefined, // Action will apply default
+        };
+        actionResult = await createPrinter(dataForCreate);
       }
 
       if (actionResult.success && actionResult.printer) {
         toast({
           title: printer ? "Impressora Atualizada" : "Impressora Criada",
-          description: `A impressora ${actionResult.printer.modelo || 'sem nome'} foi salva.`,
+          description: `A impressora ${actionResult.printer.modelo || actionResult.printer.marcaId || 'ID: ' + actionResult.printer.id} foi salva.`,
           variant: "success",
         });
         onSuccess(actionResult.printer);
@@ -98,16 +110,16 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       });
     }
   }
-  
-  const handleGenericNumericInputChange = (field: any, value: string) => {
+
+  const handleGenericNumericInputChange = (field: any, value: string, isInt = false) => {
     if (value.trim() === '') {
       field.onChange(undefined);
     } else {
-      const num = parseFloat(value);
+      const num = isInt ? parseInt(value, 10) : parseFloat(value);
       field.onChange(Number.isNaN(num) ? undefined : num);
     }
   };
-  
+
   const getGenericNumericFieldValue = (value: number | undefined | null) => {
       return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
@@ -139,7 +151,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         <DialogTitle className="font-headline">{printer ? "Editar Impressora" : "Adicionar Nova Impressora"}</DialogTitle>
         <DialogDescription>
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
-          O nome da impressora é opcional. O custo de energia por kWh será um valor padrão do sistema.
+          O custo de energia por kWh será um valor padrão do sistema.
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -152,8 +164,8 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Marca</FormLabel>
-                     <Select 
-                        onValueChange={field.onChange} 
+                     <Select
+                        onValueChange={field.onChange}
                         value={field.value ?? ""}
                       >
                       <FormControl>
@@ -187,7 +199,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                 )}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -196,9 +208,9 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                   <FormItem>
                     <FormLabel>Custo Aquisição (R$)*</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 1500.00" 
+                      <Input type="number" step="0.01" placeholder="Ex: 1500.00"
                              value={getGenericNumericFieldValue(field.value)}
-                             onChange={e => handleGenericNumericInputChange(field, e.target.value)} />
+                             onChange={e => handleGenericNumericInputChange(field, e.target.value, false)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -211,12 +223,12 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                   <FormItem>
                     <FormLabel>Potência Watts *</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         step="1" // Comum para Watts
                         placeholder="Ex: 150" // Exemplo em Watts
                         value={getPotenciaWattsFieldValue(field.value)}
-                        onChange={e => handlePotenciaWattsInputChange(field, e.target.value)} 
+                        onChange={e => handlePotenciaWattsInputChange(field, e.target.value)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -232,9 +244,25 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                 <FormItem>
                   <FormLabel>Depreciação (R$/hora)*</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="Ex: 0.50" 
+                    <Input type="number" step="0.01" placeholder="Ex: 0.50"
                             value={getGenericNumericFieldValue(field.value)}
-                            onChange={e => handleGenericNumericInputChange(field, e.target.value)} />
+                            onChange={e => handleGenericNumericInputChange(field, e.target.value, false)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="vidaUtilAnos"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vida útil (anos)*</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="1" placeholder="Ex: 3"
+                            value={getGenericNumericFieldValue(field.value)}
+                            onChange={e => handleGenericNumericInputChange(field, e.target.value, true)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
