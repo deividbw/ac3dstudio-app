@@ -160,9 +160,8 @@ export function PrintersTab() {
                 <TableRow>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Marca</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Modelo</TableHead>
-                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Consumo (kWh)</TableHead>
+                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Potência Watts</TableHead>
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Depreciação (R$/h)</TableHead>
-                  {/* Custo Energia (R$/kWh) column removed */}
                   <TableHead className="w-[100px] px-2 py-2 text-center font-semibold uppercase">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -171,9 +170,8 @@ export function PrintersTab() {
                   <TableRow key={printer.id}>
                     <TableCell className="px-2 py-1.5">{getBrandNameById(printer.marcaId)}</TableCell>
                     <TableCell className="px-2 py-1.5">{printer.modelo || "N/A"}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-right">{printer.consumoEnergiaHora.toFixed(2)}</TableCell>
+                    <TableCell className="px-2 py-1.5 text-right">{(printer.consumoEnergiaHora * 1000).toFixed(0)}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{printer.taxaDepreciacaoHora.toFixed(2)}</TableCell>
-                    {/* Custo Energia (R$/kWh) cell removed */}
                     <TableCell className="px-2 py-1.5 text-center">
                       <Button 
                         variant="ghost" 
@@ -217,3 +215,4 @@ export function PrintersTab() {
     </div>
   );
 }
+
