@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from 'next/link'; // Ensure Link is imported
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, DollarSign, Download, PackageSearch, AlertTriangle } from 'lucide-react';
@@ -177,7 +177,7 @@ export default function ProductsPage() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0"> 
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-0"> 
             <ProductForm 
               product={editingProduct} 
               filaments={filaments}

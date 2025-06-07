@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateProductCostAction, createProduct, updateProduct } from '@/lib/actions/product.actions';
 import type { ProductCostCalculationInput } from '@/ai/flows/product-cost-calculation';
 import { Loader2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// Removed ScrollArea import as it's no longer used here for main scrolling
 
 interface ProductFormProps {
   product?: Product | null;
@@ -87,7 +87,6 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
     if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
       if (!isCalculating) {
-          // Consider reducing frequency of this toast or making it more subtle
           // toast({ title: "Dados Incompletos", description: "Selecione um filamento com Preço/Kg válido.", variant: "default" });
       }
       setCalculatedCostForDisplay(undefined);
@@ -134,6 +133,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     } else {
       setCalculatedCostForDisplay(undefined);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, triggerAutomaticCostCalculation, setCalculatedCostForDisplay]); 
 
 
@@ -202,162 +202,162 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
   return (
     <>
-      <DialogHeader className="px-6 pt-6 flex-shrink-0">
+      <DialogHeader className="px-6 pt-6 sticky top-0 bg-background z-10 border-b">
         <DialogTitle className="font-headline text-xl">{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
         <DialogDescription>
           {product ? "Modifique os detalhes do produto. O custo será recalculado automaticamente." : "Preencha as informações do novo produto. O custo será calculado automaticamente."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-3 px-6 py-4">
-              <FormField
-                control={form.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Produto*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Suporte de Celular Articulado" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="descricao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição (Opcional)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL da Imagem (Opcional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://placehold.co/300x200.png" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    {field.value && <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-32 object-cover rounded-md border" />}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col"> {/* Removed min-h-0 and overflow-hidden */}
+          {/* Content area, no ScrollArea component, DialogContent will scroll */}
+          <div className="px-6 py-4 space-y-3"> {/* This div now holds the form content */}
+            <FormField
+              control={form.control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Produto*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Suporte de Celular Articulado" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="descricao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição (Opcional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL da Imagem (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://placehold.co/300x200.png" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  {field.value && <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-32 object-cover rounded-md border" />}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="filamentoId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Filamento Utilizado*</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um filamento" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {filaments.map((f) => (
-                            <SelectItem key={f.id} value={f.id}>
-                              {f.tipo} - {f.cor} {f.marcaId ? `(${brands.find(b => b.id === f.marcaId)?.nome || 'N/A'})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="impressoraId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Impressora Utilizada*</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma impressora" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {printers.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="pesoGramas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Material Usado (g)*</FormLabel>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="filamentoId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Filamento Utilizado*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
                       <FormControl>
-                        <Input type="number" step="0.1" placeholder="Ex: 50.5" 
-                                value={getNumericFieldValue(field.value)}
-                                onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um filamento" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tempoImpressaoHoras"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tempo Produção (h)*</FormLabel>
+                      <SelectContent>
+                        {filaments.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.tipo} - {f.cor} {f.marcaId ? `(${brands.find(b => b.id === f.marcaId)?.nome || 'N/A'})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="impressoraId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Impressora Utilizada*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
                       <FormControl>
-                        <Input type="number" step="0.1" placeholder="Ex: 2.5" 
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma impressora" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {printers.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="pesoGramas"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Material Usado (g)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" placeholder="Ex: 50.5" 
                               value={getNumericFieldValue(field.value)}
                               onChange={e => handleNumericInputChange(field, e.target.value, true)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="mt-4 p-3 border rounded-md bg-muted/50 space-y-1 text-sm">
-                <div className="flex justify-between items-center mb-1">
-                  <h4 className="font-medium text-foreground">Previsão de Custos do Produto:</h4>
-                  {isCalculating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                </div>
-                {calculatedCostForDisplay ? (
-                  <>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span>{formatCurrency(calculatedCostForDisplay.materialCost)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Energia:</span> <span>{formatCurrency(calculatedCostForDisplay.energyCost)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Depreciação:</span> <span>{formatCurrency(calculatedCostForDisplay.depreciationCost)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custos Adicionais (IA):</span> <span>{formatCurrency(calculatedCostForDisplay.additionalCostEstimate)}</span></div>
-                    <div className="flex justify-between font-semibold text-primary"><span >Custo Total (sem lucro):</span> <span>{formatCurrency(calculatedCostForDisplay.totalCost)}</span></div>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground italic text-center py-2">
-                    {isCalculating ? 'Calculando...' : 'Preencha os campos para calcular o custo.'}
-                  </p>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </div>
+              />
+              <FormField
+                control={form.control}
+                name="tempoImpressaoHoras"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tempo Produção (h)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" placeholder="Ex: 2.5" 
+                            value={getNumericFieldValue(field.value)}
+                            onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </ScrollArea>
-          <DialogFooter className="px-6 pb-6 pt-4 border-t flex-shrink-0">
+            
+            <div className="mt-4 p-3 border rounded-md bg-muted/50 space-y-1 text-sm">
+              <div className="flex justify-between items-center mb-1">
+                <h4 className="font-medium text-foreground">Previsão de Custos do Produto:</h4>
+                {isCalculating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+              </div>
+              {calculatedCostForDisplay ? (
+                <>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span>{formatCurrency(calculatedCostForDisplay.materialCost)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Energia:</span> <span>{formatCurrency(calculatedCostForDisplay.energyCost)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Depreciação:</span> <span>{formatCurrency(calculatedCostForDisplay.depreciationCost)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Custos Adicionais (IA):</span> <span>{formatCurrency(calculatedCostForDisplay.additionalCostEstimate)}</span></div>
+                  <div className="flex justify-between font-semibold text-primary"><span >Custo Total (sem lucro):</span> <span>{formatCurrency(calculatedCostForDisplay.totalCost)}</span></div>
+                </>
+              ) : (
+                <p className="text-muted-foreground italic text-center py-2">
+                  {isCalculating ? 'Calculando...' : 'Preencha os campos para calcular o custo.'}
+                </p>
+              )}
+            </div>
+          </div> {/* End of form content div */}
+          
+          <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-background z-10">
             <DialogClose asChild>
               <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
