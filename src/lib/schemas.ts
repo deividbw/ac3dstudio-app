@@ -20,10 +20,10 @@ export const PrinterSchema = z.object({
   marcaId: z.string().optional().nullable().transform(val => val === "" ? undefined : val),
   modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   custoAquisicao: z.coerce.number().nonnegative({ message: "Custo de aquisição não pode ser negativo" }),
-  consumoEnergiaHora: z.coerce.number().positive({ message: "Consumo de energia deve ser positivo" }),
   taxaDepreciacaoHora: z.coerce.number().nonnegative({ message: "Taxa de depreciação não pode ser negativa" }),
   vidaUtilAnos: z.coerce.number().int({ message: "Vida útil deve ser um número inteiro" }).nonnegative({ message: "Vida útil não pode ser negativa" }),
   horasTrabalhoDia: z.coerce.number().int({ message: "Horas de trabalho por dia deve ser um número inteiro"}).positive({message: "Horas de trabalho por dia deve ser um número positivo"}),
+  custoEnergiaKwh: z.coerce.number().nonnegative({ message: "Custo de energia por kWh não pode ser negativo" }).optional(), // Mantido para consistência, mas não no formulário
 });
 
 export const ProductSchema = z.object({
@@ -38,7 +38,6 @@ export const ProductSchema = z.object({
   custoModelagem: z.coerce.number().nonnegative({message: "Custo de modelagem não pode ser negativo"}).default(0),
   custosExtras: z.coerce.number().nonnegative({message: "Custos extras não podem ser negativos"}).default(0),
   margemLucroPercentual: z.coerce.number().nonnegative({message: "Margem de lucro não pode ser negativa"}).default(20),
-  // custoDetalhado será calculado e não faz parte da validação do formulário em si, mas dos dados do produto.
 });
 
 export const BrandSchema = z.object({

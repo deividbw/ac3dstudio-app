@@ -160,7 +160,6 @@ export function PrintersTab() {
                 <TableRow>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Marca</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Modelo</TableHead>
-                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Potência Watts</TableHead>
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Vida Útil (anos)</TableHead>
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Horas Trab. Dia</TableHead>
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Depreciação (R$/h)</TableHead>
@@ -172,7 +171,6 @@ export function PrintersTab() {
                   <TableRow key={printer.id}>
                     <TableCell className="px-2 py-1.5">{getBrandNameById(printer.marcaId)}</TableCell>
                     <TableCell className="px-2 py-1.5">{printer.modelo || "N/A"}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-right">{(printer.consumoEnergiaHora * 1000).toFixed(0)}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{printer.vidaUtilAnos}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{printer.horasTrabalhoDia}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{printer.taxaDepreciacaoHora.toFixed(2)}</TableCell>
@@ -219,4 +217,3 @@ export function PrintersTab() {
     </div>
   );
 }
-

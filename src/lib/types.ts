@@ -14,24 +14,19 @@ export interface Filament {
 
 export interface Printer {
   id: string;
-  // nome?: string; // Made optional, then removed from display
   marcaId?: string; // ID da marca
   modelo?: string;
   custoAquisicao: number;
-  consumoEnergiaHora: number; // kWh
   taxaDepreciacaoHora: number; // R$/hora - Custo por hora da impressora (depreciação)
-  custoEnergiaKwh: number; // R$/kWh - Custo da energia
+  custoEnergiaKwh: number; // R$/kWh - Custo da energia (padrão do sistema ou específico da impressora se implementado)
   vidaUtilAnos: number;
-  horasTrabalhoDia: number; // Novo campo
+  horasTrabalhoDia: number; 
 }
 
-// Nova estrutura para o detalhamento do custo e preço do produto
 export interface ProductCostBreakdown {
   custoMaterialCalculado: number;
-  custoImpressaoCalculado: number; // Combina depreciação e energia
-  // custoModelagem e custosExtras vêm diretamente do Product, mas são listados aqui para clareza no cálculo total
-  custoTotalProducaoCalculado: number; // Soma de material, impressão, modelagem, extras
-  // margemLucroPercentual vem diretamente do Product
+  custoImpressaoCalculado: number; 
+  custoTotalProducaoCalculado: number; 
   lucroCalculado: number;
   precoVendaCalculado: number;
 }
@@ -40,18 +35,15 @@ export interface Product {
   id:string;
   nome: string;
   descricao?: string;
-  filamentoId: string; // Obrigatório para cálculo
-  impressoraId: string; // Obrigatório para cálculo
-  tempoImpressaoHoras: number; // Obrigatório para cálculo
-  pesoGramas: number; // gramas - Obrigatório para cálculo
+  filamentoId: string; 
+  impressoraId: string; 
+  tempoImpressaoHoras: number; 
+  pesoGramas: number; 
   imageUrl?: string;
-
-  // Novos campos de entrada para o formulário
-  custoModelagem: number; // Alterado de opcional para obrigatório com default no schema
-  custosExtras: number; // Alterado de opcional para obrigatório com default no schema
-  margemLucroPercentual: number; // Alterado de opcional para obrigatório com default no schema
-
-  custoDetalhado?: ProductCostBreakdown; // Armazena todos os valores calculados
+  custoModelagem: number; 
+  custosExtras: number;    
+  margemLucroPercentual: number; 
+  custoDetalhado?: ProductCostBreakdown; 
 }
 
 export interface Brand {
@@ -61,18 +53,16 @@ export interface Brand {
 
 export interface FilamentType {
   id: string;
-  nome: string; // Ex: PLA, ABS, PETG, TPU
+  nome: string; 
 }
 
-// Moved from ConfiguracoesPage.tsx
 export interface PowerOverride {
-  id: string; // printerId_filamentTypeId
+  id: string; 
   printerId: string;
-  printerName: string; // For display purposes
+  printerName: string; 
   filamentTypeId: string;
-  filamentTypeName: string; // For display purposes
+  filamentTypeName: string; 
   powerWatts: number;
 }
 
 export type SortableOverrideField = 'printerName' | 'filamentTypeName' | 'powerWatts';
-

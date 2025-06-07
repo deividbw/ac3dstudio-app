@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -30,34 +31,50 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from '@/components/ui/card';
 import { PrinterForm } from './components/PrinterForm';
-import type { Printer } from '@/lib/types';
+import type { Printer, Brand } from '@/lib/types'; // Import Brand
 import { useToast } from "@/hooks/use-toast";
 import { exportToCsv } from '@/lib/csv-export';
-// Mock actions
 import { getPrinters as mockGetPrinters, createPrinter as mockCreatePrinter, updatePrinter as mockUpdatePrinter, deletePrinter as mockDeletePrinter } from '@/lib/actions/printer.actions';
+import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; // Import getBrands
 
 export default function PrintersPage() {
   const [printers, setPrinters] = useState<Printer[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
   const { toast } = useToast();
 
-  const loadPrinters = useCallback(async () => {
-    const data = await mockGetPrinters();
-    setPrinters(data);
+  const loadData = useCallback(async () => { // Renamed from loadPrinters to loadData
+    const [printersData, brandsData] = await Promise.all([
+      mockGetPrinters(),
+      mockGetBrands(),
+    ]);
+    setPrinters(printersData);
+    setBrands(brandsData);
   }, []);
 
   useEffect(() => {
-    loadPrinters();
-  }, [loadPrinters]);
+    loadData();
+  }, [loadData]);
+
+  const getBrandNameById = useCallback((brandId?: string) => {
+    if (!brandId) return "N/A";
+    const brand = brands.find(b => b.id === brandId);
+    return brand ? brand.nome : "Desconhecida";
+  }, [brands]);
+  
+  const getPrinterDisplayName = (printer: Printer) => {
+    const brandName = getBrandNameById(printer.marcaId);
+    if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
+    if (printer.modelo) return printer.modelo;
+    return `Impressora ID: ${printer.id}`;
+  };
+
 
   const handleFormSuccess = async (printer: Printer) => {
-    if (editingPrinter) {
-      await mockUpdatePrinter(printer.id, printer);
-    } else {
-      await mockCreatePrinter(printer);
-    }
-    loadPrinters();
+    // Actions like updatePrinter/createPrinter are now part of PrinterForm onSubmit
+    // So this function might just need to reload data and close form
+    loadData();
     setIsFormOpen(false);
     setEditingPrinter(null);
   };
@@ -66,7 +83,7 @@ export default function PrintersPage() {
     const result = await mockDeletePrinter(id);
      if (result.success) {
       toast({ title: "Sucesso", description: "Impressora excluída." });
-      loadPrinters();
+      loadData();
     } else {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir a impressora.", variant: "destructive" });
     }
@@ -79,18 +96,20 @@ export default function PrintersPage() {
     }
     exportToCsv("impressoras.csv", printers.map(p => ({
       ID: p.id,
-      Nome: p.nome,
+      Marca: getBrandNameById(p.marcaId),
+      Modelo: p.modelo || "N/A",
       "Custo Aquisição (R$)": p.custoAquisicao.toFixed(2),
-      "Consumo Energia (kWh)": p.consumoEnergiaHora.toFixed(2),
       "Depreciação (R$/hora)": p.taxaDepreciacaoHora.toFixed(2),
       "Custo Energia (R$/kWh)": p.custoEnergiaKwh.toFixed(2),
+      "Vida Útil (anos)": p.vidaUtilAnos,
+      "Horas Trabalho Dia": p.horasTrabalhoDia,
     })));
     toast({ title: "Exportar Dados", description: "Dados das impressoras exportados para CSV."});
   };
 
   return (
     <>
-      <PageHeader title="Gerenciar Impressoras">
+      <PageHeader title="Gerenciar Impressoras (Alternativo)">
         <Button onClick={handleExport} variant="outline" size="sm" className="mr-2">
           <Download className="mr-2 h-4 w-4" />
           Exportar CSV
@@ -105,6 +124,7 @@ export default function PrintersPage() {
           <DialogContent className="sm:max-w-md">
             <PrinterForm 
               printer={editingPrinter} 
+              brands={brands} // Pass brands to the form
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingPrinter(null); }}
             />
@@ -122,9 +142,9 @@ export default function PrintersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
+                  <TableHead>Marca</TableHead>
+                  <TableHead>Modelo</TableHead>
                   <TableHead className="text-right">Custo Aquisição (R$)</TableHead>
-                  <TableHead className="text-right">Consumo (kWh)</TableHead>
                   <TableHead className="text-right">Depreciação (R$/h)</TableHead>
                   <TableHead className="text-right">Custo Energia (R$/kWh)</TableHead>
                   <TableHead className="w-[100px] text-center">Ações</TableHead>
@@ -133,9 +153,9 @@ export default function PrintersPage() {
               <TableBody>
                 {printers.map((printer) => (
                   <TableRow key={printer.id}>
-                    <TableCell className="font-medium">{printer.nome}</TableCell>
+                    <TableCell className="font-medium">{getBrandNameById(printer.marcaId)}</TableCell>
+                    <TableCell className="font-medium">{printer.modelo || "N/A"}</TableCell>
                     <TableCell className="text-right">{printer.custoAquisicao.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{printer.consumoEnergiaHora.toFixed(2)}</TableCell>
                     <TableCell className="text-right">{printer.taxaDepreciacaoHora.toFixed(2)}</TableCell>
                     <TableCell className="text-right">{printer.custoEnergiaKwh.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
@@ -152,7 +172,7 @@ export default function PrintersPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Tem certeza que deseja excluir a impressora "{printer.nome}"? Esta ação não pode ser desfeita.
+                              Tem certeza que deseja excluir a impressora "{getPrinterDisplayName(printer)}"? Esta ação não pode ser desfeita.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

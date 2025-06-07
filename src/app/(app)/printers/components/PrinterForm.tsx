@@ -52,7 +52,6 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
-      consumoEnergiaHora: 0.1,
       vidaUtilAnos: 0,
       horasTrabalhoDia: 8,
       taxaDepreciacaoHora: 0,
@@ -89,7 +88,6 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
-        consumoEnergiaHora: Number(values.consumoEnergiaHora),
         vidaUtilAnos: Number(values.vidaUtilAnos),
         horasTrabalhoDia: Number(values.horasTrabalhoDia),
         taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
@@ -99,15 +97,13 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       if (printer && printer.id) {
         const dataForUpdate: Partial<Omit<Printer, 'id'>> = {
           ...dataForActionBase,
-          // custoEnergiaKwh will be preserved from existing data as it's not on the form
           custoEnergiaKwh: printer.custoEnergiaKwh,
         };
         actionResult = await updatePrinter(printer.id, dataForUpdate);
       } else {
         const dataForCreate: Omit<Printer, 'id'> = {
           ...dataForActionBase,
-          // custoEnergiaKwh will be set by default in the action for new printers
-          custoEnergiaKwh: undefined, // Will be defaulted in the action
+          custoEnergiaKwh: undefined, 
         };
         actionResult = await createPrinter(dataForCreate);
       }
@@ -155,27 +151,6 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
 
-  const handlePotenciaWattsInputChange = (field: any, valueInWattsStr: string) => {
-    if (valueInWattsStr.trim() === '') {
-      field.onChange(undefined);
-    } else {
-      const numWatts = parseFloat(valueInWattsStr);
-      if (Number.isNaN(numWatts)) {
-        field.onChange(undefined);
-      } else {
-        field.onChange(numWatts / 1000);
-      }
-    }
-  };
-
-  const getPotenciaWattsFieldValue = (valueInKwh: number | undefined | null) => {
-    if (valueInKwh === undefined || valueInKwh === null || Number.isNaN(valueInKwh)) {
-      return '';
-    }
-    return String(valueInKwh * 1000);
-  };
-
-
   return (
     <>
       <DialogHeader className="sticky top-0 z-10 bg-background p-6 border-b">
@@ -183,6 +158,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         <DialogDescription>
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
           O custo de energia por kWh é um valor padrão do sistema (R$ {printer?.custoEnergiaKwh?.toFixed(2) || 'N/A'}).
+          A potência de consumo é definida em Configurações por tipo de filamento e impressora.
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -231,42 +207,22 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="custoAquisicao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Custo Aquisição (R$)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 1500.00"
-                             value={getGenericNumericFieldValue(field.value)}
-                             onChange={e => handleGenericNumericInputChange(field, e.target.value, false)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="consumoEnergiaHora"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Potência Watts *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="1"
-                        placeholder="Ex: 150"
-                        value={getPotenciaWattsFieldValue(field.value)}
-                        onChange={e => handlePotenciaWattsInputChange(field, e.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="custoAquisicao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Custo Aquisição (R$)*</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" placeholder="Ex: 1500.00"
+                            value={getGenericNumericFieldValue(field.value)}
+                            onChange={e => handleGenericNumericInputChange(field, e.target.value, false)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

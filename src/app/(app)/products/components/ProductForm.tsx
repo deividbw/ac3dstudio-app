@@ -36,8 +36,8 @@ interface ProductFormProps {
   filaments: Filament[];
   printers: Printer[];
   brands: Brand[];
-  filamentTypes: FilamentType[]; // Added for mapping filament.tipo to filamentType.id
-  powerOverrides?: PowerOverride[]; // Added for specific power consumption
+  filamentTypes: FilamentType[]; 
+  powerOverrides?: PowerOverride[]; 
   onSuccess: (product: Product) => void;
   onCancel: () => void;
 }
@@ -47,6 +47,8 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
   const [isCalculating, setIsCalculating] = useState(false);
   const [costBreakdown, setCostBreakdown] = useState<ProductCostBreakdown | undefined>(product?.custoDetalhado);
   const [showCostSection, setShowCostSection] = useState(!!product?.custoDetalhado);
+  const [powerOverrideWarning, setPowerOverrideWarning] = useState<string | null>(null);
+
 
   const form = useForm<z.infer<typeof ProductSchema>>({
     resolver: zodResolver(ProductSchema),
@@ -80,6 +82,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
 
   const triggerCostCalculation = useCallback(async () => {
     const currentValues = form.getValues();
+    setPowerOverrideWarning(null);
     
     if (!currentValues.filamentoId || !currentValues.impressoraId) {
       setCostBreakdown(undefined); 
@@ -118,19 +121,36 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
 
       const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
       
-      let consumoEnergiaHoraParaCalculo = selectedPrinter.consumoEnergiaHora;
+      let consumoEnergiaHoraParaCalculo = 0; // Default to 0 kWh
+      let localPowerOverrideWarning: string | null = null;
 
-      // Find filamentType.id for the selectedFilament.tipo
       const filamentType = filamentTypes.find(ft => ft.nome === selectedFilament.tipo);
       
-      if (filamentType && powerOverrides) {
+      if (filamentType) {
         const override = powerOverrides.find(
           ov => ov.printerId === selectedPrinter.id && ov.filamentTypeId === filamentType.id
         );
         if (override) {
           consumoEnergiaHoraParaCalculo = override.powerWatts / 1000; // Convert Watts to kWh
+        } else {
+          localPowerOverrideWarning = `Config. de potência não encontrada para ${getPrinterDisplayName(selectedPrinter)} com ${selectedFilament.tipo}. Custo de energia será 0. Verifique Configurações.`;
+          toast({
+            title: "Aviso de Cálculo",
+            description: localPowerOverrideWarning,
+            variant: "default",
+            duration: 7000,
+          });
         }
+      } else {
+         localPowerOverrideWarning = "Tipo de filamento não reconhecido para busca de override de potência.";
+         toast({
+            title: "Aviso de Cálculo",
+            description: localPowerOverrideWarning,
+            variant: "default",
+            duration: 7000,
+          });
       }
+      setPowerOverrideWarning(localPowerOverrideWarning);
       
       const custoEnergiaImpressao = consumoEnergiaHoraParaCalculo * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
       const custoDepreciacaoImpressao = selectedPrinter.taxaDepreciacaoHora * tempoProducaoHoras;
@@ -157,7 +177,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
     } finally {
         setIsCalculating(false);
     }
-  }, [form, filaments, printers, toast, filamentTypes, powerOverrides]);
+  }, [form, filaments, printers, toast, filamentTypes, powerOverrides, brands]);
 
   const filamentoId = form.watch("filamentoId");
   const impressoraId = form.watch("impressoraId");
@@ -176,6 +196,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
     } else {
       setCostBreakdown(undefined);
       setShowCostSection(false);
+      setPowerOverrideWarning(null);
     }
   }, [
     filamentoId, 
@@ -474,6 +495,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                   <>
                     <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span className="font-medium">{formatCurrency(costBreakdown.custoMaterialCalculado)}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Custo Impressão:</span> <span className="font-medium">{formatCurrency(costBreakdown.custoImpressaoCalculado)}</span></div>
+                    {powerOverrideWarning && <p className="text-xs text-amber-600 dark:text-amber-500 text-center py-1">{powerOverrideWarning}</p>}
                     <div className="flex justify-between"><span className="text-muted-foreground">Custo Modelagem:</span> <span className="font-medium">{formatCurrency(form.getValues("custoModelagem"))}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Custos Extras:</span> <span className="font-medium">{formatCurrency(form.getValues("custosExtras"))}</span></div>
                     <hr className="my-1"/>
@@ -507,4 +529,3 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
     </>
   );
 }
-
