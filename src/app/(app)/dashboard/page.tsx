@@ -23,7 +23,7 @@ interface VisibleShortcutCardConfig extends ShortcutCardConfig {
 }
 
 const featureCardIconColors = {
-  orcamentos: "bg-primary", // Changed from pedidos
+  orcamentos: "bg-primary", 
   agenda: "bg-accent",
   financeiro: "bg-green-500",
   clientes: "bg-orange-500",
@@ -70,7 +70,12 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Main Features Grid */}
       <div className="grid grid-cols-2 gap-4">
-        <FeatureCard icon={Icons.ClipboardList} title="Orçamentos" iconBgColor={featureCardIconColors.orcamentos} />
+        <FeatureCard 
+          icon={Icons.ClipboardList} 
+          title="Orçamentos" 
+          iconBgColor={featureCardIconColors.orcamentos} 
+          onClick={() => router.push('/orcamentos')} 
+        />
         <FeatureCard icon={Icons.CalendarDays} title="Agenda" iconBgColor={featureCardIconColors.agenda} />
         <FeatureCard icon={Icons.DollarSign} title="Financeiro" iconBgColor={featureCardIconColors.financeiro} />
         <FeatureCard icon={Icons.Users} title="Clientes" iconBgColor={featureCardIconColors.clientes} />
@@ -168,7 +173,7 @@ export default function DashboardPage() {
 
       {/* Fixed Action Button */}
       <div className="fixed bottom-20 left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 sm:w-auto sm:left-auto sm:right-4 sm:translate-x-0">
-        <Button size="lg" className="w-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90">
+        <Button size="lg" className="w-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90" onClick={() => router.push('/orcamentos')}>
           <Icons.FilePlus2 className="mr-2 h-5 w-5" />
           Criar novo orçamento
         </Button>
