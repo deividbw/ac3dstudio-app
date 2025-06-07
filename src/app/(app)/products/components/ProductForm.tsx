@@ -36,8 +36,8 @@ interface ProductFormProps {
   filaments: Filament[];
   printers: Printer[];
   brands: Brand[];
-  filamentTypes: FilamentType[]; 
-  powerOverrides?: PowerOverride[]; 
+  filamentTypes: FilamentType[];
+  powerOverrides?: PowerOverride[];
   onSuccess: (product: Product) => void;
   onCancel: () => void;
 }
@@ -60,9 +60,9 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
       tempoImpressaoHoras: 0,
       pesoGramas: 0,
       imageUrl: "",
-      custoModelagem: 0, 
-      custosExtras: 0,    
-      margemLucroPercentual: 20, 
+      custoModelagem: 0,
+      custosExtras: 0,
+      margemLucroPercentual: 20,
     },
   });
 
@@ -72,42 +72,55 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
     return brand ? brand.nome : "";
   }, [brands]);
 
-  const getPrinterDisplayName = (printer: Printer) => {
+  const getPrinterDisplayName = useCallback((printer: Printer) => {
     const brandName = getBrandNameById(printer.marcaId);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
     return `Impressora ID: ${printer.id}`;
-  }
+  }, [getBrandNameById]);
 
 
   const triggerCostCalculation = useCallback(async () => {
     const currentValues = form.getValues();
     setPowerOverrideWarning(null);
-    
+
+    console.log("ProductForm Debug: --- Initiating Cost Calculation ---");
+    console.log("ProductForm Debug: Current Form Values:", currentValues);
+    console.log("ProductForm Debug: Selected Filament ID:", currentValues.filamentoId);
+    console.log("ProductForm Debug: Selected Printer ID:", currentValues.impressoraId);
+
     if (!currentValues.filamentoId || !currentValues.impressoraId) {
-      setCostBreakdown(undefined); 
+      setCostBreakdown(undefined);
       setShowCostSection(false);
+      console.log("ProductForm Debug: Calculation aborted - missing filament or printer ID.");
       return;
     }
-    
+
     if (Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
-       setCostBreakdown(undefined); 
+       setCostBreakdown(undefined);
        setShowCostSection(false);
+       console.log("ProductForm Debug: Calculation aborted - peso or tempo is zero or less.");
        return;
     }
 
     const selectedFilament = filaments.find(f => f.id === currentValues.filamentoId);
     const selectedPrinter = printers.find(p => p.id === currentValues.impressoraId);
 
+    console.log("ProductForm Debug: Selected Filament Object:", selectedFilament);
+    console.log("ProductForm Debug: Selected Printer Object:", selectedPrinter);
+
+
     if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
       toast({ title: "Filamento Inválido", description: "O filamento selecionado não possui um preço por Kg válido para cálculo.", variant: "destructive" });
-      setCostBreakdown(undefined); 
+      setCostBreakdown(undefined);
       setShowCostSection(false);
+      console.log("ProductForm Debug: Calculation aborted - invalid filament or filament price.");
       return;
     }
     if (!selectedPrinter) {
-      setCostBreakdown(undefined); 
+      setCostBreakdown(undefined);
       setShowCostSection(false);
+      console.log("ProductForm Debug: Calculation aborted - printer not found.");
       return;
     }
 
@@ -120,19 +133,18 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
       const margemLucroPercentualValue = Number(currentValues.margemLucroPercentual) || 0;
 
       const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
-      
-      let consumoEnergiaHoraParaCalculo = 0; // Default to 0 kWh
+
+      let consumoEnergiaHoraParaCalculo = 0; // Default to 0 kWh (potência em Watts / 1000)
       let localPowerOverrideWarning: string | null = null;
 
-      // Debugging logs
-      console.log("ProductForm Debug: --- Initiating Override Lookup ---");
-      console.log("ProductForm Debug: Selected Printer ID:", selectedPrinter.id, `(${getPrinterDisplayName(selectedPrinter)})`);
-      console.log("ProductForm Debug: Selected Filament Tipo:", selectedFilament.tipo);
+      console.log("ProductForm Debug: --- Override Lookup ---");
+      console.log("ProductForm Debug: Selected Printer ID for Override:", selectedPrinter.id, `(${getPrinterDisplayName(selectedPrinter)})`);
+      console.log("ProductForm Debug: Selected Filament Tipo for Override:", selectedFilament.tipo);
       console.log("ProductForm Debug: Available FilamentTypes prop:", JSON.stringify(filamentTypes.map(ft => ({id: ft.id, nome: ft.nome}))));
-      
+
       const filamentType = filamentTypes.find(ft => ft.nome.toUpperCase() === selectedFilament.tipo.toUpperCase());
-      
-      console.log("ProductForm Debug: Matched FilamentType ID:", filamentType?.id, "(Nome:", filamentType?.nome, ")");
+
+      console.log("ProductForm Debug: Matched FilamentType Object for Override:", filamentType);
       console.log("ProductForm Debug: Available PowerOverrides prop:", JSON.stringify(powerOverrides.map(po => ({printerId: po.printerId, filamentTypeId: po.filamentTypeId, watts: po.powerWatts }))));
 
 
@@ -140,12 +152,10 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
         const override = powerOverrides.find(
           ov => ov.printerId === selectedPrinter.id && ov.filamentTypeId === filamentType.id
         );
-
-        console.log("ProductForm Debug: Found Override:", JSON.stringify(override));
-        console.log("ProductForm Debug: --- Override Lookup Ended ---");
-
+        console.log("ProductForm Debug: Found Override:", override);
         if (override) {
           consumoEnergiaHoraParaCalculo = override.powerWatts / 1000; // Convert Watts to kWh
+          console.log("ProductForm Debug: Using Override Power (kW):", consumoEnergiaHoraParaCalculo);
         } else {
           localPowerOverrideWarning = `Config. de potência não encontrada para ${getPrinterDisplayName(selectedPrinter)} com ${selectedFilament.tipo}. Custo de energia será 0. Verifique Configurações.`;
           toast({
@@ -154,11 +164,11 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
             variant: "default",
             duration: 7000,
           });
+          console.log("ProductForm Debug: Override NOT found. Warning set.");
         }
       } else {
          localPowerOverrideWarning = `Tipo de filamento '${selectedFilament.tipo}' não mapeado no sistema para busca de override de potência. Verifique os cadastros de Tipos de Filamento.`;
          console.log("ProductForm Debug: FilamentType not found for selectedFilament.tipo:", selectedFilament.tipo);
-         console.log("ProductForm Debug: --- Override Lookup Ended (FilamentType not found) ---");
          toast({
             title: "Aviso de Tipo de Filamento",
             description: localPowerOverrideWarning,
@@ -166,12 +176,13 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
             duration: 7000,
           });
       }
+      console.log("ProductForm Debug: --- Override Lookup Ended ---");
       setPowerOverrideWarning(localPowerOverrideWarning);
-      
+
       const custoEnergiaImpressao = consumoEnergiaHoraParaCalculo * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
       const custoDepreciacaoImpressao = selectedPrinter.taxaDepreciacaoHora * tempoProducaoHoras;
       const custoImpressaoCalculado = custoEnergiaImpressao + custoDepreciacaoImpressao;
-      
+
       const custoTotalProducaoCalculado = custoMaterialCalculado + custoImpressaoCalculado + custoModelagemValue + custosExtrasValue;
       const lucroCalculado = custoTotalProducaoCalculado * (margemLucroPercentualValue / 100);
       const precoVendaCalculado = custoTotalProducaoCalculado + lucroCalculado;
@@ -185,15 +196,18 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
       };
       setCostBreakdown(newBreakdown);
       setShowCostSection(true);
+      console.log("ProductForm Debug: Calculation successful. Breakdown:", newBreakdown);
 
     } catch (error: any) {
         toast({ title: "Erro no Cálculo", description: error.message || "Ocorreu um erro ao calcular o custo.", variant: "destructive" });
         setCostBreakdown(undefined);
         setShowCostSection(false);
+        console.error("ProductForm Debug: Error during calculation:", error);
     } finally {
         setIsCalculating(false);
+        console.log("ProductForm Debug: --- Cost Calculation Ended ---");
     }
-  }, [form, filaments, printers, toast, filamentTypes, powerOverrides, brands, getPrinterDisplayName]); // Added getPrinterDisplayName to dependencies
+  }, [form, filaments, printers, toast, filamentTypes, powerOverrides, brands, getPrinterDisplayName]);
 
   const filamentoId = form.watch("filamentoId");
   const impressoraId = form.watch("impressoraId");
@@ -215,15 +229,15 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
       setPowerOverrideWarning(null);
     }
   }, [
-    filamentoId, 
-    impressoraId, 
-    pesoGramas, 
-    tempoImpressaoHoras, 
-    custoModelagemWatched, 
-    custosExtrasWatched, 
+    filamentoId,
+    impressoraId,
+    pesoGramas,
+    tempoImpressaoHoras,
+    custoModelagemWatched,
+    custosExtrasWatched,
     margemLucroPercentualWatched,
-    triggerCostCalculation, 
-    form 
+    triggerCostCalculation,
+    form
   ]);
 
 
@@ -239,7 +253,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
       }
 
       const dataToSave: Omit<Product, 'id'> & { id?: string } = {
-        id: product?.id, 
+        id: product?.id,
         nome: values.nome,
         descricao: values.descricao || undefined,
         filamentoId: values.filamentoId,
@@ -250,22 +264,22 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
         custoModelagem: Number(values.custoModelagem),
         custosExtras: Number(values.custosExtras),
         margemLucroPercentual: Number(values.margemLucroPercentual),
-        custoDetalhado: costBreakdown, 
+        custoDetalhado: costBreakdown,
       };
 
       let actionResult;
       let finalProductData: Product;
 
       if (product && product.id) {
-        actionResult = await updateProduct(product.id, dataToSave as Product ); 
+        actionResult = await updateProduct(product.id, dataToSave as Product );
         finalProductData = actionResult.product!;
       } else {
         const createData = { ...dataToSave };
-        delete createData.id; 
-        actionResult = await createProduct(createData as Omit<Product, 'id'>); 
+        delete createData.id;
+        actionResult = await createProduct(createData as Omit<Product, 'id'>);
         finalProductData = actionResult.product!;
       }
-      
+
       if (actionResult.success && finalProductData) {
         toast({
           title: product ? "Produto Atualizado" : "Produto Criado",
@@ -289,7 +303,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
       });
     }
   }
-  
+
   const formatCurrency = (value: number | undefined) => {
     if (value === undefined) return "N/A";
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -297,13 +311,13 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
 
   const handleNumericInputChange = (field: any, value: string) => {
     if (value.trim() === '') {
-      field.onChange(undefined); 
+      field.onChange(undefined);
     } else {
       const num = parseFloat(value);
       field.onChange(Number.isNaN(num) ? undefined : num);
     }
   };
-  
+
   const getNumericFieldValue = (value: number | undefined | null) => {
       return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
@@ -317,8 +331,8 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}> 
-          <div className="px-6 pt-3 pb-6 space-y-3"> 
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="px-6 pt-3 pb-6 space-y-3">
             <FormField
               control={form.control}
               name="nome"
@@ -423,7 +437,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                   <FormItem>
                     <FormLabel>Material Usado (g)*</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" placeholder="Ex: 50" 
+                      <Input type="number" step="0.1" placeholder="Ex: 50"
                               value={getNumericFieldValue(field.value)}
                               onChange={e => handleNumericInputChange(field, e.target.value)} />
                     </FormControl>
@@ -438,7 +452,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                   <FormItem>
                     <FormLabel>Tempo Produção (h)*</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" placeholder="Ex: 2.5" 
+                      <Input type="number" step="0.1" placeholder="Ex: 2.5"
                             value={getNumericFieldValue(field.value)}
                             onChange={e => handleNumericInputChange(field, e.target.value)} />
                     </FormControl>
@@ -447,7 +461,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                 )}
               />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                     control={form.control}
@@ -456,7 +470,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                     <FormItem>
                         <FormLabel>Custo Modelagem (R$)</FormLabel>
                         <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 10.00" 
+                        <Input type="number" step="0.01" placeholder="Ex: 10.00"
                                 value={getNumericFieldValue(field.value)}
                                 onChange={e => handleNumericInputChange(field, e.target.value)} />
                         </FormControl>
@@ -471,7 +485,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                     <FormItem>
                         <FormLabel>Custos Extras (R$)</FormLabel>
                         <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 5.00" 
+                        <Input type="number" step="0.01" placeholder="Ex: 5.00"
                                 value={getNumericFieldValue(field.value)}
                                 onChange={e => handleNumericInputChange(field, e.target.value)} />
                         </FormControl>
@@ -486,7 +500,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                     <FormItem>
                         <FormLabel>Margem Lucro (%)*</FormLabel>
                         <FormControl>
-                        <Input type="number" step="1" placeholder="Ex: 100" 
+                        <Input type="number" step="1" placeholder="Ex: 100"
                                 value={getNumericFieldValue(field.value)}
                                 onChange={e => handleNumericInputChange(field, e.target.value)} />
                         </FormControl>
@@ -495,7 +509,7 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
                     )}
                 />
             </div>
-            
+
             {isCalculating && !costBreakdown ? (
                 <div className="mt-3 pt-3 border-t text-xs text-muted-foreground text-center">
                     <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto mb-1" />
@@ -529,8 +543,8 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
             )}
 
 
-          </div> 
-          
+          </div>
+
           <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
             <DialogClose asChild>
               <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
