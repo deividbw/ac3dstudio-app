@@ -92,7 +92,7 @@ export function FilamentTypesTab() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Gerenciar Tipos de Filamento">
+      <PageHeader title="Gerenciar Tipos de Filamento" backButtonHref="/servicos">
         <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
           setIsFormOpen(isOpen);
           if (!isOpen) setEditingFilamentType(null);

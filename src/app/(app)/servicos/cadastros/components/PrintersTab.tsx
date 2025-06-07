@@ -103,7 +103,7 @@ export function PrintersTab() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Gerenciar Impressoras">
+      <PageHeader title="Gerenciar Impressoras" backButtonHref="/servicos">
         <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
           setIsFormOpen(isOpen);
           if (!isOpen) setEditingPrinter(null);

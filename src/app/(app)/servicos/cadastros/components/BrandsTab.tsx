@@ -89,7 +89,7 @@ export function BrandsTab() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Gerenciar Marcas">
+      <PageHeader title="Gerenciar Marcas" backButtonHref="/servicos">
         <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
           setIsFormOpen(isOpen);
           if (!isOpen) setEditingBrand(null);

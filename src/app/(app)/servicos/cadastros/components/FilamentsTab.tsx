@@ -241,7 +241,7 @@ export function FilamentsTab() {
   
   return (
     <div className="space-y-4">
-      <PageHeader title="Gerenciar Filamentos">
+      <PageHeader title="Gerenciar Filamentos" backButtonHref="/servicos">
         <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
           setIsFormOpen(isOpen);
           if (!isOpen) setEditingFilament(null);
