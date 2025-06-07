@@ -182,6 +182,7 @@ export function FilamentsTab() {
             <FilamentForm
               filament={editingFilament}
               brands={brands}
+              allFilaments={filaments} // Passando a lista completa de filamentos
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingFilament(null); }}
             />
@@ -331,6 +332,3 @@ export function FilamentsTab() {
     </div>
   );
 }
-
-
-    

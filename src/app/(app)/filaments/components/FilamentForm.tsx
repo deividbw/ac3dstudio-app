@@ -31,16 +31,16 @@ import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
 interface FilamentFormProps {
   filament?: Filament | null;
   brands: Brand[];
+  allFilaments: Filament[]; // Adicionado para verificação de duplicidade
   onSuccess: (filament: Filament) => void;
   onCancel: () => void;
 }
 
-export function FilamentForm({ filament, brands, onSuccess, onCancel }: FilamentFormProps) {
+export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCancel }: FilamentFormProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof FilamentSchema>>({
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
-      // Spread only the fields relevant to this form
       id: filament.id,
       tipo: filament.tipo,
       cor: filament.cor,
@@ -53,7 +53,7 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
     } : {
       tipo: "",
       cor: "",
-      densidade: 1.24, // Default density
+      densidade: 1.24, 
       marcaId: undefined,
       modelo: undefined,
       temperaturaBicoIdeal: undefined,
@@ -78,6 +78,36 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
+      // Validação de duplicidade ANTES de qualquer ação
+      if (!filament || !filament.id) { // Apenas para novos filamentos
+        const tipoLowerCase = values.tipo.toLowerCase();
+        const corLowerCase = values.cor.toLowerCase();
+        const modeloLowerCase = values.modelo?.toLowerCase() || null; // Normalize para null se undefined/empty
+        const marcaIdNormalized = values.marcaId || null; // Normalize para null se undefined/empty
+
+        const existingMatch = allFilaments.find(f => {
+          const fTipoLowerCase = f.tipo.toLowerCase();
+          const fCorLowerCase = f.cor.toLowerCase();
+          const fModeloLowerCase = f.modelo?.toLowerCase() || null;
+          const fMarcaIdNormalized = f.marcaId || null;
+          
+          return fTipoLowerCase === tipoLowerCase &&
+                 fCorLowerCase === corLowerCase &&
+                 fModeloLowerCase === modeloLowerCase &&
+                 fMarcaIdNormalized === marcaIdNormalized;
+        });
+
+        if (existingMatch) {
+          toast({
+            title: "Filamento Duplicado",
+            description: "Já existe um filamento cadastrado com estas mesmas características (Tipo, Cor, Marca e Modelo).",
+            variant: "destructive",
+          });
+          return; // Interrompe a submissão
+        }
+      }
+
+
       // Data for action only includes fields managed by this form
       const dataForAction = {
         tipo: values.tipo,
@@ -87,22 +117,17 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
         modelo: values.modelo || undefined,
         temperaturaBicoIdeal: values.temperaturaBicoIdeal !== undefined ? Number(values.temperaturaBicoIdeal) : undefined,
         temperaturaMesaIdeal: values.temperaturaMesaIdeal !== undefined ? Number(values.temperaturaMesaIdeal) : undefined,
-        // precoPorKg and quantidadeEstoqueGramas are handled below
       };
 
       let actionResult;
       if (filament && filament.id) {
-        // For updates, explicitly preserve existing precoPorKg and quantidadeEstoqueGramas
         const updatePayload: Partial<Omit<Filament, 'id'>> = {
           ...dataForAction,
-          precoPorKg: filament.precoPorKg, // Preserve existing price
-          quantidadeEstoqueGramas: filament.quantidadeEstoqueGramas, // Preserve existing stock
+          precoPorKg: filament.precoPorKg, 
+          quantidadeEstoqueGramas: filament.quantidadeEstoqueGramas, 
         };
         actionResult = await updateFilament(filament.id, updatePayload);
       } else {
-        // For creates, precoPorKg and quantidadeEstoqueGramas will be undefined/default
-        // as per schema, or handled by the backend upon creation.
-        // Pass only data from this form.
         actionResult = await createFilament(dataForAction as Omit<Filament, 'id' | 'precoPorKg' | 'quantidadeEstoqueGramas'>);
       }
 
