@@ -17,13 +17,14 @@ export const FilamentSchema = z.object({
 
 export const PrinterSchema = z.object({
   id: z.string().optional(),
-  nome: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val), // Made optional
+  // nome: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val), // Nome foi removido
   marcaId: z.string().optional().nullable().transform(val => val === "" ? undefined : val),
   modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   custoAquisicao: z.coerce.number().nonnegative({ message: "Custo de aquisição não pode ser negativo" }),
   consumoEnergiaHora: z.coerce.number().positive({ message: "Consumo de energia deve ser positivo" }),
   taxaDepreciacaoHora: z.coerce.number().nonnegative({ message: "Taxa de depreciação não pode ser negativa" }),
-  custoEnergiaKwh: z.coerce.number().positive({ message: "Custo de energia deve ser positivo" }),
+  // custoEnergiaKwh: z.coerce.number().positive({ message: "Custo de energia deve ser positivo" }), // Removido do form, default no backend
+  vidaUtilAnos: z.coerce.number().int({ message: "Vida útil deve ser um número inteiro" }).nonnegative({ message: "Vida útil não pode ser negativa" }),
 });
 
 export const ProductSchema = z.object({
@@ -45,4 +46,3 @@ export const BrandSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(1, { message: "Nome da marca é obrigatório" }).max(100, { message: "Nome da marca deve ter no máximo 100 caracteres" }),
 });
-
