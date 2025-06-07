@@ -46,7 +46,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       marcaId: printer.marcaId ?? undefined,
       modelo: printer.modelo ?? undefined,
       vidaUtilAnos: printer.vidaUtilAnos ?? 0,
-      horasTrabalhoDia: printer.horasTrabalhoDia ?? 8, // Default if editing existing without this field
+      horasTrabalhoDia: printer.horasTrabalhoDia ?? 8, 
       taxaDepreciacaoHora: printer.taxaDepreciacaoHora ?? 0,
     } : {
       marcaId: undefined,
@@ -54,7 +54,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       custoAquisicao: 0,
       consumoEnergiaHora: 0.1, 
       vidaUtilAnos: 0,
-      horasTrabalhoDia: 8, // Default for new printers
+      horasTrabalhoDia: 8, 
       taxaDepreciacaoHora: 0,
     },
   });
@@ -62,6 +62,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
   const custoAquisicaoWatched = form.watch("custoAquisicao");
   const vidaUtilAnosWatched = form.watch("vidaUtilAnos");
   const horasTrabalhoDiaWatched = form.watch("horasTrabalhoDia");
+  const taxaDepreciacaoHoraWatched = form.watch("taxaDepreciacaoHora");
 
   useEffect(() => {
     const custoAquisicao = Number(custoAquisicaoWatched) || 0;
@@ -75,7 +76,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     } else {
       form.setValue("taxaDepreciacaoHora", 0);
     }
-  }, [custoAquisicaoWatched, vidaUtilAnosWatched, horasTrabalhoDiaWatched, form]);
+  }, [custoAquisicaoWatched, vidaUtilAnosWatched, horasTrabalhoDiaWatched, form.setValue]);
 
 
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
@@ -87,20 +88,20 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         consumoEnergiaHora: Number(values.consumoEnergiaHora),
         vidaUtilAnos: Number(values.vidaUtilAnos),
         horasTrabalhoDia: Number(values.horasTrabalhoDia),
-        taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora), // This will be the calculated value
+        taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora), 
       };
 
       let actionResult;
       if (printer && printer.id) {
         const dataForUpdate: Partial<Omit<Printer, 'id'>> = {
           ...dataForActionBase,
-          custoEnergiaKwh: printer.custoEnergiaKwh, // Preserve existing energy cost
+          custoEnergiaKwh: printer.custoEnergiaKwh, 
         };
         actionResult = await updatePrinter(printer.id, dataForUpdate);
       } else {
         const dataForCreate: Omit<Printer, 'id'> = {
           ...dataForActionBase,
-          custoEnergiaKwh: undefined, // Action will apply default
+          custoEnergiaKwh: undefined, 
         };
         actionResult = await createPrinter(dataForCreate);
       }
@@ -296,8 +297,8 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                     type="text" 
                     readOnly 
                     value={
-                        form.getValues("taxaDepreciacaoHora") > 0
-                        ? `R$ ${form.getValues("taxaDepreciacaoHora").toFixed(4)}`
+                        taxaDepreciacaoHoraWatched > 0
+                        ? `R$ ${taxaDepreciacaoHoraWatched.toFixed(4)}`
                         : "R$ 0.0000"
                     }
                     className="bg-muted text-muted-foreground cursor-default"
@@ -331,3 +332,4 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     </>
   );
 }
+
