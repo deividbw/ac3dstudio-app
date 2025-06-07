@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FilePlus2, Filter, Search, Edit, Trash2, DollarSign, List, LayoutGrid } from 'lucide-react'; // Added List, LayoutGrid
+import { FilePlus2, Filter, Search, Edit, Trash2, DollarSign, List, LayoutGrid } from 'lucide-react'; 
 import {
   Table,
   TableBody,
@@ -31,12 +31,27 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger as AlertDialogPrimitiveTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { useToast } from '@/hooks/use-toast';
 import type { Orcamento, Product, OrcamentoStatus } from '@/lib/types';
+import { OrcamentoStatusOptions } from '@/lib/types'; // Import non-type for direct use
 import { getProducts } from '@/lib/actions/product.actions';
 import { getOrcamentos, createOrcamento, updateOrcamento, deleteOrcamento } from '@/lib/actions/orcamento.actions';
 import { OrcamentoForm } from './components/OrcamentoForm'; 
-import { OrcamentoCard } from './components/OrcamentoCard'; // Import OrcamentoCard
+import { OrcamentoCard } from './components/OrcamentoCard'; 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils'; 
 
@@ -47,9 +62,12 @@ export default function OrcamentosPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrcamento, setEditingOrcamento] = useState<Orcamento | null>(null);
   const [deletingOrcamentoId, setDeletingOrcamentoId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid'); // Default to grid view
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid'); 
   
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<OrcamentoStatus | "">(""); // State for status filter
+  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
+
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -75,11 +93,12 @@ export default function OrcamentosPage() {
 
   const filteredOrcamentos = useMemo(() => {
     return orcamentos.filter(orc => 
-      orc.nomeOrcamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (orc.nomeOrcamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
       orc.clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      orc.id.toLowerCase().includes(searchTerm.toLowerCase())
+      orc.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterStatus === "" || orc.status === filterStatus) // Apply status filter
     );
-  }, [orcamentos, searchTerm]);
+  }, [orcamentos, searchTerm, filterStatus]); // Add filterStatus to dependencies
 
   const handleFormSuccess = (orcamento: Orcamento) => {
     loadData(); 
@@ -210,10 +229,45 @@ export default function OrcamentosPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="sm" className="h-9">
-              <Filter className="mr-2 h-4 w-4" />
-              Filtros
-            </Button>
+            <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant={filterStatus !== "" ? "secondary" : "outline"} size="sm" className="h-9">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filtros
+                  {filterStatus !== "" && <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary" />}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-60 p-3 space-y-3">
+                <div>
+                  <Label htmlFor="filterStatus" className="text-xs font-medium">Status do Orçamento</Label>
+                  <Select
+                    value={filterStatus}
+                    onValueChange={(value) => setFilterStatus(value as OrcamentoStatus | "")}
+                  >
+                    <SelectTrigger id="filterStatus" className="mt-1 h-8 text-xs">
+                      <SelectValue placeholder="Selecione um status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="" className="text-xs">Todos os Status</SelectItem>
+                      {OrcamentoStatusOptions.map(status => (
+                        <SelectItem key={status} value={status} className="text-xs">{status}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-8 text-xs text-destructive hover:text-destructive"
+                  onClick={() => {
+                    setFilterStatus("");
+                    setIsFilterPopoverOpen(false); // Close popover after clearing
+                  }}
+                >
+                  Limpar Filtro
+                </Button>
+              </PopoverContent>
+            </Popover>
           </div>
         </CardHeader>
         <CardContent>
@@ -231,7 +285,7 @@ export default function OrcamentosPage() {
                   />
                 ))}
               </div>
-            ) : ( // viewMode === 'list'
+            ) : ( 
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -291,6 +345,7 @@ export default function OrcamentosPage() {
               <Search className="mx-auto h-12 w-12 opacity-50 mb-3" />
               <p className="text-sm">Nenhum orçamento encontrado.</p>
               {searchTerm && <p className="text-xs mt-1">Tente refinar sua busca ou limpar o filtro.</p>}
+               {filterStatus && <p className="text-xs mt-1">Tente alterar o filtro de status aplicado.</p>}
               {products.length === 0 && !isLoading &&
                  <p className="text-sm mt-2 text-destructive">
                     Atenção: Não há produtos com preço definido cadastrados para criar orçamentos.
@@ -318,3 +373,6 @@ export default function OrcamentosPage() {
     </div>
   );
 }
+
+
+    
