@@ -42,7 +42,7 @@ import { getFilaments as mockGetFilaments } from '@/lib/actions/filament.actions
 import { getPrinters as mockGetPrinters } from '@/lib/actions/printer.actions';
 import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
 import { getFilamentTypes as mockGetFilamentTypes } from '@/lib/actions/filamentType.actions';
-import { getPowerOverrides as mockGetPowerOverrides } from '@/lib/actions/powerOverride.actions'; // Import action for power overrides
+import { getPowerOverrides as mockGetPowerOverrides } from '@/lib/actions/powerOverride.actions'; 
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -68,14 +68,15 @@ export default function ProductsPage() {
         mockGetPrinters(),
         mockGetBrands(),
         mockGetFilamentTypes(),
-        mockGetPowerOverrides(), // Fetch power overrides
+        mockGetPowerOverrides(), 
       ]);
+      console.log("ProductsPage Debug: Fetched powerOverrides:", powerOverridesData); // DEBUG LOG
       setProducts(productsData);
       setFilaments(filamentsData);
       setPrinters(printersData);
       setBrands(brandsData);
       setFilamentTypes(filamentTypesData);
-      setPowerOverrides(powerOverridesData); // Set power overrides
+      setPowerOverrides(powerOverridesData); 
     } catch (error) {
       console.error("Failed to load initial data:", error);
       toast({ title: "Erro ao carregar dados", description: "Não foi possível buscar todos os dados necessários.", variant: "destructive" });
@@ -215,7 +216,7 @@ export default function ProductsPage() {
               printers={printers}
               brands={brands}
               filamentTypes={filamentTypes}
-              powerOverrides={powerOverrides} // Pass fetched powerOverrides
+              powerOverrides={powerOverrides} 
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
             />
@@ -310,3 +311,5 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+    
