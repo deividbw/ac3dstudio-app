@@ -1,0 +1,47 @@
+
+"use client";
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { SheetClose } from '@/components/ui/sheet';
+import { AppLogo } from '@/components/AppLogo';
+import { MOBILE_SIDEBAR_NAV_ITEMS, type NavItem } from '@/lib/constants';
+
+export function MobileSidebar() {
+  const pathname = usePathname();
+
+  return (
+    <div className="flex h-full flex-col bg-card text-card-foreground">
+      <div className="border-b">
+        <AppLogo />
+      </div>
+      <ScrollArea className="flex-grow">
+        <nav className="flex flex-col gap-1 p-2">
+          {MOBILE_SIDEBAR_NAV_ITEMS.map((item: NavItem) => (
+            <SheetClose asChild key={item.href}>
+              <Button
+                variant={pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href !== '/') ? 'default' : 'ghost'}
+                className={cn(
+                  "w-full justify-start gap-2 text-sm h-10",
+                  (pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href !== '/'))
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "hover:bg-accent hover:text-accent-foreground"
+                )}
+                asChild
+              >
+                <Link href={item.href}>
+                  <item.icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              </Button>
+            </SheetClose>
+          ))}
+        </nav>
+      </ScrollArea>
+      {/* Você pode adicionar um rodapé ao menu lateral aqui, se desejar */}
+    </div>
+  );
+}
