@@ -91,7 +91,7 @@ export default function DashboardPage() {
               className="h-7 w-7 text-muted-foreground"
               onClick={toggleSummaryValuesVisibility}
             >
-              {showSummaryValues ? <Icons.EyeOff className="h-5 w-5" /> : <Icons.Eye className="h-5 w-5" />}
+              {showSummaryValues ? <Icons.Eye className="h-5 w-5" /> : <Icons.EyeOff className="h-5 w-5" />}
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
               <Icons.SlidersHorizontal className="h-5 w-5" />
