@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from "@/components/ui/label"; // Added import
 import {
   Table,
   TableBody,
@@ -18,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Filament, Brand } from '@/lib/types';
 import { getFilaments, updateFilamentStockBatch } from '@/lib/actions/filament.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
-import { Edit, PackageSearch, Filter } from 'lucide-react'; // Edit for action, Filter for visual
+import { Edit, PackageSearch, Filter } from 'lucide-react'; 
 import { FilamentStockUpdateDialog } from './components/FilamentStockUpdateDialog';
 
 export default function FilamentStockPage() {
@@ -77,12 +78,12 @@ export default function FilamentStockPage() {
       toast({ title: "Nenhuma Alteração", description: "Nenhuma quantidade ou preço foi fornecido para atualização.", variant: "default" });
       return;
     }
-    setIsLoading(true); // Consider a more specific saving state if needed
+    setIsLoading(true); 
     try {
-      const result = await updateFilamentStockBatch([update]); // Use existing batch action
+      const result = await updateFilamentStockBatch([update]); 
       if (result.success && result.updatedCount > 0) {
         toast({ title: "Estoque Atualizado", description: `Filamento atualizado com sucesso.`, variant: "success" });
-        loadData(); // Refresh data
+        loadData(); 
       } else if (result.errors && result.errors.length > 0) {
          toast({ title: "Erro ao Atualizar", description: result.errors[0].error, variant: "destructive" });
       } else if (!result.success) {
@@ -132,13 +133,13 @@ export default function FilamentStockPage() {
 
           {isLoading && filteredFilaments.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground">Carregando filamentos...</div>
-          ) : !isLoading && filaments.length === 0 ? ( // This case means no filaments at all
+          ) : !isLoading && filaments.length === 0 ? ( 
             <div className="p-10 text-center text-muted-foreground flex flex-col items-center space-y-3">
               <PackageSearch className="h-12 w-12" />
               <p className="font-medium">Nenhum filamento cadastrado ainda.</p>
               <p className="text-sm">Vá para <a href="/servicos/cadastros" className="text-primary hover:underline">Cadastros &gt; Filamentos</a> para adicionar.</p>
             </div>
-          ) : !isLoading && filteredFilaments.length === 0 && filaments.length > 0 ? ( // This case means filaments exist, but none match filter
+          ) : !isLoading && filteredFilaments.length === 0 && filaments.length > 0 ? ( 
              <div className="p-6 text-center text-muted-foreground">
               Nenhum filamento encontrado com os filtros aplicados. Limpe os filtros para ver todos os itens.
             </div>
