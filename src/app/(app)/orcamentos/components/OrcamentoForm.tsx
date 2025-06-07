@@ -244,10 +244,8 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
 
 
   return (
-    // This root div will be a flex item inside DialogContent (which is flex flex-col)
-    // h-full makes it try to take the full height given by DialogContent
-    <div className="flex flex-col h-full">
-      <DialogHeader className="p-6 border-b bg-background flex-shrink-0 z-10">
+    <>
+      <DialogHeader className="p-6 border-b bg-background sticky top-0 z-10 flex-shrink-0">
         <DialogTitle className="font-headline">{orcamento ? "Editar Orçamento" : "Novo Orçamento"}</DialogTitle>
         <DialogDescription>
           {orcamento ? "Modifique os detalhes do orçamento." : "Preencha as informações do novo orçamento."}
@@ -255,10 +253,9 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
       </DialogHeader>
 
       <Form {...form}>
-        {/* The form itself will be a flex container for its content (ScrollArea) and footer */}
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-          <ScrollArea className="flex-1"> {/* This ScrollArea will contain the form fields */}
-            <div className="p-6 space-y-4"> {/* Padding for actual form content */}
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-4">
               <FormField
                 control={form.control}
                 name="nomeOrcamento"
@@ -451,10 +448,10 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
                     </span>
                 </h4>
               </div>
-            </div> {/* End of p-6 content div */}
+            </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t bg-background flex-shrink-0 z-10">
+          <DialogFooter className="p-6 border-t bg-background sticky bottom-0 z-10 flex-shrink-0">
             <DialogClose asChild>
               <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
@@ -464,6 +461,6 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
           </DialogFooter>
         </form>
       </Form>
-    </div>
+    </>
   );
 }

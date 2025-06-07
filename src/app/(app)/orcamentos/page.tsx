@@ -154,7 +154,7 @@ export default function OrcamentosPage() {
             </p>
           )}
           {isFormOpen && products.length > 0 && ( 
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col">
+             <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 overflow-y-auto">
                 <OrcamentoForm
                     orcamento={editingOrcamento}
                     products={products}
