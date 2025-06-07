@@ -5,7 +5,7 @@ import {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings // Added Settings for explicitness if needed, though Settings2 is a gear
+  WalletCards, CalendarX2, TrendingDown, Settings
 } from 'lucide-react';
 
 // Interface para itens de navegação, reutilizada do AppSidebar
@@ -47,7 +47,7 @@ export const MOBILE_SIDEBAR_NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/servicos',
-    icon: Settings2, // This is already used for "Serviços", which is fine for a general category
+    icon: Settings2, 
     label: 'Serviços',
   },
   {
@@ -62,7 +62,7 @@ export const MOBILE_SIDEBAR_NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/configuracoes',
-    icon: Settings2, // Using Settings2 as it's a gear icon
+    icon: Settings2, 
     label: 'Configurações',
   },
 ];
@@ -82,7 +82,6 @@ export const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
   { href: '/benefits', icon: PercentSquare, label: 'Benefícios' },
 ];
 
-// The Icons object is kept for other parts of the app that might use it.
 export const Icons = {
   LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare,
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
@@ -103,9 +102,9 @@ export interface SummaryCardConfig {
 
 export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
-    id: 'orcamentosConcluidos', // Changed from pedidosConcluidos
-    title: 'Orçamentos Concluídos Hoje', // Changed from Pedidos
-    icon: CalendarCheck2,
+    id: 'orcamentosConcluidos', 
+    title: 'Orçamentos Concluídos Hoje', 
+    icon: Icons.CalendarCheck2, // Changed to use Icons object
     iconBgColor: "bg-green-100 dark:bg-green-900",
     iconTextColor: "text-green-600 dark:text-green-400",
     mainValueColorClass: 'text-green-600 dark:text-green-400',
@@ -114,7 +113,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresAReceber',
     title: 'Valores a Receber Hoje',
-    icon: Hourglass,
+    icon: Icons.Hourglass, // Changed to use Icons object
     iconBgColor: "bg-blue-100 dark:bg-blue-900",
     iconTextColor: "text-blue-600 dark:text-blue-400",
     mainValueColorClass: 'text-blue-600 dark:text-blue-400',
@@ -123,16 +122,16 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresRecebidos',
     title: 'Valores Recebidos Hoje',
-    icon: WalletCards,
+    icon: Icons.WalletCards, // Changed to use Icons object
     iconBgColor: "bg-emerald-100 dark:bg-emerald-900",
     iconTextColor: "text-emerald-600 dark:text-emerald-400",
     mainValueColorClass: 'text-emerald-600 dark:text-emerald-400',
     defaultVisible: true,
   },
   {
-    id: 'orcamentosCancelados', // Changed from pedidosCancelados
-    title: 'Orçamentos Cancelados Hoje', // Changed from Pedidos
-    icon: CalendarX2,
+    id: 'orcamentosCancelados', 
+    title: 'Orçamentos Cancelados Hoje', 
+    icon: Icons.CalendarX2, // Changed to use Icons object
     iconBgColor: "bg-red-100 dark:bg-red-900",
     iconTextColor: "text-red-600 dark:text-red-400",
     mainValueColorClass: 'text-red-600 dark:text-red-400',
@@ -141,7 +140,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresEmAtraso',
     title: 'Valores em Atraso',
-    icon: TrendingDown,
+    icon: Icons.TrendingDown, // Changed to use Icons object
     iconBgColor: "bg-amber-100 dark:bg-amber-900",
     iconTextColor: "text-amber-600 dark:text-amber-400",
     mainValueColorClass: 'text-amber-600 dark:text-amber-400',
@@ -155,15 +154,15 @@ export interface ShortcutCardConfig {
   icon: LucideIcon;
   iconBgColor: string;
   defaultVisible: boolean;
-  // onClick?: () => void; // Add if specific actions per shortcut are needed later
+  // onClick?: () => void; 
 }
 
 export const ALL_SHORTCUT_CARDS_CONFIG: ShortcutCardConfig[] = [
   {
-    id: 'novoOrcamento', // Changed from novoPedido
-    label: 'Criar novo orçamento', // Changed from pedido
+    id: 'novoOrcamento', 
+    label: 'Criar novo orçamento', 
     icon: FilePlus2,
-    iconBgColor: 'bg-primary', // Using theme primary
+    iconBgColor: 'bg-primary', 
     defaultVisible: true,
   },
   {
@@ -177,7 +176,7 @@ export const ALL_SHORTCUT_CARDS_CONFIG: ShortcutCardConfig[] = [
     id: 'novoCompromisso',
     label: 'Novo compromisso',
     icon: CalendarPlus,
-    iconBgColor: 'bg-accent', // Using theme accent
+    iconBgColor: 'bg-accent', 
     defaultVisible: true,
   },
   {
