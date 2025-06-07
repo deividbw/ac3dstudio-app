@@ -72,7 +72,6 @@ export function ProductsTab() {
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [filterNome, setFilterNome] = useState("");
-  const [filterPrinterMarca, setFilterPrinterMarca] = useState(""); // Renamed from filterPrinterMarca for clarity
 
   const [sortField, setSortField] = useState<SortableProductField>('nome');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -111,7 +110,7 @@ export function ProductsTab() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterNome, filterPrinterMarca, sortField, sortDirection, itemsPerPage]);
+  }, [filterNome, sortField, sortDirection, itemsPerPage]);
 
 
   const getBrandNameById = useCallback((brandId?: string) => {
@@ -144,12 +143,8 @@ export function ProductsTab() {
 
   const paginatedData = useMemo(() => {
     let filtered = products.filter(product => {
-      const printer = printers.find(p => p.id === product.impressoraId);
-      const printerBrandName = printer ? getBrandNameById(printer.marcaId) : "";
-
       return (
-        (filterNome === "" || product.nome.toLowerCase().includes(filterNome.toLowerCase())) &&
-        (filterPrinterMarca === "" || printerBrandName.toLowerCase().includes(filterPrinterMarca.toLowerCase()))
+        (filterNome === "" || product.nome.toLowerCase().includes(filterNome.toLowerCase()))
       );
     });
 
@@ -204,7 +199,7 @@ export function ProductsTab() {
       totalFilteredItems,
       startIndex,
     };
-  }, [products, filaments, printers, getBrandNameById, getPrinterDisplayName, getFilamentDisplayName, filterNome, filterPrinterMarca, sortField, sortDirection, currentPage, itemsPerPage]);
+  }, [products, filaments, printers, getBrandNameById, getPrinterDisplayName, getFilamentDisplayName, filterNome, sortField, sortDirection, currentPage, itemsPerPage]);
 
   const renderSortIcon = (field: SortableProductField) => {
     if (sortField === field) {
@@ -375,12 +370,7 @@ export function ProductsTab() {
               onChange={e => setFilterNome(e.target.value)}
               className="h-9"
             />
-            <Input
-              placeholder="Filtrar por marca da impressora..."
-              value={filterPrinterMarca}
-              onChange={e => setFilterPrinterMarca(e.target.value)}
-              className="h-9"
-            />
+            {/* Filtro por marca da impressora removido */}
           </div>
 
            <div className="mb-3 text-sm text-muted-foreground">
