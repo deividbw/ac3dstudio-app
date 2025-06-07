@@ -69,7 +69,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
   }, [brands]);
 
   const getPrinterDisplayName = (printer: Printer) => {
-    if (printer.nome) return printer.nome;
+    // if (printer.nome) return printer.nome; // nome was removed from Printer type
     const brandName = getBrandNameById(printer.marcaId);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
@@ -81,12 +81,14 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     const currentValues = form.getValues();
     
     if (!currentValues.filamentoId || !currentValues.impressoraId) {
-      // This case should be handled by the useEffect's else block now
+      setCostBreakdown(undefined); 
+      setShowCostSection(false);
       return;
     }
     
     if (Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
-       // This case should be handled by the useEffect's else block now
+       setCostBreakdown(undefined); 
+       setShowCostSection(false);
        return;
     }
 
@@ -100,7 +102,6 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
       return;
     }
     if (!selectedPrinter) {
-      // This case should be handled by the useEffect's else block now
       setCostBreakdown(undefined); 
       setShowCostSection(false);
       return;
@@ -108,6 +109,9 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
     setIsCalculating(true);
     try {
+      // Simulate a brief delay for calculation if needed, or remove for instant calculation
+      // await new Promise(resolve => setTimeout(resolve, 50)); 
+
       const pesoGramas = Number(currentValues.pesoGramas) || 0;
       const tempoProducaoHoras = Number(currentValues.tempoImpressaoHoras) || 0;
       const custoModelagemValue = Number(currentValues.custoModelagem) || 0;
@@ -115,9 +119,12 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
       const margemLucroPercentualValue = Number(currentValues.margemLucroPercentual) || 0;
 
       const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
+      
+      // TODO: Integrate filament-specific power overrides from configuracoes page when available
       const custoEnergiaImpressao = selectedPrinter.consumoEnergiaHora * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
       const custoDepreciacaoImpressao = selectedPrinter.taxaDepreciacaoHora * tempoProducaoHoras;
       const custoImpressaoCalculado = custoEnergiaImpressao + custoDepreciacaoImpressao;
+      
       const custoTotalProducaoCalculado = custoMaterialCalculado + custoImpressaoCalculado + custoModelagemValue + custosExtrasValue;
       const lucroCalculado = custoTotalProducaoCalculado * (margemLucroPercentualValue / 100);
       const precoVendaCalculado = custoTotalProducaoCalculado + lucroCalculado;
@@ -156,7 +163,6 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     if (filamentoId && impressoraId && Number(currentPesoGramasValue) > 0 && Number(currentTempoImpressaoHorasValue) > 0) {
       triggerCostCalculation();
     } else {
-      // Unconditionally reset if conditions are not met to avoid needing costBreakdown/showCostSection in deps
       setCostBreakdown(undefined);
       setShowCostSection(false);
     }
@@ -168,15 +174,29 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     custoModelagemWatched, 
     custosExtrasWatched, 
     margemLucroPercentualWatched,
-    triggerCostCalculation,
+    triggerCostCalculation, // Added as dependency
     form // form.getValues is used in the effect's condition check
   ]);
 
 
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
     try {
-      const dataToSave: Product = {
-        id: product?.id || '', 
+      // Ensure costBreakdown is current based on form values before submission
+      // This is important if any calculation input changed without immediate re-trigger of useEffect (e.g., blur vs change)
+      // However, with current useEffect deps, it should be up-to-date.
+      // For safety, one could re-run calculation or ensure button is disabled until calc is stable.
+
+      if (!costBreakdown) {
+        toast({
+          title: "Cálculo Pendente",
+          description: "O cálculo de custo não foi concluído. Verifique os dados e tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const dataToSave: Omit<Product, 'id'> & { id?: string } = {
+        id: product?.id, 
         nome: values.nome,
         descricao: values.descricao || undefined,
         filamentoId: values.filamentoId,
@@ -194,13 +214,13 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
       let finalProductData: Product;
 
       if (product && product.id) {
-        actionResult = await updateProduct(product.id, dataToSave );
+        actionResult = await updateProduct(product.id, dataToSave as Product ); // Cast to Product for update
         finalProductData = actionResult.product!;
       } else {
-        
+        // For create, remove id if it's undefined or empty string
         const createData = { ...dataToSave };
-        
-        actionResult = await createProduct(createData); 
+        delete createData.id; 
+        actionResult = await createProduct(createData as Omit<Product, 'id'>); 
         finalProductData = actionResult.product!;
       }
       
@@ -317,8 +337,9 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                       </FormControl>
                       <SelectContent>
                         {filaments.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>
+                          <SelectItem key={f.id} value={f.id} disabled={typeof f.precoPorKg !== 'number' || f.precoPorKg <= 0}>
                             {f.tipo} - {f.cor} {f.marcaId ? `(${brands.find(b => b.id === f.marcaId)?.nome || 'N/A'})` : ''}
+                            {(typeof f.precoPorKg !== 'number' || f.precoPorKg <= 0) && " (Preço Kg não definido)"}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -460,7 +481,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
               </div>
             ) : (
                  <div className="mt-3 pt-3 border-t text-xs text-muted-foreground italic text-center">
-                    Preencha os campos obrigatórios (*) para ver a previsão de custos.
+                    Preencha os campos obrigatórios (*) e selecione um filamento com preço/Kg definido para ver a previsão de custos.
                 </div>
             )}
 

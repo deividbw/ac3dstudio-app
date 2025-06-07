@@ -80,3 +80,4 @@ export function CostDisplayDialog({ isOpen, onOpenChange, product }: CostDisplay
     </Dialog>
   );
 }
+

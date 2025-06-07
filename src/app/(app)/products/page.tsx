@@ -57,17 +57,22 @@ export default function ProductsPage() {
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
-    const [productsData, filamentsData, printersData, brandsData] = await Promise.all([
-      mockGetProducts(),
-      mockGetFilaments(),
-      mockGetPrinters(),
-      mockGetBrands()
-    ]);
-    setProducts(productsData);
-    setFilaments(filamentsData);
-    setPrinters(printersData);
-    setBrands(brandsData);
-  }, []);
+    try {
+      const [productsData, filamentsData, printersData, brandsData] = await Promise.all([
+        mockGetProducts(),
+        mockGetFilaments(),
+        mockGetPrinters(),
+        mockGetBrands()
+      ]);
+      setProducts(productsData);
+      setFilaments(filamentsData);
+      setPrinters(printersData);
+      setBrands(brandsData);
+    } catch (error) {
+      console.error("Failed to load initial data:", error);
+      toast({ title: "Erro ao carregar dados", description: "Não foi possível buscar todos os dados necessários.", variant: "destructive" });
+    }
+  }, [toast]);
 
   useEffect(() => {
     loadData();
@@ -81,7 +86,7 @@ export default function ProductsPage() {
 
   const getPrinterDisplayName = (printer?: Printer) => {
     if (!printer) return 'N/A';
-    if (printer.nome) return printer.nome;
+    // if (printer.nome) return printer.nome; // nome was removed from Printer
     const brandName = getBrandNameById(printer.marcaId);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
@@ -109,7 +114,7 @@ export default function ProductsPage() {
       setCurrentProductForCostDisplay(product);
       setIsCostDisplayOpen(true);
     } else {
-      toast({ title: "Custo Não Calculado", description: "Os detalhes do custo para este produto não foram encontrados ou não foram calculados.", variant: "default" });
+      toast({ title: "Custo Não Calculado", description: "Os detalhes do custo para este produto não foram encontrados ou não foram calculados. Edite o produto para calcular.", variant: "default" });
     }
   };
 
@@ -157,6 +162,8 @@ export default function ProductsPage() {
 
 
   if (!hasRequiredDataForProducts && (filaments.length === 0 || printers.length === 0 || brands.length === 0)) {
+    // This check runs after the first useEffect, so initial state might be empty.
+    // Consider a loading state if data fetching takes time. For mock data, it's usually fast.
     return (
        <div className="space-y-6">
         <PageHeader title="Gerenciar Produtos e Custos" />
@@ -299,3 +306,4 @@ export default function ProductsPage() {
     
 
     
+

@@ -36,9 +36,9 @@ let mockProducts: Product[] = [
     tempoImpressaoHoras: 5,
     pesoGramas: 120,
     imageUrl: "https://placehold.co/300x200.png",
-    custoModelagem: 0, // Defaulted
-    custosExtras: 0,    // Defaulted
-    margemLucroPercentual: 150, // Defaulted
+    custoModelagem: 0, 
+    custosExtras: 0,    
+    margemLucroPercentual: 150, 
     // custoDetalhado: undefined, // A ser calculado pelo formulário
   },
 ];
@@ -78,25 +78,29 @@ export async function updateProduct(id: string, data: Product): Promise<{ succes
     return { success: false, error: "Produto não encontrado" };
   }
   
+  // The 'data' received here should already be a complete Product object,
+  // including id and potentially custoDetalhado from the form.
+  // We just need to validate it with ProductSchema.
   const validation = ProductSchema.safeParse(data);
    if (!validation.success) {
     console.error("Server-side validation failed for updateProduct:", validation.error.flatten());
     return { success: false, error: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') };
   }
 
-  const updatedProductData = validation.data;
-  const updatedProduct: Product = { 
-    ...mockProducts[existingProductIndex], 
-    ...updatedProductData,
-    // Explicitly carry over values from validated data
-    custoModelagem: updatedProductData.custoModelagem,
-    custosExtras: updatedProductData.custosExtras,
-    margemLucroPercentual: updatedProductData.margemLucroPercentual,
-    custoDetalhado: data.custoDetalhado, // Pass through the calculated breakdown from form submission
+  const updatedProductDataFromSchema = validation.data;
+  // Ensure the custoDetalhado from the input `data` (which comes from the form state) is preserved.
+  const finalProductData: Product = { 
+    ...mockProducts[existingProductIndex], // Spread existing to keep any potential non-schema fields if they existed
+    ...updatedProductDataFromSchema,       // Spread validated schema fields
+    custoDetalhado: data.custoDetalhado,  // Explicitly use custoDetalhado from incoming 'data' argument
   };
+  
+  // Make sure the ID is the original ID
+  finalProductData.id = id;
 
-  mockProducts[existingProductIndex] = updatedProduct;
-  return { success: true, product: updatedProduct};
+
+  mockProducts[existingProductIndex] = finalProductData;
+  return { success: true, product: finalProductData};
 }
 
 export async function deleteProduct(id: string): Promise<{ success: boolean, error?: string }> {
@@ -107,3 +111,4 @@ export async function deleteProduct(id: string): Promise<{ success: boolean, err
   }
   return { success: true };
 }
+
