@@ -73,6 +73,21 @@ export default function ProductsPage() {
     loadData();
   }, [loadData]);
 
+  const getBrandNameById = useCallback((brandId?: string) => {
+    if (!brandId) return "";
+    const brand = brands.find(b => b.id === brandId);
+    return brand ? brand.nome : "";
+  }, [brands]);
+
+  const getPrinterDisplayName = (printer?: Printer) => {
+    if (!printer) return 'N/A';
+    if (printer.nome) return printer.nome;
+    const brandName = getBrandNameById(printer.marcaId);
+    if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
+    if (printer.modelo) return printer.modelo;
+    return `ID: ${printer.id}`;
+  }
+
   const handleFormSuccess = (productData: Product) => {
     loadData(); 
     setIsFormOpen(false);
@@ -111,7 +126,7 @@ export default function ProductsPage() {
         Nome: p.nome,
         Descrição: p.descricao || '',
         Filamento: filament ? `${filament.tipo} (${filament.cor})` : 'N/A',
-        Impressora: printer ? printer.nome : 'N/A',
+        Impressora: getPrinterDisplayName(printer),
         "Tempo Impressão (h)": p.tempoImpressaoHoras,
         "Peso (g)": p.pesoGramas,
         "Custo Modelagem (R$)": p.custoModelagem?.toFixed(2) || '0.00',
@@ -153,9 +168,9 @@ export default function ProductsPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-                {filaments.length === 0 && <p>Nenhum filamento cadastrado. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Filamentos</Link></Button>.</p>}
-                {printers.length === 0 && <p>Nenhuma impressora cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Impressoras</Link></Button>.</p>}
-                {brands.length === 0 && <p>Nenhuma marca cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros">Cadastros &gt; Marcas</Link></Button>.</p>}
+                {filaments.length === 0 && <p>Nenhum filamento cadastrado. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros?tab=filaments">Cadastros &gt; Filamentos</Link></Button>.</p>}
+                {printers.length === 0 && <p>Nenhuma impressora cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros?tab=impressoras">Cadastros &gt; Impressoras</Link></Button>.</p>}
+                {brands.length === 0 && <p>Nenhuma marca cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros?tab=marcas">Cadastros &gt; Marcas</Link></Button>.</p>}
             </CardContent>
         </Card>
        </div>
@@ -231,7 +246,7 @@ export default function ProductsPage() {
                       </TableCell>
                       <TableCell className="font-medium px-2 py-1.5">{product.nome}</TableCell>
                       <TableCell className="px-2 py-1.5">{filament ? `${filament.tipo} (${filament.cor})` : 'N/A'}</TableCell>
-                      <TableCell className="px-2 py-1.5">{printer ? printer.nome : 'N/A'}</TableCell>
+                      <TableCell className="px-2 py-1.5">{getPrinterDisplayName(printer)}</TableCell>
                       <TableCell className="text-right font-semibold text-primary px-2 py-1.5">
                         {product.custoDetalhado?.precoVendaCalculado ? product.custoDetalhado.precoVendaCalculado.toFixed(2) : 'N/A'}
                       </TableCell>

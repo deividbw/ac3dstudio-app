@@ -69,9 +69,9 @@ export function PrintersTab() {
 
   const filteredPrinters = useMemo(() => {
     return printers.filter(p => 
-      (filterNome === "" || p.nome.toLowerCase().includes(filterNome.toLowerCase())) &&
+      (filterNome === "" || (p.nome && p.nome.toLowerCase().includes(filterNome.toLowerCase()))) &&
       (filterMarca === "" || getBrandNameById(p.marcaId).toLowerCase().includes(filterMarca.toLowerCase())) &&
-      (filterModelo === "" || p.modelo?.toLowerCase().includes(filterModelo.toLowerCase()))
+      (filterModelo === "" || (p.modelo && p.modelo.toLowerCase().includes(filterModelo.toLowerCase())))
     );
   }, [printers, filterNome, filterMarca, filterModelo, getBrandNameById]);
 
@@ -178,7 +178,7 @@ export function PrintersTab() {
               <TableBody>
                 {filteredPrinters.map((printer) => (
                   <TableRow key={printer.id}>
-                    <TableCell className="font-medium px-2 py-1.5">{printer.nome}</TableCell>
+                    <TableCell className="font-medium px-2 py-1.5">{printer.nome || "N/A"}</TableCell>
                     <TableCell className="px-2 py-1.5">{getBrandNameById(printer.marcaId)}</TableCell>
                     <TableCell className="px-2 py-1.5">{printer.modelo || "N/A"}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{printer.consumoEnergiaHora.toFixed(2)}</TableCell>

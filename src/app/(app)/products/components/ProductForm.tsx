@@ -62,6 +62,21 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     },
   });
 
+  const getBrandNameById = useCallback((brandId?: string) => {
+    if (!brandId) return "";
+    const brand = brands.find(b => b.id === brandId);
+    return brand ? brand.nome : "";
+  }, [brands]);
+
+  const getPrinterDisplayName = (printer: Printer) => {
+    if (printer.nome) return printer.nome;
+    const brandName = getBrandNameById(printer.marcaId);
+    if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
+    if (printer.modelo) return printer.modelo;
+    return `Impressora ID: ${printer.id}`;
+  }
+
+
   const triggerCostCalculation = useCallback(async () => {
     const currentValues = form.getValues();
     
@@ -327,7 +342,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                       <SelectContent>
                         {printers.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.nome}
+                            {getPrinterDisplayName(p)}
                           </SelectItem>
                         ))}
                       </SelectContent>

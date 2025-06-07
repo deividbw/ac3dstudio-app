@@ -17,7 +17,7 @@ export const FilamentSchema = z.object({
 
 export const PrinterSchema = z.object({
   id: z.string().optional(),
-  nome: z.string().min(1, { message: "Nome é obrigatório" }),
+  nome: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val), // Made optional
   marcaId: z.string().optional().nullable().transform(val => val === "" ? undefined : val),
   modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   custoAquisicao: z.coerce.number().nonnegative({ message: "Custo de aquisição não pode ser negativo" }),
@@ -45,3 +45,4 @@ export const BrandSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(1, { message: "Nome da marca é obrigatório" }).max(100, { message: "Nome da marca deve ter no máximo 100 caracteres" }),
 });
+

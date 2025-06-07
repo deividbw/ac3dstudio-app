@@ -41,10 +41,12 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     resolver: zodResolver(PrinterSchema),
     defaultValues: printer ? {
       ...printer,
+      nome: printer.nome ?? undefined, // Keep for existing data, but not editable
       marcaId: printer.marcaId ?? undefined,
       modelo: printer.modelo ?? undefined,
     } : {
-      nome: "",
+      // nome is removed from form inputs
+      nome: undefined, 
       marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
@@ -56,8 +58,9 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
 
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
     try {
+      // nome is no longer directly from form 'values', it's either existing or undefined
       const dataForAction: Omit<Printer, 'id'> = {
-        nome: values.nome,
+        nome: printer?.nome, // Preserve existing name if editing, undefined if new
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
@@ -76,7 +79,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       if (actionResult.success && actionResult.printer) {
         toast({
           title: printer ? "Impressora Atualizada" : "Impressora Criada",
-          description: `A impressora "${actionResult.printer.nome}" foi salva.`,
+          description: `A impressora ${actionResult.printer.nome || `${actionResult.printer.modelo || 'sem nome'}`} foi salva.`,
           variant: "success",
         });
         onSuccess(actionResult.printer);
@@ -117,25 +120,13 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         <DialogTitle className="font-headline">{printer ? "Editar Impressora" : "Adicionar Nova Impressora"}</DialogTitle>
         <DialogDescription>
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
+          O nome da impressora é opcional e pode ser deixado em branco.
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="p-6 space-y-3">
-            <FormField
-              control={form.control}
-              name="nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Impressora*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Ender 3, Prusa MK3" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+            {/* Nome field removed from here */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}

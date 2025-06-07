@@ -14,7 +14,7 @@ export interface Filament {
 
 export interface Printer {
   id: string;
-  nome: string;
+  nome?: string; // Made optional
   marcaId?: string; // ID da marca
   modelo?: string;
   custoAquisicao: number;
@@ -56,3 +56,4 @@ export interface Brand {
   id: string;
   nome: string;
 }
+
