@@ -8,7 +8,7 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
-  DialogTrigger, // Add DialogTrigger import
+  DialogTrigger, 
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { PrinterForm } from '@/app/(app)/printers/components/PrinterForm';
-import type { Printer, Brand } from '@/lib/types'; // Import Brand
+import type { Printer, Brand } from '@/lib/types'; 
 import { useToast } from '@/hooks/use-toast';
 import { getPrinters as mockGetPrinters, deletePrinter as mockDeletePrinter } from '@/lib/actions/printer.actions';
-import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; // Import getBrands
+import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; 
 import {
   Table,
   TableBody,
@@ -38,7 +38,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function PrintersTab() {
   const [printers, setPrinters] = useState<Printer[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
+  const [brands, setBrands] = useState<Brand[]>([]); 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
   const [deletingPrinterId, setDeletingPrinterId] = useState<string | null>(null);
@@ -48,7 +48,7 @@ export function PrintersTab() {
   const [filterMarca, setFilterMarca] = useState("");
   const [filterModelo, setFilterModelo] = useState("");
 
-  const loadData = useCallback(async () => { // Renamed from loadPrinters
+  const loadData = useCallback(async () => { 
     const [printersData, brandsData] = await Promise.all([
       mockGetPrinters(),
       mockGetBrands()
@@ -116,10 +116,10 @@ export function PrintersTab() {
               Adicionar Impressora
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+          <DialogContent className="sm:max-w-md max-h-[85vh] p-0 overflow-y-auto">
             <PrinterForm 
               printer={editingPrinter} 
-              brands={brands} // Pass brands to form
+              brands={brands} 
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingPrinter(null); }}
             />

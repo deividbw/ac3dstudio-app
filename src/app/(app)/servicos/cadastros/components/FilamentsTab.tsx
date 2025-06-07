@@ -19,7 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Removed AlertDialogPrimitiveTrigger (AlertDialogTrigger) import
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
 import type { Filament, Brand } from '@/lib/types';
@@ -121,7 +121,7 @@ export function FilamentsTab() {
               Adicionar Filamento
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
+          <DialogContent className="sm:max-w-md max-h-[85vh] p-0 overflow-y-auto">
             <FilamentForm
               filament={editingFilament}
               brands={brands}
@@ -232,4 +232,3 @@ export function FilamentsTab() {
     </div>
   );
 }
-
