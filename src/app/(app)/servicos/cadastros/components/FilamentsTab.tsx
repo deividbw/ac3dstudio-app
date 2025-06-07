@@ -24,7 +24,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
 import type { Filament, Brand } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament } from '@/lib/actions/filament.actions';
+import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament, updateFilamentStockBatch } from '@/lib/actions/filament.actions'; // Import updateFilamentStockBatch
 import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
 import {
   Table,
@@ -35,6 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from '@/components/ui/card';
+import { FilamentStockUpdateDialog } from '../../estoque/filamentos/components/FilamentStockUpdateDialog'; // Import stock update dialog
 
 type SortableFilamentField = 'marcaId' | 'tipo' | 'cor' | 'modelo' | 'densidade';
 
@@ -52,6 +53,13 @@ export function FilamentsTab() {
 
   const [sortField, setSortField] = useState<SortableFilamentField>('marcaId');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // States for the new stock addition flow
+  const [isConfirmStockAddDialogOpen, setIsConfirmStockAddDialogOpen] = useState(false);
+  const [filamentPendingStockUpdate, setFilamentPendingStockUpdate] = useState<Filament | null>(null);
+  const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
+  const [editingFilamentForStock, setEditingFilamentForStock] = useState<Filament | null>(null);
+
 
   const loadData = useCallback(async () => {
     const [filamentsData, brandsData] = await Promise.all([
@@ -137,14 +145,20 @@ export function FilamentsTab() {
     return <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />;
   };
 
-  const handleFormSuccess = () => {
-    loadData();
-    setIsFormOpen(false);
+  const handleFormSuccess = (createdOrUpdatedFilament: Filament, isNew: boolean) => {
+    setIsFormOpen(false); 
     setEditingFilament(null);
+    
+    if (isNew) {
+      setFilamentPendingStockUpdate(createdOrUpdatedFilament);
+      setIsConfirmStockAddDialogOpen(true);
+    } else {
+      loadData(); // For updates, just reload
+    }
   };
 
-  const openEditDialog = (filament: Filament) => {
-    setEditingFilament(filament);
+  const openEditDialog = (filamentToEdit: Filament) => {
+    setEditingFilament(filamentToEdit);
     setIsFormOpen(true);
   };
 
@@ -164,6 +178,32 @@ export function FilamentsTab() {
     }
     setDeletingFilamentId(null);
   };
+
+  const handleSaveStockUpdate = async (update: { id: string; novaQuantidadeCompradaGramas?: number; novoPrecoKg?: number }) => {
+    if (!update.novaQuantidadeCompradaGramas && !update.novoPrecoKg && update.novaQuantidadeCompradaGramas !==0 && update.novoPrecoKg !==0) {
+      toast({ title: "Nenhuma Alteração", description: "Nenhuma quantidade ou preço foi fornecido para atualização.", variant: "default" });
+      return;
+    }
+    // setIsLoading(true); // Consider adding loading state if needed
+    try {
+      const result = await updateFilamentStockBatch([update]);
+      if (result.success && result.updatedCount > 0) {
+        toast({ title: "Estoque Atualizado", description: `Filamento atualizado com sucesso.`, variant: "success" });
+        loadData(); // Reload main filament list
+      } else if (result.errors && result.errors.length > 0) {
+         toast({ title: "Erro ao Atualizar", description: result.errors[0].error, variant: "destructive" });
+      } else if (!result.success) {
+         toast({ title: "Erro ao Atualizar", description: "Não foi possível atualizar o filamento.", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error("Failed to update stock:", error);
+      toast({ title: "Erro Inesperado", description: "Ocorreu um problema ao tentar atualizar o estoque.", variant: "destructive" });
+    } finally {
+      // setIsLoading(false);
+      setIsStockUpdateDialogOpen(false); // Ensure stock dialog closes
+      setEditingFilamentForStock(null);
+    }
+  };
   
   return (
     <div className="space-y-4">
@@ -182,7 +222,7 @@ export function FilamentsTab() {
             <FilamentForm
               filament={editingFilament}
               brands={brands}
-              allFilaments={filaments} // Passando a lista completa de filamentos
+              allFilaments={filaments} 
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingFilament(null); }}
             />
@@ -329,6 +369,51 @@ export function FilamentsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AlertDialog para confirmar adição de estoque após criar novo filamento */}
+      <AlertDialog open={isConfirmStockAddDialogOpen} onOpenChange={setIsConfirmStockAddDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Adicionar Estoque ao Novo Filamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O filamento "{filamentPendingStockUpdate?.tipo} - {filamentPendingStockUpdate?.cor} {filamentPendingStockUpdate?.modelo ? `(${filamentPendingStockUpdate.modelo})` : ''}" foi criado.
+              Deseja adicionar a quantidade em estoque e o preço por Kg agora?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setIsConfirmStockAddDialogOpen(false);
+              setFilamentPendingStockUpdate(null);
+              loadData(); 
+            }}>Não, depois</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setIsConfirmStockAddDialogOpen(false);
+              if (filamentPendingStockUpdate) {
+                setEditingFilamentForStock(filamentPendingStockUpdate); 
+                setIsStockUpdateDialogOpen(true); 
+              }
+              setFilamentPendingStockUpdate(null);
+            }}>Sim, adicionar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog para atualizar estoque (reutilizado) */}
+      {editingFilamentForStock && (
+        <FilamentStockUpdateDialog
+          isOpen={isStockUpdateDialogOpen}
+          onOpenChange={(isOpen) => {
+            setIsStockUpdateDialogOpen(isOpen);
+            if (!isOpen) {
+              setEditingFilamentForStock(null);
+              loadData(); // Recarrega os dados se o diálogo de estoque for fechado (salvo ou cancelado)
+            }
+          }}
+          filament={editingFilamentForStock}
+          brands={brands}
+          onSave={handleSaveStockUpdate}
+        />
+      )}
     </div>
   );
 }

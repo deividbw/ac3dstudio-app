@@ -31,8 +31,8 @@ import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
 interface FilamentFormProps {
   filament?: Filament | null;
   brands: Brand[];
-  allFilaments: Filament[]; // Adicionado para verificação de duplicidade
-  onSuccess: (filament: Filament) => void;
+  allFilaments: Filament[];
+  onSuccess: (filament: Filament, isNew: boolean) => void; // Modificado para incluir isNew
   onCancel: () => void;
 }
 
@@ -78,12 +78,14 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
+      const isCreatingNew = !filament || !filament.id;
+
       // Validação de duplicidade ANTES de qualquer ação
-      if (!filament || !filament.id) { // Apenas para novos filamentos
+      if (isCreatingNew) {
         const tipoLowerCase = values.tipo.toLowerCase();
         const corLowerCase = values.cor.toLowerCase();
-        const modeloLowerCase = values.modelo?.toLowerCase() || null; // Normalize para null se undefined/empty
-        const marcaIdNormalized = values.marcaId || null; // Normalize para null se undefined/empty
+        const modeloLowerCase = values.modelo?.toLowerCase() || null;
+        const marcaIdNormalized = values.marcaId || null;
 
         const existingMatch = allFilaments.find(f => {
           const fTipoLowerCase = f.tipo.toLowerCase();
@@ -103,12 +105,10 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
             description: "Já existe um filamento cadastrado com estas mesmas características (Tipo, Cor, Marca e Modelo).",
             variant: "destructive",
           });
-          return; // Interrompe a submissão
+          return; 
         }
       }
 
-
-      // Data for action only includes fields managed by this form
       const dataForAction = {
         tipo: values.tipo,
         cor: values.cor,
@@ -120,24 +120,24 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
       };
 
       let actionResult;
-      if (filament && filament.id) {
+      if (isCreatingNew) {
+        actionResult = await createFilament(dataForAction as Omit<Filament, 'id' | 'precoPorKg' | 'quantidadeEstoqueGramas'>);
+      } else { // Editing existing filament
         const updatePayload: Partial<Omit<Filament, 'id'>> = {
           ...dataForAction,
           precoPorKg: filament.precoPorKg, 
           quantidadeEstoqueGramas: filament.quantidadeEstoqueGramas, 
         };
-        actionResult = await updateFilament(filament.id, updatePayload);
-      } else {
-        actionResult = await createFilament(dataForAction as Omit<Filament, 'id' | 'precoPorKg' | 'quantidadeEstoqueGramas'>);
+        actionResult = await updateFilament(filament!.id, updatePayload);
       }
 
       if (actionResult.success && actionResult.filament) {
         toast({
-          title: filament ? "Filamento Atualizado" : "Filamento Criado",
+          title: isCreatingNew ? "Filamento Criado" : "Filamento Atualizado",
           description: `O filamento foi salvo.`,
           variant: "success",
         });
-        onSuccess(actionResult.filament);
+        onSuccess(actionResult.filament, isCreatingNew); // Pass isNew flag
       } else {
         toast({
           title: "Erro ao Salvar",
