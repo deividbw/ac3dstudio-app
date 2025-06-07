@@ -15,13 +15,21 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 export default function ConfiguracoesPage() {
   const [kwhValue, setKwhValue] = React.useState("0.75"); // Example value
+  const { toast } = useToast(); // Initialize toast
 
   const handleSaveKwh = () => {
+    // In a real app, this would call a server action to save the kwhValue
+    // and potentially update a global state/context.
     console.log("Salvar valor kWh:", kwhValue);
-    // toast({ title: "Configuração Salva", description: "Valor do kWh atualizado." });
+    toast({ 
+      title: "Configuração Salva", 
+      description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}.`,
+      variant: "success",
+    });
   };
 
   return (
