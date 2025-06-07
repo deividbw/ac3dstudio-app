@@ -5,13 +5,13 @@ import type { Orcamento, OrcamentoStatus } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, User, CalendarDays, DollarSign, FileText } from "lucide-react";
+import { Edit, Trash2, User, CalendarDays, DollarSign, FileText, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface OrcamentoCardProps {
   orcamento: Orcamento;
   onEdit: (orcamento: Orcamento) => void;
-  onDeleteRequest: (orcamentoId: string) => void; // Renomeado para evitar conflito com prop 'onDelete' de alguns elementos
+  onDeleteRequest: (orcamentoId: string) => void;
 }
 
 export function OrcamentoCard({ orcamento, onEdit, onDeleteRequest }: OrcamentoCardProps) {
@@ -56,6 +56,10 @@ export function OrcamentoCard({ orcamento, onEdit, onDeleteRequest }: OrcamentoC
         <div className="flex items-center">
           <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
           <span>Data: <strong>{formatDate(orcamento.dataCriacao)}</strong></span>
+        </div>
+        <div className="flex items-center">
+          <PackageSearch className="h-4 w-4 mr-2 text-muted-foreground" />
+          <span>Itens: <strong>{orcamento.itens.length}</strong></span>
         </div>
         <div className="flex items-center pt-1">
           <DollarSign className="h-4 w-4 mr-2 text-green-600" />
