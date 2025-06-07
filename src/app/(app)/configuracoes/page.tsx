@@ -64,6 +64,7 @@ export default function ConfiguracoesPage() {
         getPowerOverrides(),
         getKwhValue(),
       ]);
+      console.log('ConfiguracoesPage: Fetched printersData:', printersData); // Log adicionado
       setPrinters(printersData);
       setFilamentTypes(filamentTypesData);
       setBrands(brandsData);
