@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogTrigger,
@@ -24,7 +31,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
 import type { Filament, Brand } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament, updateFilamentStockBatch } from '@/lib/actions/filament.actions'; // Import updateFilamentStockBatch
+import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament, updateFilamentStockBatch } from '@/lib/actions/filament.actions';
 import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
 import {
   Table,
@@ -35,7 +42,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from '@/components/ui/card';
-import { FilamentStockUpdateDialog } from '../../estoque/filamentos/components/FilamentStockUpdateDialog'; // Import stock update dialog
+import { FilamentStockUpdateDialog } from '../../estoque/filamentos/components/FilamentStockUpdateDialog';
 
 type SortableFilamentField = 'marcaId' | 'tipo' | 'cor' | 'modelo' | 'densidade';
 
@@ -54,7 +61,9 @@ export function FilamentsTab() {
   const [sortField, setSortField] = useState<SortableFilamentField>('marcaId');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // States for the new stock addition flow
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const [isConfirmStockAddDialogOpen, setIsConfirmStockAddDialogOpen] = useState(false);
   const [filamentPendingStockUpdate, setFilamentPendingStockUpdate] = useState<Filament | null>(null);
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
@@ -74,6 +83,10 @@ export function FilamentsTab() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterMarca, filterTipo, filterModelo, sortField, sortDirection, itemsPerPage]);
+
   const getBrandNameById = useCallback((brandId?: string) => {
     if (!brandId) return "N/A";
     const brand = brands.find(b => b.id === brandId);
@@ -89,15 +102,15 @@ export function FilamentsTab() {
     }
   };
 
-  const sortedAndFilteredFilaments = useMemo(() => {
-    let items = filaments.filter(f =>
+  const paginatedData = useMemo(() => {
+    let filtered = filaments.filter(f =>
       (filterMarca === "" || getBrandNameById(f.marcaId).toLowerCase().includes(filterMarca.toLowerCase())) &&
       (filterTipo === "" || f.tipo.toLowerCase().includes(filterTipo.toLowerCase())) &&
       (filterModelo === "" || (f.modelo && f.modelo.toLowerCase().includes(filterModelo.toLowerCase())))
     );
 
     if (sortField) {
-      items.sort((a, b) => {
+      filtered.sort((a, b) => {
         let valA: string | number = '';
         let valB: string | number = '';
 
@@ -135,8 +148,20 @@ export function FilamentsTab() {
         return 0;
       });
     }
-    return items;
-  }, [filaments, filterMarca, filterTipo, filterModelo, getBrandNameById, sortField, sortDirection]);
+
+    const totalFilteredItems = filtered.length;
+    const totalPages = Math.ceil(totalFilteredItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const itemsToDisplay = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+    return {
+      itemsToDisplay,
+      totalPages,
+      totalFilteredItems,
+      startIndex,
+    };
+  }, [filaments, filterMarca, filterTipo, filterModelo, getBrandNameById, sortField, sortDirection, currentPage, itemsPerPage]);
+
 
   const renderSortIcon = (field: SortableFilamentField) => {
     if (sortField === field) {
@@ -153,7 +178,7 @@ export function FilamentsTab() {
       setFilamentPendingStockUpdate(createdOrUpdatedFilament);
       setIsConfirmStockAddDialogOpen(true);
     } else {
-      loadData(); // For updates, just reload
+      loadData(); 
     }
   };
 
@@ -184,12 +209,11 @@ export function FilamentsTab() {
       toast({ title: "Nenhuma Alteração", description: "Nenhuma quantidade ou preço foi fornecido para atualização.", variant: "default" });
       return;
     }
-    // setIsLoading(true); // Consider adding loading state if needed
     try {
       const result = await updateFilamentStockBatch([update]);
       if (result.success && result.updatedCount > 0) {
         toast({ title: "Estoque Atualizado", description: `Filamento atualizado com sucesso.`, variant: "success" });
-        loadData(); // Reload main filament list
+        loadData(); 
       } else if (result.errors && result.errors.length > 0) {
          toast({ title: "Erro ao Atualizar", description: result.errors[0].error, variant: "destructive" });
       } else if (!result.success) {
@@ -199,11 +223,17 @@ export function FilamentsTab() {
       console.error("Failed to update stock:", error);
       toast({ title: "Erro Inesperado", description: "Ocorreu um problema ao tentar atualizar o estoque.", variant: "destructive" });
     } finally {
-      // setIsLoading(false);
-      setIsStockUpdateDialogOpen(false); // Ensure stock dialog closes
+      setIsStockUpdateDialogOpen(false); 
       setEditingFilamentForStock(null);
     }
   };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+  };
+
+  const goToPreviousPage = () => setCurrentPage(prev => Math.max(1, prev - 1));
+  const goToNextPage = () => setCurrentPage(prev => Math.min(paginatedData.totalPages, prev + 1));
   
   return (
     <div className="space-y-4">
@@ -254,14 +284,14 @@ export function FilamentsTab() {
           </div>
 
           <div className="mb-3 text-sm text-muted-foreground">
-             Exibindo {sortedAndFilteredFilaments.length} de {filaments.length} filamento(s).
+             Exibindo {paginatedData.itemsToDisplay.length > 0 ? paginatedData.startIndex + 1 : 0} - {Math.min(paginatedData.startIndex + itemsPerPage, paginatedData.totalFilteredItems)} de {paginatedData.totalFilteredItems} filamento(s).
           </div>
 
-          {sortedAndFilteredFilaments.length === 0 && filaments.length > 0 ? (
+          {paginatedData.itemsToDisplay.length === 0 && filaments.length > 0 && paginatedData.totalFilteredItems > 0 ? (
              <div className="p-6 text-center text-muted-foreground">
               Nenhum filamento encontrado com os filtros aplicados.
             </div>
-          ) : sortedAndFilteredFilaments.length === 0 && filaments.length === 0 ? (
+          ) : paginatedData.itemsToDisplay.length === 0 && filaments.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">
               Nenhum filamento cadastrado ainda. Clique em "Adicionar Filamento" para começar.
             </div>
@@ -319,7 +349,7 @@ export function FilamentsTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedAndFilteredFilaments.map((filament) => (
+                  {paginatedData.itemsToDisplay.map((filament) => (
                     <TableRow key={filament.id}>
                       <TableCell className="font-medium px-2 py-1.5">{getBrandNameById(filament.marcaId)}</TableCell>
                       <TableCell className="px-2 py-1.5">{filament.tipo}</TableCell>
@@ -352,6 +382,48 @@ export function FilamentsTab() {
               </Table>
             </div>
           )}
+          {paginatedData.totalPages > 1 && (
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Itens por página:</span>
+                <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+                  <SelectTrigger className="w-[70px] h-8 text-xs">
+                    <SelectValue placeholder={itemsPerPage} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 10, 20, 50].map(size => (
+                      <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {paginatedData.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsUpDown className="h-4 w-4 rotate-90" /> 
+                  <span className="sr-only">Página Anterior</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={goToNextPage}
+                  disabled={currentPage === paginatedData.totalPages}
+                >
+                  <ChevronsUpDown className="h-4 w-4 -rotate-90" />
+                  <span className="sr-only">Próxima Página</span>
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -370,7 +442,6 @@ export function FilamentsTab() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* AlertDialog para confirmar adição de estoque após criar novo filamento */}
       <AlertDialog open={isConfirmStockAddDialogOpen} onOpenChange={setIsConfirmStockAddDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -398,7 +469,6 @@ export function FilamentsTab() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog para atualizar estoque (reutilizado) */}
       {editingFilamentForStock && (
         <FilamentStockUpdateDialog
           isOpen={isStockUpdateDialogOpen}
@@ -406,7 +476,7 @@ export function FilamentsTab() {
             setIsStockUpdateDialogOpen(isOpen);
             if (!isOpen) {
               setEditingFilamentForStock(null);
-              loadData(); // Recarrega os dados se o diálogo de estoque for fechado (salvo ou cancelado)
+              loadData(); 
             }
           }}
           filament={editingFilamentForStock}
