@@ -89,19 +89,18 @@ export const Icons = {
 export interface SummaryCardConfig {
   id: string;
   title: string;
-  icon: LucideIcon; // This type is correct for Lucide icon components
+  icon: LucideIcon;
   iconBgColor: string;
   iconTextColor: string;
   mainValueColorClass: string;
   defaultVisible: boolean;
 }
 
-// ALL_SUMMARY_CARDS_CONFIG now uses directly imported icons.
 export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'pedidosConcluidos',
     title: 'Pedidos Concluídos Hoje',
-    icon: CalendarCheck2, // Direct usage
+    icon: CalendarCheck2,
     iconBgColor: "bg-green-100 dark:bg-green-900",
     iconTextColor: "text-green-600 dark:text-green-400",
     mainValueColorClass: 'text-green-600 dark:text-green-400',
@@ -110,7 +109,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresAReceber',
     title: 'Valores a Receber Hoje',
-    icon: Hourglass, // Direct usage
+    icon: Hourglass,
     iconBgColor: "bg-blue-100 dark:bg-blue-900",
     iconTextColor: "text-blue-600 dark:text-blue-400",
     mainValueColorClass: 'text-blue-600 dark:text-blue-400',
@@ -119,7 +118,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresRecebidos',
     title: 'Valores Recebidos Hoje',
-    icon: WalletCards, // Direct usage
+    icon: WalletCards,
     iconBgColor: "bg-emerald-100 dark:bg-emerald-900",
     iconTextColor: "text-emerald-600 dark:text-emerald-400",
     mainValueColorClass: 'text-emerald-600 dark:text-emerald-400',
@@ -128,7 +127,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'pedidosCancelados',
     title: 'Pedidos Cancelados Hoje',
-    icon: CalendarX2, // Direct usage
+    icon: CalendarX2,
     iconBgColor: "bg-red-100 dark:bg-red-900",
     iconTextColor: "text-red-600 dark:text-red-400",
     mainValueColorClass: 'text-red-600 dark:text-red-400',
@@ -137,10 +136,50 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresEmAtraso',
     title: 'Valores em Atraso',
-    icon: TrendingDown, // Direct usage
+    icon: TrendingDown,
     iconBgColor: "bg-amber-100 dark:bg-amber-900",
     iconTextColor: "text-amber-600 dark:text-amber-400",
     mainValueColorClass: 'text-amber-600 dark:text-amber-400',
+    defaultVisible: true,
+  },
+];
+
+export interface ShortcutCardConfig {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  iconBgColor: string;
+  defaultVisible: boolean;
+  // onClick?: () => void; // Add if specific actions per shortcut are needed later
+}
+
+export const ALL_SHORTCUT_CARDS_CONFIG: ShortcutCardConfig[] = [
+  {
+    id: 'novoPedido',
+    label: 'Criar novo pedido',
+    icon: FilePlus2,
+    iconBgColor: 'bg-primary', // Using theme primary
+    defaultVisible: true,
+  },
+  {
+    id: 'novoRecebimento',
+    label: 'Novo recebimento',
+    icon: WalletMinimal,
+    iconBgColor: 'bg-green-500',
+    defaultVisible: true,
+  },
+  {
+    id: 'novoCompromisso',
+    label: 'Novo compromisso',
+    icon: CalendarPlus,
+    iconBgColor: 'bg-accent', // Using theme accent
+    defaultVisible: true,
+  },
+  {
+    id: 'novoCliente',
+    label: 'Novo cliente',
+    icon: UserPlus,
+    iconBgColor: 'bg-orange-500',
     defaultVisible: true,
   },
 ];

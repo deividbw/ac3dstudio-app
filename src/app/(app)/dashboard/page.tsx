@@ -9,11 +9,16 @@ import { ShortcutCard } from '@/components/ShortcutCard';
 import { SummaryCard } from '@/components/SummaryCard';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { ALL_SUMMARY_CARDS_CONFIG, type SummaryCardConfig } from '@/lib/constants';
+import { ALL_SUMMARY_CARDS_CONFIG, type SummaryCardConfig, ALL_SHORTCUT_CARDS_CONFIG, type ShortcutCardConfig } from '@/lib/constants';
 import { SummarySettingsDialog } from './components/SummarySettingsDialog';
+import { ShortcutSettingsDialog } from './components/ShortcutSettingsDialog'; // New dialog
 
 // Local type for state management, extending the config with a 'visible' property
 interface VisibleSummaryCardConfig extends SummaryCardConfig {
+  visible: boolean;
+}
+
+interface VisibleShortcutCardConfig extends ShortcutCardConfig {
   visible: boolean;
 }
 
@@ -26,21 +31,20 @@ const featureCardIconColors = {
   servicos: "bg-indigo-500",
 };
 
-const shortcutCardIconColors = {
-  novoPedido: "bg-primary",
-  novoRecebimento: "bg-green-500",
-  novoCompromisso: "bg-accent",
-  novoCliente: "bg-orange-500",
-};
-
+// shortcutCardIconColors is no longer needed as colors are in ALL_SHORTCUT_CARDS_CONFIG
 
 export default function DashboardPage() {
   const router = useRouter();
   const [showSummaryValues, setShowSummaryValues] = useState(true);
-  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
-
+  
+  const [isSummarySettingsDialogOpen, setIsSummarySettingsDialogOpen] = useState(false);
   const [summaryCardSettings, setSummaryCardSettings] = useState<VisibleSummaryCardConfig[]>(
     ALL_SUMMARY_CARDS_CONFIG.map(card => ({ ...card, visible: card.defaultVisible }))
+  );
+
+  const [isShortcutSettingsDialogOpen, setIsShortcutSettingsDialogOpen] = useState(false);
+  const [shortcutCardSettings, setShortcutCardSettings] = useState<VisibleShortcutCardConfig[]>(
+    ALL_SHORTCUT_CARDS_CONFIG.map(card => ({ ...card, visible: card.defaultVisible }))
   );
 
   const toggleSummaryValuesVisibility = () => {
@@ -49,7 +53,10 @@ export default function DashboardPage() {
 
   const handleSaveSummarySettings = (updatedSettings: VisibleSummaryCardConfig[]) => {
     setSummaryCardSettings(updatedSettings);
-    // setIsSettingsDialogOpen(false); // Dialog closes itself on save
+  };
+
+  const handleSaveShortcutSettings = (updatedSettings: VisibleShortcutCardConfig[]) => {
+    setShortcutCardSettings(updatedSettings);
   };
 
   return (
@@ -73,19 +80,36 @@ export default function DashboardPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">Atalhos</h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 text-muted-foreground"
+            onClick={() => setIsShortcutSettingsDialogOpen(true)}
+            title="Personalizar atalhos"
+          >
             <Icons.SlidersHorizontal className="h-5 w-5" />
           </Button>
         </div>
-        <ScrollArea className="w-full whitespace-nowrap rounded-md">
-          <div className="flex space-x-3 pb-2">
-            <ShortcutCard icon={Icons.FilePlus2} label="Criar novo pedido" iconBgColor={shortcutCardIconColors.novoPedido} />
-            <ShortcutCard icon={Icons.WalletMinimal} label="Novo recebimento" iconBgColor={shortcutCardIconColors.novoRecebimento} />
-            <ShortcutCard icon={Icons.CalendarPlus} label="Novo compromisso" iconBgColor={shortcutCardIconColors.novoCompromisso} />
-            <ShortcutCard icon={Icons.UserPlus} label="Novo cliente" iconBgColor={shortcutCardIconColors.novoCliente} />
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        {shortcutCardSettings.filter(card => card.visible).length > 0 ? (
+          <ScrollArea className="w-full whitespace-nowrap rounded-md">
+            <div className="flex space-x-3 pb-2">
+              {shortcutCardSettings.filter(card => card.visible).map(card => (
+                <ShortcutCard 
+                  key={card.id} 
+                  icon={card.icon} 
+                  label={card.label} 
+                  iconBgColor={card.iconBgColor}
+                  // onClick={card.onClick} // Add if onClick is part of config and needed
+                />
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        ) : (
+          <p className="text-center text-sm text-muted-foreground py-3">
+            Nenhum atalho selecionado para exibição.
+          </p>
+        )}
       </div>
 
       {/* Resumo Section */}
@@ -106,7 +130,7 @@ export default function DashboardPage() {
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground"
-              onClick={() => setIsSettingsDialogOpen(true)}
+              onClick={() => setIsSummarySettingsDialogOpen(true)}
               title="Personalizar resumo"
             >
               <Icons.SlidersHorizontal className="h-5 w-5" />
@@ -144,10 +168,17 @@ export default function DashboardPage() {
       </div>
 
       <SummarySettingsDialog
-        isOpen={isSettingsDialogOpen}
-        onOpenChange={setIsSettingsDialogOpen}
+        isOpen={isSummarySettingsDialogOpen}
+        onOpenChange={setIsSummarySettingsDialogOpen}
         currentSettings={summaryCardSettings}
         onSave={handleSaveSummarySettings}
+      />
+
+      <ShortcutSettingsDialog
+        isOpen={isShortcutSettingsDialogOpen}
+        onOpenChange={setIsShortcutSettingsDialogOpen}
+        currentSettings={shortcutCardSettings}
+        onSave={handleSaveShortcutSettings}
       />
     </div>
   );
