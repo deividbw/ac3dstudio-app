@@ -64,3 +64,15 @@ export interface FilamentType {
   nome: string; // Ex: PLA, ABS, PETG, TPU
 }
 
+// Moved from ConfiguracoesPage.tsx
+export interface PowerOverride {
+  id: string; // printerId_filamentTypeId
+  printerId: string;
+  printerName: string; // For display purposes
+  filamentTypeId: string;
+  filamentTypeName: string; // For display purposes
+  powerWatts: number;
+}
+
+export type SortableOverrideField = 'printerName' | 'filamentTypeName' | 'powerWatts';
+

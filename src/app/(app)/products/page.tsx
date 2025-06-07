@@ -34,19 +34,24 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductForm } from './components/ProductForm';
 import { CostDisplayDialog } from './components/CostDisplayDialog';
-import type { Product, Filament, Printer, Brand } from '@/lib/types';
+import type { Product, Filament, Printer, Brand, FilamentType, PowerOverride } from '@/lib/types'; // Added FilamentType, PowerOverride
 import { useToast } from "@/hooks/use-toast";
 import { exportToCsv } from '@/lib/csv-export';
 import { getProducts as mockGetProducts, deleteProduct as mockDeleteProduct } from '@/lib/actions/product.actions';
 import { getFilaments as mockGetFilaments } from '@/lib/actions/filament.actions';
 import { getPrinters as mockGetPrinters } from '@/lib/actions/printer.actions';
 import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
+import { getFilamentTypes as mockGetFilamentTypes } from '@/lib/actions/filamentType.actions'; // Added
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]); // Added
+  // NOTE: PowerOverrides would ideally be fetched from a persistent store.
+  // For now, it's an empty array, meaning ProductForm will use default printer consumption.
+  const [powerOverrides, setPowerOverrides] = useState<PowerOverride[]>([]); // Added
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -58,16 +63,24 @@ export default function ProductsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [productsData, filamentsData, printersData, brandsData] = await Promise.all([
+      const [productsData, filamentsData, printersData, brandsData, filamentTypesData] = await Promise.all([
         mockGetProducts(),
         mockGetFilaments(),
         mockGetPrinters(),
-        mockGetBrands()
+        mockGetBrands(),
+        mockGetFilamentTypes(), // Fetch filament types
+        // Mock fetching powerOverrides (in a real app, this would come from a database/config)
+        Promise.resolve([] as PowerOverride[]) // Simulating empty or fetched overrides
       ]);
       setProducts(productsData);
       setFilaments(filamentsData);
       setPrinters(printersData);
       setBrands(brandsData);
+      setFilamentTypes(filamentTypesData); // Set filament types
+      // setPowerOverrides(powerOverridesData); // Set power overrides
+      // For now, explicitly setting to empty as there's no source for these yet.
+      // This part would be updated if/when `powerOverrides` are globally available.
+      // For example, if they were stored in a DB and fetched via an action.
     } catch (error) {
       console.error("Failed to load initial data:", error);
       toast({ title: "Erro ao carregar dados", description: "Não foi possível buscar todos os dados necessários.", variant: "destructive" });
@@ -86,7 +99,6 @@ export default function ProductsPage() {
 
   const getPrinterDisplayName = (printer?: Printer) => {
     if (!printer) return 'N/A';
-    // if (printer.nome) return printer.nome; // nome was removed from Printer
     const brandName = getBrandNameById(printer.marcaId);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
@@ -158,12 +170,10 @@ export default function ProductsPage() {
     setIsFormOpen(true);
   };
   
-  const hasRequiredDataForProducts = filaments.length > 0 && printers.length > 0 && brands.length > 0;
+  const hasRequiredDataForProducts = filaments.length > 0 && printers.length > 0 && brands.length > 0 && filamentTypes.length > 0;
 
 
-  if (!hasRequiredDataForProducts && (filaments.length === 0 || printers.length === 0 || brands.length === 0)) {
-    // This check runs after the first useEffect, so initial state might be empty.
-    // Consider a loading state if data fetching takes time. For mock data, it's usually fast.
+  if (!hasRequiredDataForProducts && (filaments.length === 0 || printers.length === 0 || brands.length === 0 || filamentTypes.length === 0)) {
     return (
        <div className="space-y-6">
         <PageHeader title="Gerenciar Produtos e Custos" />
@@ -171,11 +181,12 @@ export default function ProductsPage() {
             <CardHeader>
                 <CardTitle className="flex items-center"><AlertTriangle className="mr-2 h-6 w-6 text-destructive" /> Dados Incompletos</CardTitle>
                 <CardDescription>
-                    Para gerenciar produtos e calcular custos, é necessário primeiro cadastrar filamentos, impressoras e marcas.
+                    Para gerenciar produtos e calcular custos, é necessário primeiro cadastrar filamentos, tipos de filamentos, impressoras e marcas.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
                 {filaments.length === 0 && <p>Nenhum filamento cadastrado. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros?tab=filaments">Cadastros &gt; Filamentos</Link></Button>.</p>}
+                {filamentTypes.length === 0 && <p>Nenhum tipo de filamento cadastrado. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros?tab=tipoFilamentos">Cadastros &gt; Tipos de Filamento</Link></Button>.</p>}
                 {printers.length === 0 && <p>Nenhuma impressora cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros?tab=impressoras">Cadastros &gt; Impressoras</Link></Button>.</p>}
                 {brands.length === 0 && <p>Nenhuma marca cadastrada. Por favor, vá para <Button variant="link" asChild><Link href="/servicos/cadastros?tab=marcas">Cadastros &gt; Marcas</Link></Button>.</p>}
             </CardContent>
@@ -208,6 +219,8 @@ export default function ProductsPage() {
               filaments={filaments}
               printers={printers}
               brands={brands}
+              filamentTypes={filamentTypes} // Pass filamentTypes
+              powerOverrides={powerOverrides} // Pass powerOverrides (currently empty)
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
             />
@@ -302,8 +315,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    
-
-    
-

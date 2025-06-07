@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { ProductSchema } from "@/lib/schemas";
-import type { Product, Filament, Printer, ProductCostBreakdown, Brand } from "@/lib/types";
+import type { Product, Filament, Printer, ProductCostBreakdown, Brand, FilamentType, PowerOverride } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createProduct, updateProduct } from '@/lib/actions/product.actions';
 import { Loader2 } from "lucide-react";
@@ -36,11 +36,13 @@ interface ProductFormProps {
   filaments: Filament[];
   printers: Printer[];
   brands: Brand[];
+  filamentTypes: FilamentType[]; // Added for mapping filament.tipo to filamentType.id
+  powerOverrides?: PowerOverride[]; // Added for specific power consumption
   onSuccess: (product: Product) => void;
   onCancel: () => void;
 }
 
-export function ProductForm({ product, filaments, printers, brands, onSuccess, onCancel }: ProductFormProps) {
+export function ProductForm({ product, filaments, printers, brands, filamentTypes, powerOverrides = [], onSuccess, onCancel }: ProductFormProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
   const [costBreakdown, setCostBreakdown] = useState<ProductCostBreakdown | undefined>(product?.custoDetalhado);
@@ -69,7 +71,6 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
   }, [brands]);
 
   const getPrinterDisplayName = (printer: Printer) => {
-    // if (printer.nome) return printer.nome; // nome was removed from Printer type
     const brandName = getBrandNameById(printer.marcaId);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
@@ -109,9 +110,6 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
     setIsCalculating(true);
     try {
-      // Simulate a brief delay for calculation if needed, or remove for instant calculation
-      // await new Promise(resolve => setTimeout(resolve, 50)); 
-
       const pesoGramas = Number(currentValues.pesoGramas) || 0;
       const tempoProducaoHoras = Number(currentValues.tempoImpressaoHoras) || 0;
       const custoModelagemValue = Number(currentValues.custoModelagem) || 0;
@@ -120,8 +118,21 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
       const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
       
-      // TODO: Integrate filament-specific power overrides from configuracoes page when available
-      const custoEnergiaImpressao = selectedPrinter.consumoEnergiaHora * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
+      let consumoEnergiaHoraParaCalculo = selectedPrinter.consumoEnergiaHora;
+
+      // Find filamentType.id for the selectedFilament.tipo
+      const filamentType = filamentTypes.find(ft => ft.nome === selectedFilament.tipo);
+      
+      if (filamentType && powerOverrides) {
+        const override = powerOverrides.find(
+          ov => ov.printerId === selectedPrinter.id && ov.filamentTypeId === filamentType.id
+        );
+        if (override) {
+          consumoEnergiaHoraParaCalculo = override.powerWatts / 1000; // Convert Watts to kWh
+        }
+      }
+      
+      const custoEnergiaImpressao = consumoEnergiaHoraParaCalculo * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
       const custoDepreciacaoImpressao = selectedPrinter.taxaDepreciacaoHora * tempoProducaoHoras;
       const custoImpressaoCalculado = custoEnergiaImpressao + custoDepreciacaoImpressao;
       
@@ -146,7 +157,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     } finally {
         setIsCalculating(false);
     }
-  }, [form, filaments, printers, toast]);
+  }, [form, filaments, printers, toast, filamentTypes, powerOverrides]);
 
   const filamentoId = form.watch("filamentoId");
   const impressoraId = form.watch("impressoraId");
@@ -174,18 +185,13 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     custoModelagemWatched, 
     custosExtrasWatched, 
     margemLucroPercentualWatched,
-    triggerCostCalculation, // Added as dependency
-    form // form.getValues is used in the effect's condition check
+    triggerCostCalculation, 
+    form 
   ]);
 
 
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
     try {
-      // Ensure costBreakdown is current based on form values before submission
-      // This is important if any calculation input changed without immediate re-trigger of useEffect (e.g., blur vs change)
-      // However, with current useEffect deps, it should be up-to-date.
-      // For safety, one could re-run calculation or ensure button is disabled until calc is stable.
-
       if (!costBreakdown) {
         toast({
           title: "Cálculo Pendente",
@@ -214,10 +220,9 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
       let finalProductData: Product;
 
       if (product && product.id) {
-        actionResult = await updateProduct(product.id, dataToSave as Product ); // Cast to Product for update
+        actionResult = await updateProduct(product.id, dataToSave as Product ); 
         finalProductData = actionResult.product!;
       } else {
-        // For create, remove id if it's undefined or empty string
         const createData = { ...dataToSave };
         delete createData.id; 
         actionResult = await createProduct(createData as Omit<Product, 'id'>); 
