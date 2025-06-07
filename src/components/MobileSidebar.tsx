@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SheetClose } from '@/components/ui/sheet';
+import { SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
 import { AppLogo } from '@/components/AppLogo';
 import { MOBILE_SIDEBAR_NAV_ITEMS, type NavItem } from '@/lib/constants';
 
@@ -15,9 +15,11 @@ export function MobileSidebar() {
 
   return (
     <div className="flex h-full flex-col bg-card text-card-foreground">
-      <div className="border-b">
-        <AppLogo />
-      </div>
+      <SheetHeader className="p-4 border-b"> {/* Added padding to SheetHeader, replaced div */}
+        <SheetTitle>
+          <AppLogo /> {/* AppLogo is now inside SheetTitle */}
+        </SheetTitle>
+      </SheetHeader>
       <ScrollArea className="flex-grow">
         <nav className="flex flex-col gap-1 p-2">
           {MOBILE_SIDEBAR_NAV_ITEMS.map((item: NavItem) => (
