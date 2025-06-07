@@ -38,9 +38,10 @@ export function SummarySettingsDialog({
   const [localSettings, setLocalSettings] = useState<DialogSummaryCardConfig[]>([]);
 
   useEffect(() => {
-    // Deep copy to avoid mutating the prop directly and to reset on open/prop change
+    // Create a new array with shallow copies of card objects to avoid mutating the prop
+    // and to ensure local state is distinct. This preserves function components like icons.
     if (isOpen) {
-      setLocalSettings(JSON.parse(JSON.stringify(currentSettings)));
+      setLocalSettings(currentSettings.map(card => ({ ...card })));
     }
   }, [currentSettings, isOpen]);
 
@@ -102,3 +103,4 @@ export function SummarySettingsDialog({
     </Dialog>
   );
 }
+
