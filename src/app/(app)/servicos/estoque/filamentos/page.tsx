@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Filament, Brand } from '@/lib/types';
 import { getFilaments, updateFilamentStockBatch } from '@/lib/actions/filament.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
-import { Edit, PackageSearch, Filter, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, PackageSearch, Filter, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react'; // Changed Edit to Plus
 import { FilamentStockUpdateDialog } from './components/FilamentStockUpdateDialog';
 
 type SortableField = 'marcaId' | 'tipo' | 'cor' | 'modelo';
@@ -241,9 +241,9 @@ export default function FilamentStockPage() {
                           size="icon"
                           className="h-8 w-8 text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-500/20 dark:hover:text-green-400"
                           onClick={() => handleOpenStockUpdateDialog(f)}
-                          title="Atualizar Estoque/Preço"
+                          title="Adicionar Estoque / Atualizar Preço"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Plus className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -266,5 +266,3 @@ export default function FilamentStockPage() {
     </div>
   );
 }
-
-    
