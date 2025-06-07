@@ -1,51 +1,173 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap } from 'lucide-react';
+import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap, ListPlus } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import type { Printer, FilamentType, Brand } from '@/lib/types';
+import { getPrinters } from '@/lib/actions/printer.actions';
+import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
+import { getBrands } from '@/lib/actions/brand.actions';
+
+interface PowerOverride {
+  id: string; // printerId_filamentTypeId
+  printerId: string;
+  printerName: string;
+  filamentTypeId: string;
+  filamentTypeName: string;
+  powerWatts: number;
+}
 
 export default function ConfiguracoesPage() {
-  const [kwhValue, setKwhValue] = React.useState("0.75"); // Example value
+  const [kwhValue, setKwhValue] = useState("0.75");
   const { toast } = useToast();
 
-  // State for filament power consumption in Watts
-  const [plaPowerWatts, setPlaPowerWatts] = React.useState("60"); // Ex: 60 Watts
-  const [absPowerWatts, setAbsPowerWatts] = React.useState("100"); // Ex: 100 Watts
-  const [petgPowerWatts, setPetgPowerWatts] = React.useState("80"); // Ex: 80 Watts
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+
+  const [selectedPrinterId, setSelectedPrinterId] = useState<string>("");
+  const [selectedFilamentTypeId, setSelectedFilamentTypeId] = useState<string>("");
+  const [specificPowerWatts, setSpecificPowerWatts] = useState<string>("");
+  const [configuredOverrides, setConfiguredOverrides] = useState<PowerOverride[]>([]);
+
+  const loadDropdownData = useCallback(async () => {
+    try {
+      const [printersData, filamentTypesData, brandsData] = await Promise.all([
+        getPrinters(),
+        getFilamentTypes(),
+        getBrands(),
+      ]);
+      setPrinters(printersData);
+      setFilamentTypes(filamentTypesData);
+      setBrands(brandsData);
+    } catch (error) {
+      console.error("Failed to load data for dropdowns:", error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar impressoras ou tipos de filamento.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadDropdownData();
+  }, [loadDropdownData]);
+
+  const getBrandNameById = useCallback((brandId?: string) => {
+    if (!brandId) return "";
+    const brand = brands.find(b => b.id === brandId);
+    return brand ? brand.nome : "Marca Desconhecida";
+  }, [brands]);
+  
+  const getPrinterDisplayName = useCallback((printer: Printer) => {
+    const brandName = getBrandNameById(printer.marcaId);
+    if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
+    if (printer.modelo) return printer.modelo;
+    return `Impressora ID: ${printer.id}`;
+  }, [getBrandNameById, brands]);
+
 
   const handleSaveKwh = () => {
-    // In a real app, this would save to a DB / global state (e.g., Firestore, localStorage)
     console.log("Salvar valor kWh:", kwhValue);
-    toast({ 
-      title: "Configuração Salva", 
+    toast({
+      title: "Configuração Salva",
       description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}. (Simulação)`,
       variant: "success",
     });
   };
 
-  const handleSavePowerConsumptionWatts = () => {
-    // In a real app, this would save to a DB / global state
-    console.log("Salvando potência média por filamento (Watts):", { pla: plaPowerWatts, abs: absPowerWatts, petg: petgPowerWatts });
+  const handleSaveSpecificPowerConsumption = () => {
+    if (!selectedPrinterId || !selectedFilamentTypeId || !specificPowerWatts) {
+      toast({
+        title: "Campos Obrigatórios",
+        description: "Selecione uma impressora, um tipo de filamento e informe a potência.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const power = parseInt(specificPowerWatts, 10);
+    if (isNaN(power) || power <= 0) {
+      toast({
+        title: "Potência Inválida",
+        description: "A potência deve ser um número positivo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const printer = printers.find(p => p.id === selectedPrinterId);
+    const filamentType = filamentTypes.find(ft => ft.id === selectedFilamentTypeId);
+
+    if (!printer || !filamentType) {
+      toast({
+        title: "Seleção Inválida",
+        description: "Impressora ou tipo de filamento não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const overrideId = `${selectedPrinterId}_${selectedFilamentTypeId}`;
+    const newOverride: PowerOverride = {
+      id: overrideId,
+      printerId: selectedPrinterId,
+      printerName: getPrinterDisplayName(printer),
+      filamentTypeId: selectedFilamentTypeId,
+      filamentTypeName: filamentType.nome,
+      powerWatts: power,
+    };
+
+    setConfiguredOverrides(prevOverrides => {
+      const existingIndex = prevOverrides.findIndex(ov => ov.id === overrideId);
+      if (existingIndex !== -1) {
+        const updatedOverrides = [...prevOverrides];
+        updatedOverrides[existingIndex] = newOverride;
+        return updatedOverrides;
+      }
+      return [...prevOverrides, newOverride];
+    });
+
     toast({
-      title: "Ajustes de Potência Salvos",
-      description: "Potência média consumida por tipo de filamento foi salva. (Simulação)",
+      title: "Configuração Específica Salva",
+      description: `Potência de ${power}W para ${getPrinterDisplayName(printer)} com ${filamentType.nome} salva. (Simulação)`,
       variant: "success",
     });
+    // Optionally reset fields
+    // setSelectedPrinterId("");
+    // setSelectedFilamentTypeId("");
+    // setSpecificPowerWatts("");
   };
+
 
   return (
     <div className="space-y-6">
@@ -88,63 +210,90 @@ export default function ConfiguracoesPage() {
               <div>
                 <h4 className="font-medium text-md mb-2 flex items-center">
                   <Zap className="mr-2 h-5 w-5 text-primary/80" />
-                  Potência Média Consumida por Tipo de Filamento
+                  Potência Consumida por Tipo de Filamento e Impressora
                 </h4>
                 <CardDescription className="mb-3 text-xs">
-                  Informe a potência média em Watts que sua impressora consome ao utilizar cada tipo de filamento,
-                  baseado em suas medições (ex: com uma peça de teste padrão).
-                  Este valor refinará o cálculo de custo de energia dos produtos. Se não informado para um tipo, será usada a potência nominal da impressora.
+                  Informe a potência média específica em Watts que uma impressora consome ao utilizar um determinado tipo de filamento.
+                  Este valor, se configurado, sobreporá a potência nominal da impressora para cálculos de custo de energia mais precisos.
                 </CardDescription>
-                <div className="space-y-3">
+                <div className="space-y-3 p-4 border rounded-md bg-muted/10">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
-                      <Label htmlFor="plaPowerWatts" className="text-sm">PLA (Watts)</Label>
-                      <Input
-                        id="plaPowerWatts"
-                        type="number"
-                        step="1"
-                        min="0"
-                        value={plaPowerWatts}
-                        onChange={(e) => setPlaPowerWatts(e.target.value)}
-                        placeholder="Ex: 60"
-                        className="mt-1"
-                      />
+                      <Label htmlFor="selectPrinterPower" className="text-sm">Impressora*</Label>
+                      <Select value={selectedPrinterId} onValueChange={setSelectedPrinterId}>
+                        <SelectTrigger id="selectPrinterPower" className="mt-1">
+                          <SelectValue placeholder="Selecione uma impressora" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {printers.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{getPrinterDisplayName(p)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <Label htmlFor="absPowerWatts" className="text-sm">ABS (Watts)</Label>
-                      <Input
-                        id="absPowerWatts"
-                        type="number"
-                        step="1"
-                        min="0"
-                        value={absPowerWatts}
-                        onChange={(e) => setAbsPowerWatts(e.target.value)}
-                        placeholder="Ex: 100"
-                        className="mt-1"
-                      />
+                      <Label htmlFor="selectFilamentTypePower" className="text-sm">Tipo de Filamento*</Label>
+                      <Select value={selectedFilamentTypeId} onValueChange={setSelectedFilamentTypeId}>
+                        <SelectTrigger id="selectFilamentTypePower" className="mt-1">
+                          <SelectValue placeholder="Selecione um tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filamentTypes.map(ft => (
+                            <SelectItem key={ft.id} value={ft.id}>{ft.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <Label htmlFor="petgPowerWatts" className="text-sm">PETG (Watts)</Label>
+                      <Label htmlFor="specificPowerWatts" className="text-sm">Potência Específica (Watts)*</Label>
                       <Input
-                        id="petgPowerWatts"
+                        id="specificPowerWatts"
                         type="number"
                         step="1"
                         min="0"
-                        value={petgPowerWatts}
-                        onChange={(e) => setPetgPowerWatts(e.target.value)}
-                        placeholder="Ex: 80"
+                        value={specificPowerWatts}
+                        onChange={(e) => setSpecificPowerWatts(e.target.value)}
+                        placeholder="Ex: 55"
                         className="mt-1"
                       />
                     </div>
                   </div>
-                   {/* Adicionar mais tipos de filamento conforme necessário */}
                   <div className="pt-2">
-                    <Button onClick={handleSavePowerConsumptionWatts} size="sm">Salvar Potências Médias</Button>
+                    <Button onClick={handleSaveSpecificPowerConsumption} size="sm">
+                      <ListPlus className="mr-2 h-4 w-4" />
+                      Salvar Configuração Específica
+                    </Button>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  (Em desenvolvimento) No futuro, será possível adicionar/remover tipos de filamento desta lista.
-                  A integração destes valores com o cálculo de custo dos produtos será implementada.
+                {configuredOverrides.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium mb-2">Configurações Salvas:</h5>
+                    <Card className="max-h-60 overflow-y-auto">
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="px-3 py-2 text-xs">Impressora</TableHead>
+                              <TableHead className="px-3 py-2 text-xs">Filamento</TableHead>
+                              <TableHead className="px-3 py-2 text-xs text-right">Potência (W)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {configuredOverrides.map(ov => (
+                              <TableRow key={ov.id}>
+                                <TableCell className="px-3 py-1.5 text-xs">{ov.printerName}</TableCell>
+                                <TableCell className="px-3 py-1.5 text-xs">{ov.filamentTypeName}</TableCell>
+                                <TableCell className="px-3 py-1.5 text-xs text-right">{ov.powerWatts}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+                 <p className="text-xs text-muted-foreground mt-2">
+                  (Em desenvolvimento) A integração destes valores com o cálculo de custo dos produtos será implementada.
                 </p>
               </div>
 
@@ -209,3 +358,6 @@ export default function ConfiguracoesPage() {
     </div>
   );
 }
+
+
+    
