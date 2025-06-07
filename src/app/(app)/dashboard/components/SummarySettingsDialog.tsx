@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import type { SummaryCardConfig } from '@/lib/constants';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowUp, ArrowDown } from 'lucide-react';
-import { ALL_SUMMARY_CARDS_CONFIG } from '@/lib/constants'; // Import for robust icon re-assignment
+import { ALL_SUMMARY_CARDS_CONFIG } from '@/lib/constants';
 
 interface DialogSummaryCardConfig extends SummaryCardConfig {
   visible: boolean;
@@ -40,23 +40,39 @@ export function SummarySettingsDialog({
 
   useEffect(() => {
     if (isOpen) {
-      // Ensure icon references are correctly preserved or re-assigned from original config
-      const initializedSettings = currentSettings.map(userSetting => {
-        const originalCard = ALL_SUMMARY_CARDS_CONFIG.find(c => c.id === userSetting.id);
-        return {
-          ...userSetting, // Start with user's settings (like 'visible' and order)
-          ...(originalCard ? { // Overlay original static props to ensure they are not corrupted
-            icon: originalCard.icon,
-            title: originalCard.title,
-            iconBgColor: originalCard.iconBgColor,
-            iconTextColor: originalCard.iconTextColor,
-            mainValueColorClass: originalCard.mainValueColorClass,
-            defaultVisible: originalCard.defaultVisible,
-          } : {}),
-          visible: userSetting.visible, // Ensure user's visibility choice is paramount
-        };
+      let newLocalSettings: DialogSummaryCardConfig[] = [];
+
+      // 1. Process currentSettings, keeping their order and visibility,
+      //    refreshing static data, and filtering out stale items.
+      currentSettings.forEach(userSetting => {
+        const originalCardConfig = ALL_SUMMARY_CARDS_CONFIG.find(c => c.id === userSetting.id);
+        if (originalCardConfig) { // Only include if it's still a valid card
+          newLocalSettings.push({
+            // Static properties from original config
+            id: originalCardConfig.id,
+            title: originalCardConfig.title,
+            icon: originalCardConfig.icon, // Crucial: always take icon from original
+            iconBgColor: originalCardConfig.iconBgColor,
+            iconTextColor: originalCardConfig.iconTextColor,
+            mainValueColorClass: originalCardConfig.mainValueColorClass,
+            defaultVisible: originalCardConfig.defaultVisible,
+            // User-specific property
+            visible: userSetting.visible,
+          });
+        }
       });
-      setLocalSettings(initializedSettings);
+
+      // 2. Add any new cards from ALL_SUMMARY_CARDS_CONFIG that weren't in currentSettings
+      //    These will be added at the end. If order of new items matters, this logic might need adjustment.
+      ALL_SUMMARY_CARDS_CONFIG.forEach(originalCardConfig => {
+        if (!newLocalSettings.find(s => s.id === originalCardConfig.id)) {
+          newLocalSettings.push({
+            ...originalCardConfig, // All static props from original
+            visible: originalCardConfig.defaultVisible, // Default visibility for new items
+          });
+        }
+      });
+      setLocalSettings(newLocalSettings);
     }
   }, [currentSettings, isOpen]);
 
@@ -75,7 +91,7 @@ export function SummarySettingsDialog({
       const swapIndex = direction === 'up' ? index - 1 : index + 1;
 
       if (swapIndex < 0 || swapIndex >= newSettings.length) {
-        return prevSettings; 
+        return prevSettings;
       }
 
       newSettings[index] = newSettings[swapIndex];
@@ -86,7 +102,7 @@ export function SummarySettingsDialog({
 
   const handleSaveChanges = () => {
     onSave(localSettings);
-    onOpenChange(false); 
+    onOpenChange(false);
   };
 
   const handleCancel = () => {
