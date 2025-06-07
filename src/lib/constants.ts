@@ -1,6 +1,12 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare, MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2, WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign, Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass, WalletCards, CalendarX2, TrendingDown } from 'lucide-react';
+import {
+  LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare,
+  MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
+  WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
+  Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
+  WalletCards, CalendarX2, TrendingDown
+} from 'lucide-react';
 
 // Interface para itens de navegação, reutilizada do AppSidebar
 export interface NavItem {
@@ -71,49 +77,31 @@ export const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
   { href: '/benefits', icon: PercentSquare, label: 'Benefícios' },
 ];
 
+// The Icons object is kept for other parts of the app that might use it.
 export const Icons = {
-  Menu,
-  MessageSquare,
-  ClipboardList,
-  CalendarDays,
-  DollarSign,
-  Users,
-  PackageSearch,
-  Settings2,
-  FilePlus2,
-  WalletMinimal,
-  CalendarPlus,
-  UserPlus,
-  SlidersHorizontal,
-  EyeOff,
-  Eye,
-  ChevronRight,
-  Home,
-  BarChart3,
-  PercentSquare,
-  Archive,
-  CalendarCheck2,
-  Hourglass,
-  WalletCards,
-  CalendarX2,
-  TrendingDown,
+  LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare,
+  MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
+  WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
+  Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
+  WalletCards, CalendarX2, TrendingDown
 };
 
 export interface SummaryCardConfig {
   id: string;
   title: string;
-  icon: LucideIcon;
+  icon: LucideIcon; // This type is correct for Lucide icon components
   iconBgColor: string;
   iconTextColor: string;
   mainValueColorClass: string;
   defaultVisible: boolean;
 }
 
+// ALL_SUMMARY_CARDS_CONFIG now uses directly imported icons.
 export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'pedidosConcluidos',
     title: 'Pedidos Concluídos Hoje',
-    icon: Icons.CalendarCheck2,
+    icon: CalendarCheck2, // Direct usage
     iconBgColor: "bg-green-100 dark:bg-green-900",
     iconTextColor: "text-green-600 dark:text-green-400",
     mainValueColorClass: 'text-green-600 dark:text-green-400',
@@ -122,7 +110,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresAReceber',
     title: 'Valores a Receber Hoje',
-    icon: Icons.Hourglass,
+    icon: Hourglass, // Direct usage
     iconBgColor: "bg-blue-100 dark:bg-blue-900",
     iconTextColor: "text-blue-600 dark:text-blue-400",
     mainValueColorClass: 'text-blue-600 dark:text-blue-400',
@@ -131,7 +119,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresRecebidos',
     title: 'Valores Recebidos Hoje',
-    icon: Icons.WalletCards,
+    icon: WalletCards, // Direct usage
     iconBgColor: "bg-emerald-100 dark:bg-emerald-900",
     iconTextColor: "text-emerald-600 dark:text-emerald-400",
     mainValueColorClass: 'text-emerald-600 dark:text-emerald-400',
@@ -140,7 +128,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'pedidosCancelados',
     title: 'Pedidos Cancelados Hoje',
-    icon: Icons.CalendarX2,
+    icon: CalendarX2, // Direct usage
     iconBgColor: "bg-red-100 dark:bg-red-900",
     iconTextColor: "text-red-600 dark:text-red-400",
     mainValueColorClass: 'text-red-600 dark:text-red-400',
@@ -149,7 +137,7 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
     id: 'valoresEmAtraso',
     title: 'Valores em Atraso',
-    icon: Icons.TrendingDown,
+    icon: TrendingDown, // Direct usage
     iconBgColor: "bg-amber-100 dark:bg-amber-900",
     iconTextColor: "text-amber-600 dark:text-amber-400",
     mainValueColorClass: 'text-amber-600 dark:text-amber-400',
