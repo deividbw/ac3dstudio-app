@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FilePlus2, Filter, Search, Edit, Trash2, DollarSign } from 'lucide-react';
+import { FilePlus2, Filter, Search, Edit, Trash2, DollarSign, List, LayoutGrid } from 'lucide-react'; // Added List, LayoutGrid
 import {
   Table,
   TableBody,
@@ -36,6 +36,7 @@ import type { Orcamento, Product, OrcamentoStatus } from '@/lib/types';
 import { getProducts } from '@/lib/actions/product.actions';
 import { getOrcamentos, createOrcamento, updateOrcamento, deleteOrcamento } from '@/lib/actions/orcamento.actions';
 import { OrcamentoForm } from './components/OrcamentoForm'; 
+import { OrcamentoCard } from './components/OrcamentoCard'; // Import OrcamentoCard
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils'; 
 
@@ -46,6 +47,7 @@ export default function OrcamentosPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrcamento, setEditingOrcamento] = useState<Orcamento | null>(null);
   const [deletingOrcamentoId, setDeletingOrcamentoId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid'); // Default to grid view
   
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
@@ -58,7 +60,7 @@ export default function OrcamentosPage() {
         getProducts(),
       ]);
       setOrcamentos(orcamentosData.sort((a,b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()));
-      setProducts(productsData.filter(p => p.custoDetalhado?.precoVendaCalculado && p.custoDetalhado.precoVendaCalculado > 0)); // Ensure products have price
+      setProducts(productsData.filter(p => p.custoDetalhado?.precoVendaCalculado && p.custoDetalhado.precoVendaCalculado > 0)); 
     } catch (error) {
       console.error("Erro ao carregar dados para orçamentos:", error);
       toast({ title: "Erro ao Carregar Dados", description: "Não foi possível buscar os orçamentos ou produtos.", variant: "destructive" });
@@ -93,6 +95,10 @@ export default function OrcamentosPage() {
   const handleOpenNewDialog = () => {
     setEditingOrcamento(null);
     setIsFormOpen(true);
+  };
+
+  const handleDeleteRequest = (orcamentoId: string) => {
+    setDeletingOrcamentoId(orcamentoId);
   };
 
   const handleDeleteConfirm = async () => {
@@ -134,7 +140,6 @@ export default function OrcamentosPage() {
     }
   };
 
-
   return (
     <div className="space-y-6">
       <PageHeader title="Orçamentos">
@@ -168,8 +173,32 @@ export default function OrcamentosPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Orçamentos</CardTitle>
-          <CardDescription>Gerencie e acompanhe todos os seus orçamentos.</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Lista de Orçamentos</CardTitle>
+              <CardDescription>Gerencie e acompanhe todos os seus orçamentos.</CardDescription>
+            </div>
+            <div className="flex items-center gap-1">
+                <Button 
+                    variant={viewMode === 'list' ? 'default' : 'outline'} 
+                    size="icon" 
+                    onClick={() => setViewMode('list')}
+                    className="h-8 w-8"
+                    title="Visualizar em Lista"
+                >
+                    <List className="h-4 w-4" />
+                </Button>
+                <Button 
+                    variant={viewMode === 'grid' ? 'default' : 'outline'} 
+                    size="icon" 
+                    onClick={() => setViewMode('grid')}
+                    className="h-8 w-8"
+                    title="Visualizar em Grade"
+                >
+                    <LayoutGrid className="h-4 w-4" />
+                </Button>
+            </div>
+          </div>
           <div className="pt-2 flex gap-2">
             <div className="relative flex-grow">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -191,59 +220,72 @@ export default function OrcamentosPage() {
           {isLoading ? (
             <p className="text-center py-10 text-muted-foreground">Carregando orçamentos...</p>
           ) : filteredOrcamentos.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Nome Orçamento</TableHead>
-                    <TableHead className="text-xs">Cliente</TableHead>
-                    <TableHead className="text-xs">Data</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-right text-xs">Valor Total</TableHead>
-                    <TableHead className="text-center w-[100px] text-xs">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrcamentos.map((orc) => (
-                    <TableRow key={orc.id}>
-                      <TableCell className="font-medium text-xs">{orc.nomeOrcamento}</TableCell>
-                      <TableCell className="text-xs">{orc.clienteNome}</TableCell>
-                      <TableCell className="text-xs">{formatDate(orc.dataCriacao)}</TableCell>
-                      <TableCell className="text-xs">
-                        <Badge variant={getStatusBadgeVariant(orc.status)} className={cn(getStatusBadgeColorClass(orc.status), 'text-xs')}>
-                            {orc.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-primary text-xs">{formatCurrency(orc.valorTotalCalculado)}</TableCell>
-                      <TableCell className="text-center">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-yellow-500 hover:bg-yellow-100" onClick={() => handleOpenEditDialog(orc)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                            <AlertDialogPrimitiveTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-100" onClick={() => setDeletingOrcamentoId(orc.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </AlertDialogPrimitiveTrigger>
-                           <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o orçamento "{orc.nomeOrcamento}"? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setDeletingOrcamentoId(null)}>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filteredOrcamentos.map((orc) => (
+                  <OrcamentoCard 
+                    key={orc.id} 
+                    orcamento={orc} 
+                    onEdit={handleOpenEditDialog} 
+                    onDeleteRequest={handleDeleteRequest} 
+                  />
+                ))}
+              </div>
+            ) : ( // viewMode === 'list'
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Nome Orçamento</TableHead>
+                      <TableHead className="text-xs">Cliente</TableHead>
+                      <TableHead className="text-xs">Data</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Valor Total</TableHead>
+                      <TableHead className="text-center w-[100px] text-xs">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrcamentos.map((orc) => (
+                      <TableRow key={orc.id}>
+                        <TableCell className="font-medium text-xs py-2 px-3">{orc.nomeOrcamento}</TableCell>
+                        <TableCell className="text-xs py-2 px-3">{orc.clienteNome}</TableCell>
+                        <TableCell className="text-xs py-2 px-3">{formatDate(orc.dataCriacao)}</TableCell>
+                        <TableCell className="text-xs py-2 px-3">
+                          <Badge variant={getStatusBadgeVariant(orc.status)} className={cn(getStatusBadgeColorClass(orc.status), 'text-xs')}>
+                              {orc.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-primary text-xs py-2 px-3">{formatCurrency(orc.valorTotalCalculado)}</TableCell>
+                        <TableCell className="text-center py-1.5 px-3">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-yellow-500 hover:bg-yellow-100" onClick={() => handleOpenEditDialog(orc)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <AlertDialog>
+                              <AlertDialogPrimitiveTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-100" onClick={() => handleDeleteRequest(orc.id)}>
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                              </AlertDialogPrimitiveTrigger>
+                             <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir o orçamento "{orc.nomeOrcamento}"? Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={() => setDeletingOrcamentoId(null)}>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
           ) : (
             <div className="text-center py-10 text-muted-foreground">
               <Search className="mx-auto h-12 w-12 opacity-50 mb-3" />
@@ -258,6 +300,21 @@ export default function OrcamentosPage() {
           )}
         </CardContent>
       </Card>
+
+       <AlertDialog open={!!deletingOrcamentoId && !isFormOpen} onOpenChange={(isOpen) => { if (!isOpen) setDeletingOrcamentoId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o orçamento "{orcamentos.find(o => o.id === deletingOrcamentoId)?.nomeOrcamento}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingOrcamentoId(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
