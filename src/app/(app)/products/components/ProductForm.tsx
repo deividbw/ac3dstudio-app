@@ -37,13 +37,13 @@ interface ProductFormProps {
   product?: Product | null;
   filaments: Filament[];
   printers: Printer[];
-  brands: Brand[]; // Added brands prop
+  brands: Brand[];
   onSuccess: (product: Product) => void;
   onCancel: () => void;
-  onCostCalculated: (cost: ProductCost) => void;
+  // onCostCalculated prop removida, pois o form gerencia o custo internamente para exibição
 }
 
-export function ProductForm({ product, filaments, printers, brands, onSuccess, onCancel, onCostCalculated }: ProductFormProps) {
+export function ProductForm({ product, filaments, printers, brands, onSuccess, onCancel }: ProductFormProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
   const [calculatedCostForDisplay, setCalculatedCostForDisplay] = useState<ProductCost | undefined>(product?.custoCalculado);
@@ -88,7 +88,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
     if (!selectedFilament || !selectedFilament.precoPorKg) {
       if (!isCalculating) {
-          toast({ title: "Dados Incompletos", description: "Selecione um filamento com Preço/Kg definido para calcular o custo.", variant: "default" });
+          // toast({ title: "Dados Incompletos", description: "Selecione um filamento com Preço/Kg definido para calcular o custo.", variant: "default" });
       }
       if(calculatedCostForDisplay) setCalculatedCostForDisplay(undefined);
       return;
@@ -115,13 +115,13 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
     if (result.success && result.cost) {
       setCalculatedCostForDisplay(result.cost);
-      onCostCalculated(result.cost);
+      // Não chamar onCostCalculated aqui, pois o estado é gerenciado internamente para exibição
     } else {
       toast({ title: "Erro no Cálculo Automático", description: result.error || "Não foi possível calcular o custo.", variant: "destructive" });
       setCalculatedCostForDisplay(undefined);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, filaments, printers, product, toast, onCostCalculated, isCalculating, calculatedCostForDisplay]);
+  }, [form, filaments, printers, product, toast, isCalculating, calculatedCostForDisplay]);
 
   useEffect(() => {
     const { filamentoId, impressoraId, pesoGramas, tempoImpressaoHoras } = form.getValues();
@@ -143,16 +143,17 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
         tempoImpressaoHoras: Number(values.tempoImpressaoHoras),
         pesoGramas: Number(values.pesoGramas),
         imageUrl: values.imageUrl || undefined,
+        custoCalculado: calculatedCostForDisplay, // Incluir o custo calculado exibido no formulário
       };
 
       let actionResult;
       let finalProductData: Product;
 
       if (product && product.id) {
-        actionResult = await updateProduct(product.id, { ...dataToSave, custoCalculado: calculatedCostForDisplay || product.custoCalculado });
+        actionResult = await updateProduct(product.id, dataToSave ); // Passar dataToSave que já inclui o custo
         finalProductData = actionResult.product!;
       } else {
-        actionResult = await createProduct({ ...dataToSave, custoCalculado: calculatedCostForDisplay });
+        actionResult = await createProduct(dataToSave); // Passar dataToSave que já inclui o custo
         finalProductData = actionResult.product!;
       }
       
@@ -200,163 +201,162 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
   return (
     <>
-      <DialogHeader>
+      <DialogHeader className="px-6 pt-6 flex-shrink-0"> {/* Adicionado padding aqui, removido do DialogContent */}
         <DialogTitle className="font-headline">{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
         <DialogDescription>
           {product ? "Modifique os detalhes do produto. O custo será recalculado automaticamente." : "Preencha as informações do novo produto. O custo será calculado automaticamente."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
-        <ScrollArea className="flex-grow min-h-0 p-1 pr-3">
-          <div className="space-y-3 py-2">
-            <FormField
-              control={form.control}
-              name="nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Produto*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Suporte de Celular Articulado" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="descricao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL da Imagem (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://placehold.co/300x200.png" {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  {field.value && <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-32 object-cover rounded-md border" />}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden"> {/* overflow-hidden para conter a ScrollArea */}
+          <ScrollArea className="flex-1 min-h-0"> {/* ScrollArea agora tem flex-1 */}
+            <div className="space-y-3 px-6 py-4"> {/* Adicionado padding aqui */}
               <FormField
                 control={form.control}
-                name="filamentoId"
+                name="nome"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Filamento Utilizado*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um filamento" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filaments.map((f) => (
-                          <SelectItem key={f.id} value={f.id}>
-                            {f.tipo} - {f.cor} {f.marcaId ? `(${brands.find(b => b.id === f.marcaId)?.nome || 'N/A'})` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="impressoraId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Impressora Utilizada*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma impressora" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {printers.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="pesoGramas"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Material Usado (g)*</FormLabel>
+                    <FormLabel>Nome do Produto*</FormLabel>
                     <FormControl>
-                       <Input type="number" step="0.1" placeholder="Ex: 50.5" 
+                      <Input placeholder="Ex: Suporte de Celular Articulado" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="descricao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição (Opcional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL da Imagem (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://placehold.co/300x200.png" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    {field.value && <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-32 object-cover rounded-md border" />}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="filamentoId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Filamento Utilizado*</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um filamento" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {filaments.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.tipo} - {f.cor} {f.marcaId ? `(${brands.find(b => b.id === f.marcaId)?.nome || 'N/A'})` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="impressoraId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Impressora Utilizada*</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma impressora" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {printers.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="pesoGramas"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Material Usado (g)*</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="Ex: 50.5" 
+                                value={getNumericFieldValue(field.value)}
+                                onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tempoImpressaoHoras"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tempo Produção (h)*</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="Ex: 2.5" 
                               value={getNumericFieldValue(field.value)}
                               onChange={e => handleNumericInputChange(field, e.target.value, true)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tempoImpressaoHoras"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tempo Produção (h)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.1" placeholder="Ex: 2.5" 
-                             value={getNumericFieldValue(field.value)}
-                             onChange={e => handleNumericInputChange(field, e.target.value, true)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="mt-4 p-3 border rounded-md bg-muted/50 space-y-1 text-sm">
-              <div className="flex justify-between items-center mb-1">
-                <h4 className="font-medium text-foreground">Previsão de Custos do Produto:</h4>
-                {isCalculating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-              {calculatedCostForDisplay ? (
-                <>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span>{formatCurrency(calculatedCostForDisplay.materialCost)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Energia:</span> <span>{formatCurrency(calculatedCostForDisplay.energyCost)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Depreciação:</span> <span>{formatCurrency(calculatedCostForDisplay.depreciationCost)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custos Adicionais (IA):</span> <span>{formatCurrency(calculatedCostForDisplay.additionalCostEstimate)}</span></div>
-                  <div className="flex justify-between font-semibold text-primary"><span >Custo Total (sem lucro):</span> <span>{formatCurrency(calculatedCostForDisplay.totalCost)}</span></div>
-                </>
-              ) : (
-                <p className="text-muted-foreground italic text-center py-2">
-                  {isCalculating ? 'Calculando...' : 'Preencha os campos para calcular o custo.'}
-                </p>
-              )}
+              
+              <div className="mt-4 p-3 border rounded-md bg-muted/50 space-y-1 text-sm">
+                <div className="flex justify-between items-center mb-1">
+                  <h4 className="font-medium text-foreground">Previsão de Custos do Produto:</h4>
+                  {isCalculating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+                {calculatedCostForDisplay ? (
+                  <>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span>{formatCurrency(calculatedCostForDisplay.materialCost)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Energia:</span> <span>{formatCurrency(calculatedCostForDisplay.energyCost)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Depreciação:</span> <span>{formatCurrency(calculatedCostForDisplay.depreciationCost)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custos Adicionais (IA):</span> <span>{formatCurrency(calculatedCostForDisplay.additionalCostEstimate)}</span></div>
+                    <div className="flex justify-between font-semibold text-primary"><span >Custo Total (sem lucro):</span> <span>{formatCurrency(calculatedCostForDisplay.totalCost)}</span></div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground italic text-center py-2">
+                    {isCalculating ? 'Calculando...' : 'Preencha os campos para calcular o custo.'}
+                  </p>
+                )}
+              </div>
             </div>
-
-          </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 flex-shrink-0">
+          <DialogFooter className="px-6 pb-6 pt-4 border-t flex-shrink-0"> {/* Adicionado padding e borda */}
             <DialogClose asChild>
               <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
@@ -370,5 +370,3 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     </>
   );
 }
-
-    

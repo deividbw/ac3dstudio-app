@@ -40,13 +40,13 @@ import { exportToCsv } from '@/lib/csv-export';
 import { getProducts as mockGetProducts, deleteProduct as mockDeleteProduct } from '@/lib/actions/product.actions';
 import { getFilaments as mockGetFilaments } from '@/lib/actions/filament.actions';
 import { getPrinters as mockGetPrinters } from '@/lib/actions/printer.actions';
-import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; // Import getBrands
+import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
+  const [brands, setBrands] = useState<Brand[]>([]);
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -61,12 +61,12 @@ export default function ProductsPage() {
       mockGetProducts(),
       mockGetFilaments(),
       mockGetPrinters(),
-      mockGetBrands() // Fetch brands
+      mockGetBrands()
     ]);
     setProducts(productsData);
     setFilaments(filamentsData);
     setPrinters(printersData);
-    setBrands(brandsData); // Set brands state
+    setBrands(brandsData);
   }, []);
 
   useEffect(() => {
@@ -89,14 +89,15 @@ export default function ProductsPage() {
     }
   };
 
-  const handleCostCalculatedInForm = (cost: ProductCost) => {
-    if (editingProduct) {
-      setEditingProduct(prev => prev ? { ...prev, custoCalculado: cost } : null);
-      setProducts(prevProducts => 
-        prevProducts.map(p => p.id === editingProduct.id ? { ...p, custoCalculado: cost } : p)
-      );
-    }
-  };
+  // Esta função não é mais necessária para atualizar o estado da página dinamicamente com o custo,
+  // pois o ProductForm gerencia a exibição do custo internamente.
+  // E a action calculateProductCostAction não modifica mais o mockProducts.
+  // const handleCostCalculatedInForm = (cost: ProductCost) => {
+  //   if (editingProduct) {
+  //     // Não atualizar setEditingProduct ou setProducts aqui para evitar a percepção de "salvo automático"
+  //     console.log("Custo calculado para produto em edição (não salvo ainda na lista principal):", cost);
+  //   }
+  // };
   
   const handleShowCost = (product: Product) => {
     if (product.custoCalculado) {
@@ -186,15 +187,16 @@ export default function ProductsPage() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+          {/* Removido p-6 do DialogContent para permitir que ProductForm controle seu próprio padding e rolagem */}
+          <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0"> 
             <ProductForm 
               product={editingProduct} 
               filaments={filaments}
               printers={printers}
-              brands={brands} // Pass brands to ProductForm
+              brands={brands}
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
-              onCostCalculated={handleCostCalculatedInForm}
+              // onCostCalculated prop removida
             />
           </DialogContent>
         </Dialog>
@@ -288,5 +290,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    

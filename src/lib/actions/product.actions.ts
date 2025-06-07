@@ -45,12 +45,13 @@ export async function getProductById(id: string): Promise<Product | undefined> {
   return mockProducts.find(p => p.id === id);
 }
 
-export async function createProduct(data: Omit<Product, 'id' | 'custoCalculado'>): Promise<{ success: boolean, product?: Product, error?: string }> {
+export async function createProduct(data: Omit<Product, 'id'>): Promise<{ success: boolean, product?: Product, error?: string }> {
   const validation = ProductSchema.safeParse(data);
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
-  const newProduct: Product = { ...validation.data, id: `prod_${String(Date.now())}` }; // Add custoCalculado undefined
+  // Ao criar, o custoCalculado já vem de data (que é values + custoCalculado do form)
+  const newProduct: Product = { ...validation.data, id: `prod_${String(Date.now())}` } as Product; 
   mockProducts.push(newProduct);
   return { success: true, product: newProduct };
 }
@@ -61,7 +62,6 @@ export async function updateProduct(id: string, data: Partial<Omit<Product, 'id'
     return { success: false, error: "Produto não encontrado" };
   }
   
-  // Preserve existing custoCalculado unless it's explicitly part of the update (which it shouldn't be from the form save directly)
   const updatedData = { ...existingProduct, ...data }; 
   
   const validation = ProductSchema.safeParse(updatedData);
@@ -85,18 +85,11 @@ export async function deleteProduct(id: string): Promise<{ success: boolean, err
 export async function calculateProductCostAction(productId: string, calculationInput: ProductCostCalculationInput): Promise<{ success: boolean, cost?: ProductCost, error?: string}> {
   try {
     const costOutput = await productCostCalculation(calculationInput);
-    
-    const productIndex = mockProducts.findIndex(p => p.id === productId);
-    if (productIndex !== -1) {
-      mockProducts[productIndex].custoCalculado = costOutput;
-      return { success: true, cost: costOutput };
-    } else {
-      // This case is for new products not yet saved, where productId might be temporary.
-      // The cost is returned, and the calling component should handle associating it
-      // with the product data before final save.
-      return { success: true, cost: costOutput };
-    }
-  } catch (error: any) {
+    // Não modificar mockProducts aqui. Apenas retornar o custo.
+    // O form irá lidar com a exibição e inclusão no objeto a ser salvo.
+    return { success: true, cost: costOutput };
+  } catch (error: any)
+{
     console.error("Error in AI cost calculation:", error);
     const errorMessage = error.message || "Falha ao calcular custo com IA.";
     return { success: false, error: errorMessage };
