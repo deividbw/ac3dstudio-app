@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap, ListPlus } from 'lucide-react';
+import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap, ListPlus, Filter, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -46,6 +46,8 @@ interface PowerOverride {
   powerWatts: number;
 }
 
+type SortableOverrideField = 'printerName' | 'filamentTypeName' | 'powerWatts';
+
 export default function ConfiguracoesPage() {
   const [kwhValue, setKwhValue] = useState("0.75");
   const { toast } = useToast();
@@ -58,6 +60,10 @@ export default function ConfiguracoesPage() {
   const [selectedFilamentTypeId, setSelectedFilamentTypeId] = useState<string>("");
   const [specificPowerWatts, setSpecificPowerWatts] = useState<string>("");
   const [configuredOverrides, setConfiguredOverrides] = useState<PowerOverride[]>([]);
+
+  const [filterConfiguredPrinterName, setFilterConfiguredPrinterName] = useState("");
+  const [sortConfigOverrides, setSortConfigOverrides] = useState<{ key: SortableOverrideField; direction: 'ascending' | 'descending' }>({ key: 'printerName', direction: 'ascending' });
+
 
   const loadDropdownData = useCallback(async () => {
     try {
@@ -94,7 +100,7 @@ export default function ConfiguracoesPage() {
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
     return `Impressora ID: ${printer.id}`;
-  }, [getBrandNameById, brands]);
+  }, [getBrandNameById]);
 
 
   const handleSaveKwh = () => {
@@ -162,11 +168,41 @@ export default function ConfiguracoesPage() {
       description: `Potência de ${power}W para ${getPrinterDisplayName(printer)} com ${filamentType.nome} salva. (Simulação)`,
       variant: "success",
     });
-    // Optionally reset fields
-    // setSelectedPrinterId("");
-    // setSelectedFilamentTypeId("");
-    // setSpecificPowerWatts("");
   };
+
+  const handleSortOverrides = (key: SortableOverrideField) => {
+    setSortConfigOverrides(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'ascending' ? 'descending' : 'ascending',
+    }));
+  };
+
+  const renderSortIcon = (field: SortableOverrideField) => {
+    if (sortConfigOverrides.key === field) {
+      return sortConfigOverrides.direction === 'ascending' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+    }
+    return <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />;
+  };
+
+  const sortedAndFilteredOverrides = useMemo(() => {
+    let items = configuredOverrides.filter(ov =>
+      ov.printerName.toLowerCase().includes(filterConfiguredPrinterName.toLowerCase())
+    );
+
+    items.sort((a, b) => {
+      const valA = a[sortConfigOverrides.key];
+      const valB = b[sortConfigOverrides.key];
+
+      let comparison = 0;
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        comparison = valA.localeCompare(valB);
+      } else if (typeof valA === 'number' && typeof valB === 'number') {
+        comparison = valA - valB;
+      }
+      return sortConfigOverrides.direction === 'ascending' ? comparison : -comparison;
+    });
+    return items;
+  }, [configuredOverrides, filterConfiguredPrinterName, sortConfigOverrides]);
 
 
   return (
@@ -225,7 +261,7 @@ export default function ConfiguracoesPage() {
                           <SelectValue placeholder="Selecione uma impressora" />
                         </SelectTrigger>
                         <SelectContent>
-                          {printers.map(p => (
+                          {printers.sort((a,b) => getPrinterDisplayName(a).localeCompare(getPrinterDisplayName(b))).map(p => (
                             <SelectItem key={p.id} value={p.id}>{getPrinterDisplayName(p)}</SelectItem>
                           ))}
                         </SelectContent>
@@ -238,7 +274,7 @@ export default function ConfiguracoesPage() {
                           <SelectValue placeholder="Selecione um tipo" />
                         </SelectTrigger>
                         <SelectContent>
-                          {filamentTypes.map(ft => (
+                          {filamentTypes.sort((a,b) => a.nome.localeCompare(b.nome)).map(ft => (
                             <SelectItem key={ft.id} value={ft.id}>{ft.nome}</SelectItem>
                           ))}
                         </SelectContent>
@@ -268,24 +304,59 @@ export default function ConfiguracoesPage() {
                 {configuredOverrides.length > 0 && (
                   <div className="mt-4">
                     <h5 className="text-sm font-medium mb-2">Configurações Salvas:</h5>
+                     <div className="flex items-center gap-2 mb-2">
+                        <Filter className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="text"
+                            placeholder="Filtrar por nome da impressora..."
+                            value={filterConfiguredPrinterName}
+                            onChange={(e) => setFilterConfiguredPrinterName(e.target.value)}
+                            className="h-8 max-w-xs text-xs"
+                        />
+                    </div>
                     <Card className="max-h-60 overflow-y-auto">
                       <CardContent className="p-0">
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="px-3 py-2 text-xs">Impressora</TableHead>
-                              <TableHead className="px-3 py-2 text-xs">Filamento</TableHead>
-                              <TableHead className="px-3 py-2 text-xs text-right">Potência (W)</TableHead>
+                              <TableHead 
+                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground"
+                                onClick={() => handleSortOverrides('printerName')}
+                                role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('printerName'); }} aria-label="Sort by Impressora"
+                              >
+                                <div className="flex items-center">Impressora <span className="ml-1">{renderSortIcon('printerName')}</span></div>
+                              </TableHead>
+                              <TableHead 
+                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground"
+                                onClick={() => handleSortOverrides('filamentTypeName')}
+                                role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('filamentTypeName'); }} aria-label="Sort by Filamento"
+                              >
+                               <div className="flex items-center">Filamento <span className="ml-1">{renderSortIcon('filamentTypeName')}</span></div>
+                              </TableHead>
+                              <TableHead 
+                                className="px-3 py-2 text-xs text-right cursor-pointer hover:text-foreground"
+                                onClick={() => handleSortOverrides('powerWatts')}
+                                role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('powerWatts'); }} aria-label="Sort by Potência"
+                              >
+                                <div className="flex items-center justify-end">Potência (W) <span className="ml-1">{renderSortIcon('powerWatts')}</span></div>
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {configuredOverrides.map(ov => (
+                            {sortedAndFilteredOverrides.map(ov => (
                               <TableRow key={ov.id}>
                                 <TableCell className="px-3 py-1.5 text-xs">{ov.printerName}</TableCell>
                                 <TableCell className="px-3 py-1.5 text-xs">{ov.filamentTypeName}</TableCell>
                                 <TableCell className="px-3 py-1.5 text-xs text-right">{ov.powerWatts}</TableCell>
                               </TableRow>
                             ))}
+                            {sortedAndFilteredOverrides.length === 0 && configuredOverrides.length > 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="px-3 py-1.5 text-xs text-center text-muted-foreground">
+                                        Nenhuma configuração encontrada com o filtro aplicado.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                           </TableBody>
                         </Table>
                       </CardContent>
@@ -358,6 +429,3 @@ export default function ConfiguracoesPage() {
     </div>
   );
 }
-
-
-    
