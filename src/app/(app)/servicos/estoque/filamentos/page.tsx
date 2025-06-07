@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,20 +18,20 @@ import { useToast } from "@/hooks/use-toast";
 import type { Filament, Brand } from '@/lib/types';
 import { getFilaments, updateFilamentStockBatch } from '@/lib/actions/filament.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
-import { Save, RotateCcw, PackageSearch } from 'lucide-react';
-
-interface StockUpdateEntry {
-  novaQuantidadeCompradaGramas?: string; // Store as string for input, convert on submit
-  novoPrecoKg?: string;                 // Store as string for input, convert on submit
-}
+import { Edit, PackageSearch, Filter } from 'lucide-react'; // Edit for action, Filter for visual
+import { FilamentStockUpdateDialog } from './components/FilamentStockUpdateDialog';
 
 export default function FilamentStockPage() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [stockUpdates, setStockUpdates] = useState<Record<string, StockUpdateEntry>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  const [filterTipo, setFilterTipo] = useState("");
+  const [filterCor, setFilterCor] = useState("");
+
+  const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
+  const [editingFilamentForStock, setEditingFilamentForStock] = useState<Filament | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -60,73 +60,39 @@ export default function FilamentStockPage() {
     return brand ? brand.nome : "Desconhecida";
   }, [brands]);
 
-  const handleInputChange = (filamentId: string, field: keyof StockUpdateEntry, value: string) => {
-    setStockUpdates(prev => ({
-      ...prev,
-      [filamentId]: {
-        ...prev[filamentId],
-        [field]: value,
-      }
-    }));
+  const filteredFilaments = useMemo(() => {
+    return filaments.filter(f =>
+      (filterTipo === "" || f.tipo.toLowerCase().includes(filterTipo.toLowerCase())) &&
+      (filterCor === "" || f.cor.toLowerCase().includes(filterCor.toLowerCase()))
+    );
+  }, [filaments, filterTipo, filterCor]);
+
+  const handleOpenStockUpdateDialog = (filament: Filament) => {
+    setEditingFilamentForStock(filament);
+    setIsStockUpdateDialogOpen(true);
   };
 
-  const handleBatchUpdate = async () => {
-    setIsSaving(true);
-    const updatesToProcess = Object.entries(stockUpdates)
-      .map(([id, changes]) => {
-        const { novaQuantidadeCompradaGramas, novoPrecoKg } = changes;
-        const updatePayload: { id: string; novaQuantidadeCompradaGramas?: number; novoPrecoKg?: number } = { id };
-        
-        let hasUpdate = false;
-        if (novaQuantidadeCompradaGramas && novaQuantidadeCompradaGramas.trim() !== "") {
-          const qty = parseFloat(novaQuantidadeCompradaGramas);
-          if (!isNaN(qty) && qty > 0) {
-            updatePayload.novaQuantidadeCompradaGramas = qty;
-            hasUpdate = true;
-          } else if (qty <=0 && novaQuantidadeCompradaGramas.trim() !== "") {
-             toast({ title: "Entrada Inválida", description: `Quantidade para ${filaments.find(f=>f.id===id)?.tipo || id} deve ser positiva.`, variant: "destructive"});
-             // Potentially stop here or collect all errors
-          }
-        }
-        if (novoPrecoKg && novoPrecoKg.trim() !== "") {
-          const price = parseFloat(novoPrecoKg);
-          if (!isNaN(price) && price >= 0) {
-            updatePayload.novoPrecoKg = price;
-            hasUpdate = true;
-          } else if (price < 0 && novoPrecoKg.trim() !== "") {
-             toast({ title: "Entrada Inválida", description: `Preço para ${filaments.find(f=>f.id===id)?.tipo || id} não pode ser negativo.`, variant: "destructive"});
-          }
-        }
-        return hasUpdate ? updatePayload : null;
-      })
-      .filter(update => update !== null) as { id: string; novaQuantidadeCompradaGramas?: number; novoPrecoKg?: number }[];
-
-    if (updatesToProcess.length === 0) {
-      toast({ title: "Nenhuma Alteração", description: "Nenhum dado válido foi inserido para atualização.", variant: "default" });
-      setIsSaving(false);
+  const handleSaveStockUpdate = async (update: { id: string; novaQuantidadeCompradaGramas?: number; novoPrecoKg?: number }) => {
+    if (!update.novaQuantidadeCompradaGramas && !update.novoPrecoKg && update.novaQuantidadeCompradaGramas !==0 && update.novoPrecoKg !==0) {
+      toast({ title: "Nenhuma Alteração", description: "Nenhuma quantidade ou preço foi fornecido para atualização.", variant: "default" });
       return;
     }
-
+    setIsLoading(true); // Consider a more specific saving state if needed
     try {
-      const result = await updateFilamentStockBatch(updatesToProcess);
-      if (result.success) {
-        toast({ title: "Estoque Atualizado", description: `${result.updatedCount} filamento(s) atualizado(s) com sucesso.`, variant: "success" });
-        setStockUpdates({}); // Clear inputs
+      const result = await updateFilamentStockBatch([update]); // Use existing batch action
+      if (result.success && result.updatedCount > 0) {
+        toast({ title: "Estoque Atualizado", description: `Filamento atualizado com sucesso.`, variant: "success" });
         loadData(); // Refresh data
-      } else {
-        toast({ title: "Erro ao Atualizar", description: `Falha ao atualizar alguns filamentos. ${result.errors.map(e => e.error).join(', ')}`, variant: "destructive" });
-      }
-       if (result.errors.length > 0) {
-        result.errors.forEach(err => {
-            const filamentName = filaments.find(f => f.id === err.id)?.tipo || err.id;
-            toast({ title: `Erro no Filamento ${filamentName}`, description: err.error, variant: "destructive" });
-        });
+      } else if (result.errors && result.errors.length > 0) {
+         toast({ title: "Erro ao Atualizar", description: result.errors[0].error, variant: "destructive" });
+      } else if (!result.success) {
+         toast({ title: "Erro ao Atualizar", description: "Não foi possível atualizar o filamento.", variant: "destructive" });
       }
     } catch (error) {
       console.error("Failed to update stock:", error);
       toast({ title: "Erro Inesperado", description: "Ocorreu um problema ao tentar atualizar o estoque.", variant: "destructive" });
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   };
   
@@ -138,72 +104,77 @@ export default function FilamentStockPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Estoque de Filamentos">
-        <div className="flex items-center gap-2">
-            <Button onClick={loadData} variant="outline" size="sm" disabled={isLoading || isSaving}>
-                <RotateCcw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Recarregar
-            </Button>
-            <Button onClick={handleBatchUpdate} size="sm" disabled={isLoading || isSaving}>
-                <Save className={`mr-2 h-4 w-4 ${isSaving ? 'animate-spin' : ''}`} />
-                {isSaving ? 'Salvando...' : 'Atualizar Estoque'}
-            </Button>
-        </div>
+        {/* Placeholder for potential future actions like export */}
       </PageHeader>
 
       <Card className="shadow-lg">
-        <CardContent className="p-0">
-          {isLoading && filaments.length === 0 ? (
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-center p-3 mb-3 border rounded-md bg-muted/50">
+            <Filter className="h-5 w-5 text-muted-foreground sm:hidden" />
+            <Label htmlFor="filterTipo" className="text-sm font-medium whitespace-nowrap hidden sm:inline">Filtrar por:</Label>
+            <Input
+              id="filterTipo"
+              placeholder="Tipo do Filamento (Ex: PLA)"
+              value={filterTipo}
+              onChange={e => setFilterTipo(e.target.value)}
+              className="h-9 bg-background"
+            />
+            <Input
+              placeholder="Cor do Filamento (Ex: Vermelho)"
+              value={filterCor}
+              onChange={e => setFilterCor(e.target.value)}
+              className="h-9 bg-background"
+            />
+          </div>
+           <div className="mb-3 text-sm text-muted-foreground">
+             Exibindo {filteredFilaments.length} de {filaments.length} filamento(s).
+          </div>
+
+          {isLoading && filteredFilaments.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground">Carregando filamentos...</div>
-          ) : !isLoading && filaments.length === 0 ? (
+          ) : !isLoading && filaments.length === 0 ? ( // This case means no filaments at all
             <div className="p-10 text-center text-muted-foreground flex flex-col items-center space-y-3">
               <PackageSearch className="h-12 w-12" />
               <p className="font-medium">Nenhum filamento cadastrado ainda.</p>
               <p className="text-sm">Vá para <a href="/servicos/cadastros" className="text-primary hover:underline">Cadastros &gt; Filamentos</a> para adicionar.</p>
+            </div>
+          ) : !isLoading && filteredFilaments.length === 0 && filaments.length > 0 ? ( // This case means filaments exist, but none match filter
+             <div className="p-6 text-center text-muted-foreground">
+              Nenhum filamento encontrado com os filtros aplicados. Limpe os filtros para ver todos os itens.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[120px]">Marca</TableHead>
-                    <TableHead className="min-w-[100px]">Tipo</TableHead>
-                    <TableHead className="min-w-[100px]">Cor</TableHead>
-                    <TableHead className="min-w-[100px]">Modelo</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Qtd. Atual (g)</TableHead>
-                    <TableHead className="text-right min-w-[120px]">Preço Atual (R$/kg)</TableHead>
-                    <TableHead className="min-w-[150px] text-center">Nova Qtd. Comprada (g)</TableHead>
-                    <TableHead className="min-w-[150px] text-center">Novo Preço do Kg (R$)</TableHead>
+                    <TableHead className="min-w-[120px] px-2 py-2 font-semibold uppercase">Marca</TableHead>
+                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">Tipo</TableHead>
+                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">Cor</TableHead>
+                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">Modelo</TableHead>
+                    <TableHead className="text-right min-w-[100px] px-2 py-2 font-semibold uppercase">Qtd. Atual (g)</TableHead>
+                    <TableHead className="text-right min-w-[120px] px-2 py-2 font-semibold uppercase">Preço Atual (R$/kg)</TableHead>
+                    <TableHead className="w-[80px] text-center px-2 py-2 font-semibold uppercase">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filaments.map((f) => (
+                  {filteredFilaments.map((f) => (
                     <TableRow key={f.id}>
-                      <TableCell className="font-medium">{getBrandNameById(f.marcaId)}</TableCell>
-                      <TableCell>{f.tipo}</TableCell>
-                      <TableCell>{f.cor}</TableCell>
-                      <TableCell>{f.modelo || "N/A"}</TableCell>
-                      <TableCell className="text-right">{(f.quantidadeEstoqueGramas || 0).toLocaleString('pt-BR')}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(f.precoPorKg)}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          placeholder="Ex: 1000"
-                          value={stockUpdates[f.id]?.novaQuantidadeCompradaGramas || ""}
-                          onChange={(e) => handleInputChange(f.id, 'novaQuantidadeCompradaGramas', e.target.value)}
-                          className="h-8 text-xs text-right"
-                          disabled={isSaving}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Ex: 95.50"
-                          value={stockUpdates[f.id]?.novoPrecoKg || ""}
-                          onChange={(e) => handleInputChange(f.id, 'novoPrecoKg', e.target.value)}
-                          className="h-8 text-xs text-right"
-                          disabled={isSaving}
-                        />
+                      <TableCell className="font-medium px-2 py-1.5">{getBrandNameById(f.marcaId)}</TableCell>
+                      <TableCell className="px-2 py-1.5">{f.tipo}</TableCell>
+                      <TableCell className="px-2 py-1.5">{f.cor}</TableCell>
+                      <TableCell className="px-2 py-1.5">{f.modelo || "N/A"}</TableCell>
+                      <TableCell className="text-right px-2 py-1.5">{(f.quantidadeEstoqueGramas || 0).toLocaleString('pt-BR')}</TableCell>
+                      <TableCell className="text-right px-2 py-1.5">{formatCurrency(f.precoPorKg)}</TableCell>
+                      <TableCell className="text-center px-2 py-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-500/20 dark:hover:text-green-400"
+                          onClick={() => handleOpenStockUpdateDialog(f)}
+                          title="Atualizar Estoque/Preço"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -213,14 +184,15 @@ export default function FilamentStockPage() {
           )}
         </CardContent>
       </Card>
-       {filaments.length > 0 && (
-         <div className="mt-4 flex justify-end">
-             <Button onClick={handleBatchUpdate} size="lg" disabled={isLoading || isSaving}>
-                <Save className={`mr-2 h-5 w-5 ${isSaving ? 'animate-spin' : ''}`} />
-                {isSaving ? 'Salvando Alterações...' : 'Atualizar Estoque'}
-            </Button>
-         </div>
-       )}
+      {editingFilamentForStock && (
+        <FilamentStockUpdateDialog
+            isOpen={isStockUpdateDialogOpen}
+            onOpenChange={setIsStockUpdateDialogOpen}
+            filament={editingFilamentForStock}
+            brands={brands}
+            onSave={handleSaveStockUpdate}
+        />
+      )}
     </div>
   );
 }
