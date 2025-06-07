@@ -40,7 +40,6 @@ interface ProductFormProps {
   brands: Brand[];
   onSuccess: (product: Product) => void;
   onCancel: () => void;
-  // onCostCalculated prop removida, pois o form gerencia o custo internamente para exibição
 }
 
 export function ProductForm({ product, filaments, printers, brands, onSuccess, onCancel }: ProductFormProps) {
@@ -69,71 +68,78 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
   const watchedNome = form.watch("nome");
 
   const triggerAutomaticCostCalculation = useCallback(async () => {
-    const values = form.getValues();
+    const currentValues = form.getValues();
     
-    if (!values.filamentoId || !values.impressoraId || !values.pesoGramas || !values.tempoImpressaoHoras || 
-        values.pesoGramas <= 0 || values.tempoImpressaoHoras <= 0) {
-      if(calculatedCostForDisplay) setCalculatedCostForDisplay(undefined);
+    if (!currentValues.filamentoId || !currentValues.impressoraId || !currentValues.pesoGramas || !currentValues.tempoImpressaoHoras || 
+        currentValues.pesoGramas <= 0 || currentValues.tempoImpressaoHoras <= 0) {
+      setCalculatedCostForDisplay(undefined);
       return;
     }
 
     const isValid = await form.trigger(["filamentoId", "impressoraId", "pesoGramas", "tempoImpressaoHoras"]);
     if (!isValid) {
-      if(calculatedCostForDisplay) setCalculatedCostForDisplay(undefined);
+      setCalculatedCostForDisplay(undefined);
       return;
     }
 
-    const selectedFilament = filaments.find(f => f.id === values.filamentoId);
-    const selectedPrinter = printers.find(p => p.id === values.impressoraId);
+    const selectedFilament = filaments.find(f => f.id === currentValues.filamentoId);
+    const selectedPrinter = printers.find(p => p.id === currentValues.impressoraId);
 
-    if (!selectedFilament || !selectedFilament.precoPorKg) {
+    if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
       if (!isCalculating) {
-          // toast({ title: "Dados Incompletos", description: "Selecione um filamento com Preço/Kg definido para calcular o custo.", variant: "default" });
+          // Consider reducing frequency of this toast or making it more subtle
+          // toast({ title: "Dados Incompletos", description: "Selecione um filamento com Preço/Kg válido.", variant: "default" });
       }
-      if(calculatedCostForDisplay) setCalculatedCostForDisplay(undefined);
+      setCalculatedCostForDisplay(undefined);
       return;
     }
     if (!selectedPrinter) {
-      if(calculatedCostForDisplay) setCalculatedCostForDisplay(undefined);
+      setCalculatedCostForDisplay(undefined);
       return;
     }
 
     setIsCalculating(true);
-    const calculationInput: ProductCostCalculationInput = {
-      filamentCostPerKg: selectedFilament.precoPorKg,
-      filamentUsedKg: Number(values.pesoGramas) / 1000,
-      printingTimeHours: Number(values.tempoImpressaoHoras),
-      printerEnergyConsumptionPerHour: selectedPrinter.consumoEnergiaHora,
-      energyCostPerKWh: selectedPrinter.custoEnergiaKwh,
-      printerDepreciationPerHour: selectedPrinter.taxaDepreciacaoHora,
-      additionalDetails: values.descricao || `Cálculo para produto: ${values.nome || 'Novo Produto'}`,
-    };
+    try {
+      const calculationInput: ProductCostCalculationInput = {
+        filamentCostPerKg: selectedFilament.precoPorKg,
+        filamentUsedKg: Number(currentValues.pesoGramas) / 1000,
+        printingTimeHours: Number(currentValues.tempoImpressaoHoras),
+        printerEnergyConsumptionPerHour: selectedPrinter.consumoEnergiaHora,
+        energyCostPerKWh: selectedPrinter.custoEnergiaKwh,
+        printerDepreciationPerHour: selectedPrinter.taxaDepreciacaoHora,
+        additionalDetails: currentValues.descricao || `Cálculo para produto: ${currentValues.nome || product?.nome || 'Novo Produto'}`,
+      };
 
-    const currentProductId = product?.id || `temp_${Date.now()}`;
-    const result = await calculateProductCostAction(currentProductId, calculationInput);
-    setIsCalculating(false);
+      const currentProductId = product?.id || `temp_${Date.now()}`;
+      const result = await calculateProductCostAction(currentProductId, calculationInput);
 
-    if (result.success && result.cost) {
-      setCalculatedCostForDisplay(result.cost);
-      // Não chamar onCostCalculated aqui, pois o estado é gerenciado internamente para exibição
-    } else {
-      toast({ title: "Erro no Cálculo Automático", description: result.error || "Não foi possível calcular o custo.", variant: "destructive" });
-      setCalculatedCostForDisplay(undefined);
+      if (result.success && result.cost) {
+        setCalculatedCostForDisplay(result.cost);
+      } else {
+        toast({ title: "Erro no Cálculo Automático", description: result.error || "Não foi possível calcular o custo.", variant: "destructive" });
+        setCalculatedCostForDisplay(undefined);
+      }
+    } catch (error) {
+        toast({ title: "Erro Inesperado no Cálculo", description: "Ocorreu um erro ao tentar calcular o custo.", variant: "destructive" });
+        setCalculatedCostForDisplay(undefined);
+    } finally {
+        setIsCalculating(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, filaments, printers, product, toast, isCalculating, calculatedCostForDisplay]);
+  }, [form, filaments, printers, product, toast, isCalculating]); // Removed setCalculatedCostForDisplay, setIsCalculating from deps as they cause re-runs
 
   useEffect(() => {
     const { filamentoId, impressoraId, pesoGramas, tempoImpressaoHoras } = form.getValues();
     if (filamentoId && impressoraId && pesoGramas && tempoImpressaoHoras && pesoGramas > 0 && tempoImpressaoHoras > 0) {
       triggerAutomaticCostCalculation();
     } else {
-        if (calculatedCostForDisplay) {
-            setCalculatedCostForDisplay(undefined);
-        }
+      // Clean up cost display if inputs are no longer valid for calculation
+      if (calculatedCostForDisplay !== undefined) { 
+          setCalculatedCostForDisplay(undefined);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, calculatedCostForDisplay]);
+  }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, calculatedCostForDisplay]); // triggerAutomaticCostCalculation removed as it has its own deps. calculatedCostForDisplay is needed for cleanup logic.
 
 
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
@@ -143,17 +149,17 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
         tempoImpressaoHoras: Number(values.tempoImpressaoHoras),
         pesoGramas: Number(values.pesoGramas),
         imageUrl: values.imageUrl || undefined,
-        custoCalculado: calculatedCostForDisplay, // Incluir o custo calculado exibido no formulário
+        custoCalculado: calculatedCostForDisplay, 
       };
 
       let actionResult;
       let finalProductData: Product;
 
       if (product && product.id) {
-        actionResult = await updateProduct(product.id, dataToSave ); // Passar dataToSave que já inclui o custo
+        actionResult = await updateProduct(product.id, dataToSave );
         finalProductData = actionResult.product!;
       } else {
-        actionResult = await createProduct(dataToSave); // Passar dataToSave que já inclui o custo
+        actionResult = await createProduct(dataToSave); 
         finalProductData = actionResult.product!;
       }
       
@@ -201,16 +207,26 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
   return (
     <>
-      <DialogHeader className="px-6 pt-6 flex-shrink-0"> {/* Adicionado padding aqui, removido do DialogContent */}
+      <DialogHeader className="px-6 pt-6 flex-shrink-0">
         <DialogTitle className="font-headline">{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
         <DialogDescription>
           {product ? "Modifique os detalhes do produto. O custo será recalculado automaticamente." : "Preencha as informações do novo produto. O custo será calculado automaticamente."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden"> {/* overflow-hidden para conter a ScrollArea */}
-          <ScrollArea className="flex-1 min-h-0"> {/* ScrollArea agora tem flex-1 */}
-            <div className="space-y-3 px-6 py-4"> {/* Adicionado padding aqui */}
+        {/* This <form> tag is crucial for layout.
+            - flex-1: allows it to take available vertical space in DialogContent (which is flex-col)
+            - flex flex-col: makes its children (ScrollArea, DialogFooter) layout vertically
+            - min-h-0: essential for allowing ScrollArea to shrink and actually scroll
+            - overflow-hidden: ensures that if ScrollArea fails, content doesn't spill out of this form container
+        */}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* ScrollArea takes the available space within the form, above the footer
+              - flex-1: allows it to grow and shrink
+              - min-h-0: allows it to shrink smaller than its content, enabling scroll
+          */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-3 px-6 py-4"> {/* Padding for the actual form content */}
               <FormField
                 control={form.control}
                 name="nome"
@@ -356,7 +372,8 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="px-6 pb-6 pt-4 border-t flex-shrink-0"> {/* Adicionado padding e borda */}
+          {/* DialogFooter is a flex-shrink-0 item, so it stays at the bottom of the form container */}
+          <DialogFooter className="px-6 pb-6 pt-4 border-t flex-shrink-0">
             <DialogClose asChild>
               <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
@@ -370,3 +387,4 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     </>
   );
 }
+
