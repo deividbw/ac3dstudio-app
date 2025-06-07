@@ -15,7 +15,8 @@ let mockFilaments: Filament[] = [
     modelo: "PLA+",
     temperaturaBicoIdeal: 210,
     temperaturaMesaIdeal: 60,
-    precoPorKg: 120.50, // RE-ADDED
+    precoPorKg: 120.50,
+    quantidadeEstoqueGramas: 1000, // Inicializado com 1kg
   },
   { 
     id: "2", 
@@ -26,7 +27,8 @@ let mockFilaments: Filament[] = [
     modelo: "Standard",
     temperaturaBicoIdeal: 230,
     temperaturaMesaIdeal: 80,
-    precoPorKg: 110.00, // RE-ADDED
+    precoPorKg: 110.00,
+    quantidadeEstoqueGramas: 500, // Inicializado com 0.5kg
   },
   { 
     id: "3", 
@@ -37,7 +39,8 @@ let mockFilaments: Filament[] = [
     modelo: "Premium",
     temperaturaBicoIdeal: 240,
     temperaturaMesaIdeal: 70,
-    precoPorKg: 150.75, // RE-ADDED
+    precoPorKg: 150.75,
+    quantidadeEstoqueGramas: 750, // Inicializado com 0.75kg
   },
 ];
 
@@ -55,16 +58,23 @@ export async function createFilament(data: Omit<Filament, 'id'>): Promise<{ succ
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
-  const newFilament: Filament = { ...validation.data, id: String(Date.now()) } as Filament;
+  // Ensure quantidadeEstoqueGramas defaults if not provided, as per schema
+  const newFilamentData = {
+    ...validation.data,
+    quantidadeEstoqueGramas: validation.data.quantidadeEstoqueGramas ?? 0,
+  };
+  const newFilament: Filament = { ...newFilamentData, id: String(Date.now()) } as Filament;
   mockFilaments.push(newFilament);
   return { success: true, filament: newFilament };
 }
 
 export async function updateFilament(id: string, data: Partial<Omit<Filament, 'id'>>): Promise<{ success: boolean, filament?: Filament, error?: string }> {
-  const existingFilament = mockFilaments.find(f => f.id === id);
-  if (!existingFilament) {
+  const existingFilamentIndex = mockFilaments.findIndex(f => f.id === id);
+  if (existingFilamentIndex === -1) {
     return { success: false, error: "Filamento não encontrado" };
   }
+  
+  const existingFilament = mockFilaments[existingFilamentIndex];
   
   // Ensure optional numeric fields are numbers or undefined, not empty strings
   const cleanedData = { ...data };
@@ -73,19 +83,16 @@ export async function updateFilament(id: string, data: Partial<Omit<Filament, 'i
   } else if ('precoPorKg' in cleanedData) {
     cleanedData.precoPorKg = Number(cleanedData.precoPorKg);
   }
-  if ('temperaturaBicoIdeal' in cleanedData && (cleanedData.temperaturaBicoIdeal === null || cleanedData.temperaturaBicoIdeal === undefined || String(cleanedData.temperaturaBicoIdeal).trim() === '')) {
-    cleanedData.temperaturaBicoIdeal = undefined;
-  } else if ('temperaturaBicoIdeal' in cleanedData) {
-    cleanedData.temperaturaBicoIdeal = Number(cleanedData.temperaturaBicoIdeal);
-  }
-  if ('temperaturaMesaIdeal' in cleanedData && (cleanedData.temperaturaMesaIdeal === null || cleanedData.temperaturaMesaIdeal === undefined || String(cleanedData.temperaturaMesaIdeal).trim() === '')) {
-    cleanedData.temperaturaMesaIdeal = undefined;
-  } else if ('temperaturaMesaIdeal' in cleanedData) {
-    cleanedData.temperaturaMesaIdeal = Number(cleanedData.temperaturaMesaIdeal);
-  }
-
+  // Similar cleaning for other numeric fields if they were part of `data` from the main form
+  // Note: quantidadeEstoqueGramas is not typically updated by this form, so it's not handled here.
 
   let mergedData = { ...existingFilament, ...cleanedData };
+
+  // Retain existing quantidadeEstoqueGramas unless explicitly part of `data` (which it shouldn't be for this function)
+  if (data.quantidadeEstoqueGramas === undefined && existingFilament.quantidadeEstoqueGramas !== undefined) {
+    mergedData.quantidadeEstoqueGramas = existingFilament.quantidadeEstoqueGramas;
+  }
+
 
   const validation = FilamentSchema.safeParse(mergedData);
   if (!validation.success) {
@@ -94,7 +101,7 @@ export async function updateFilament(id: string, data: Partial<Omit<Filament, 'i
   }
   
   const finalData = validation.data as Filament;
-  mockFilaments = mockFilaments.map(f => f.id === id ? finalData : f);
+  mockFilaments[existingFilamentIndex] = finalData;
   return { success: true, filament: finalData };
 }
 
@@ -105,4 +112,58 @@ export async function deleteFilament(id: string): Promise<{ success: boolean, er
     return { success: false, error: "Filamento não encontrado" };
   }
   return { success: true };
+}
+
+interface FilamentStockUpdate {
+  id: string;
+  novaQuantidadeCompradaGramas?: number;
+  novoPrecoKg?: number;
+}
+
+export async function updateFilamentStockBatch(updates: FilamentStockUpdate[]): Promise<{ success: boolean, updatedCount: number, errors: {id: string, error: string}[] }> {
+  let updatedCount = 0;
+  const errors: {id: string, error: string}[] = [];
+
+  updates.forEach(update => {
+    const filamentIndex = mockFilaments.findIndex(f => f.id === update.id);
+    if (filamentIndex === -1) {
+      errors.push({ id: update.id, error: "Filamento não encontrado." });
+      return;
+    }
+
+    const filamentToUpdate = { ...mockFilaments[filamentIndex] };
+    let changed = false;
+
+    if (update.novaQuantidadeCompradaGramas !== undefined && typeof update.novaQuantidadeCompradaGramas === 'number' && update.novaQuantidadeCompradaGramas > 0) {
+      filamentToUpdate.quantidadeEstoqueGramas = (filamentToUpdate.quantidadeEstoqueGramas || 0) + update.novaQuantidadeCompradaGramas;
+      changed = true;
+    } else if (update.novaQuantidadeCompradaGramas !== undefined) {
+      // Handle cases where it might be 0 or negative if strict positive addition is not desired, or invalid type
+      // For now, we only add positive quantities.
+    }
+
+    if (update.novoPrecoKg !== undefined && typeof update.novoPrecoKg === 'number' && update.novoPrecoKg >= 0) {
+      filamentToUpdate.precoPorKg = update.novoPrecoKg;
+      changed = true;
+    } else if (update.novoPrecoKg !== undefined) {
+      // Handle invalid price
+    }
+    
+    // Validate the updated filament before saving
+    const validation = FilamentSchema.safeParse(filamentToUpdate);
+    if (!validation.success) {
+        errors.push({ id: update.id, error: `Dados inválidos para o filamento: ${validation.error.errors.map(e => e.message).join(', ')}` });
+        return; // Skip this update
+    }
+
+    if (changed) {
+      mockFilaments[filamentIndex] = validation.data as Filament; // Save validated data
+      updatedCount++;
+    }
+  });
+
+  if (errors.length > 0 && updatedCount === 0) {
+    return { success: false, updatedCount, errors };
+  }
+  return { success: true, updatedCount, errors };
 }

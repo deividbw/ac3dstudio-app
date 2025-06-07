@@ -9,6 +9,7 @@ export interface Filament {
   temperaturaBicoIdeal?: number; // em °C
   temperaturaMesaIdeal?: number; // em °C
   precoPorKg?: number; // R$/kg - Essencial para o cálculo de custo do material
+  quantidadeEstoqueGramas?: number; // Nova propriedade para quantidade em estoque
 }
 
 export interface Printer {
@@ -55,4 +56,3 @@ export interface Brand {
   id: string;
   nome: string;
 }
-

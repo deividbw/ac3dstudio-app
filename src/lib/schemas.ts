@@ -11,6 +11,7 @@ export const FilamentSchema = z.object({
   temperaturaBicoIdeal: z.coerce.number().optional(),
   temperaturaMesaIdeal: z.coerce.number().optional(),
   precoPorKg: z.coerce.number().nonnegative({ message: "Preço por Kg não pode ser negativo" }).optional(),
+  quantidadeEstoqueGramas: z.coerce.number().nonnegative({ message: "Quantidade em estoque não pode ser negativa" }).default(0).optional(),
 });
 
 
@@ -44,4 +45,3 @@ export const BrandSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(1, { message: "Nome da marca é obrigatório" }).max(100, { message: "Nome da marca deve ter no máximo 100 caracteres" }),
 });
-
