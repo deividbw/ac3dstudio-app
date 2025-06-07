@@ -18,8 +18,8 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 25%;
 
-    --primary: 225 70% 55%; /* Índigo (bg-indigo-600) */
-    --primary-foreground: 0 0% 100%; /* Branco para texto de botões primários */
+    --primary: 121 100% 45%; /* Verde Limão Neon */
+    --primary-foreground: 0 0% 0%; /* Preto para texto de botões primários */
 
     --secondary: 220 15% 92%; /* Cinza um pouco mais claro para elementos secundários */
     --secondary-foreground: 220 10% 20%;
@@ -27,15 +27,15 @@ body {
     --muted: 220 15% 90%; /* Cinza para elementos muted */
     --muted-foreground: 220 10% 45%; /* Cinza para etiquetas (text-gray-700) */
 
-    --accent: 225 60% 65%; /* Um tom de índigo mais claro para acentos, se necessário */
-    --accent-foreground: 0 0% 100%; 
+    --accent: 121 100% 55%; /* Um tom de verde um pouco mais claro para acentos */
+    --accent-foreground: 0 0% 0%; 
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 220 15% 85%; /* Cinza claro para bordas (border-gray-300) */
     --input: 220 15% 85%;  /* Mesma cor para borda de input */
-    --ring: 225 70% 55%; /* Índigo para anel de foco */
+    --ring: 121 100% 45%; /* Verde Limão para anel de foco */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -47,16 +47,16 @@ body {
     /* Sidebar specific colors - Can be adjusted if sidebar styling needs to change too */
     --sidebar-background: 220 20% 95%; 
     --sidebar-foreground: 220 10% 30%;
-    --sidebar-primary: 225 70% 55%; 
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 121 100% 45%; 
+    --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 220 15% 90%;
     --sidebar-accent-foreground: 220 10% 20%;
     --sidebar-border: 220 15% 85%;
-    --sidebar-ring: 225 70% 55%; 
+    --sidebar-ring: 121 100% 45%; 
   }
 
   .dark {
-    /* Basic dark theme, can be refined later to match indigo */
+    /* Basic dark theme, can be refined later to match new primary */
     --background: 220 10% 10%;
     --foreground: 0 0% 98%;
 
@@ -66,8 +66,8 @@ body {
     --popover: 220 10% 15%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 225 70% 65%; /* Índigo mais claro para dark theme */
-    --primary-foreground: 0 0% 100%; 
+    --primary: 121 100% 50%; /* Verde Limão um pouco mais claro para dark theme */
+    --primary-foreground: 0 0% 0%; /* Preto para texto de botões primários no dark theme */
 
     --secondary: 220 10% 20%;
     --secondary-foreground: 0 0% 98%;
@@ -75,24 +75,24 @@ body {
     --muted: 220 10% 25%;
     --muted-foreground: 0 0% 63.9%;
 
-    --accent: 225 60% 70%; 
-    --accent-foreground: 220 10% 10%;
+    --accent: 121 100% 60%; 
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 220 10% 20%;
     --input: 220 10% 20%;
-    --ring: 225 70% 65%; /* Índigo para anel de foco no dark theme */
+    --ring: 121 100% 50%; /* Verde Limão para anel de foco no dark theme */
 
     --sidebar-background: 220 10% 12%;
     --sidebar-foreground: 0 0% 95.9%;
-    --sidebar-primary: 225 70% 65%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 121 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 220 10% 20%;
     --sidebar-accent-foreground: 0 0% 95.9%;
     --sidebar-border: 220 10% 20%;
-    --sidebar-ring: 225 70% 65%;
+    --sidebar-ring: 121 100% 50%;
   }
 }
 
