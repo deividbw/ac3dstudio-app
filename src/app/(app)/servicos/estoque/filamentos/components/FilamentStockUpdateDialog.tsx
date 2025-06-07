@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Filament, Brand } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 interface FilamentStockUpdateDialogProps {
   isOpen: boolean;
@@ -32,14 +33,14 @@ export function FilamentStockUpdateDialog({
   brands,
   onSave,
 }: FilamentStockUpdateDialogProps) {
-  const [quantidadeAdicionar, setQuantidadeAdicionar] = useState<string>("");
+  const [quantidadeAdicionarKg, setQuantidadeAdicionarKg] = useState<string>("");
   const [novoPrecoKg, setNovoPrecoKg] = useState<string>("");
+  const { toast } = useToast(); // Initialize useToast
 
   useEffect(() => {
     if (isOpen && filament) {
-      // Reset fields when dialog opens or filament changes
-      setQuantidadeAdicionar("");
-      setNovoPrecoKg(filament.precoPorKg?.toString() || ""); // Pre-fill with current price
+      setQuantidadeAdicionarKg("");
+      setNovoPrecoKg(filament.precoPorKg?.toString() || ""); 
     }
   }, [isOpen, filament]);
 
@@ -57,25 +58,55 @@ export function FilamentStockUpdateDialog({
   };
 
   const handleSave = async () => {
-    const qty = quantidadeAdicionar.trim() !== "" ? parseFloat(quantidadeAdicionar) : undefined;
-    const price = novoPrecoKg.trim() !== "" ? parseFloat(novoPrecoKg) : undefined;
+    const qtyKgString = quantidadeAdicionarKg.trim();
+    const priceKgString = novoPrecoKg.trim();
 
-    if ((qty !== undefined && (isNaN(qty) || qty <= 0)) && quantidadeAdicionar.trim() !== "") {
-      // Consider a toast message here for invalid input
-      alert("Quantidade a adicionar deve ser um número positivo.");
-      return;
+    let qtyKg: number | undefined = undefined;
+    let novaQuantidadeCompradaGramas: number | undefined = undefined;
+    let pricePerKg: number | undefined = undefined;
+
+    if (qtyKgString !== "") {
+      qtyKg = parseFloat(qtyKgString);
+      if (isNaN(qtyKg) || qtyKg <= 0 || !Number.isInteger(qtyKg)) {
+        toast({
+          title: "Entrada Inválida",
+          description: "Quantidade a adicionar (kg) deve ser um número inteiro positivo.",
+          variant: "destructive",
+        });
+        return;
+      }
+      novaQuantidadeCompradaGramas = qtyKg * 1000;
     }
-     if ((price !== undefined && (isNaN(price) || price < 0)) && novoPrecoKg.trim() !== "") {
-      alert("Novo preço deve ser um número não negativo.");
-      return;
+
+    if (priceKgString !== "") {
+      pricePerKg = parseFloat(priceKgString);
+      if (isNaN(pricePerKg) || pricePerKg < 0) {
+         toast({
+          title: "Entrada Inválida",
+          description: "Novo preço por kg deve ser um número não negativo.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
+    
+    // Check if at least one field was actually filled for update
+    if (novaQuantidadeCompradaGramas === undefined && pricePerKg === undefined) {
+        toast({
+            title: "Nenhuma Alteração",
+            description: "Forneça uma quantidade para adicionar ou um novo preço.",
+            variant: "default"
+        });
+        return;
+    }
+
 
     await onSave({
       id: filament.id,
-      novaQuantidadeCompradaGramas: qty,
-      novoPrecoKg: price,
+      novaQuantidadeCompradaGramas: novaQuantidadeCompradaGramas,
+      novoPrecoKg: pricePerKg,
     });
-    onOpenChange(false); // Close dialog on save
+    onOpenChange(false); 
   };
 
   return (
@@ -84,7 +115,7 @@ export function FilamentStockUpdateDialog({
         <DialogHeader>
           <DialogTitle className="font-headline">Atualizar Estoque: {getBrandNameById(filament.marcaId)} {filament.tipo} {filament.cor}</DialogTitle>
           <DialogDescription>
-            Modifique a quantidade em estoque e o preço por Kg do filamento.
+            Modifique a quantidade em estoque (em Kg) e/ou o preço por Kg do filamento.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] p-1 pr-3">
@@ -99,13 +130,14 @@ export function FilamentStockUpdateDialog({
                 </div>
                 <hr className="my-2"/>
                 <div>
-                    <Label htmlFor="quantidadeAdicionar">Adicionar Quantidade (g)</Label>
+                    <Label htmlFor="quantidadeAdicionarKg">Adicionar Quantidade (kg)</Label>
                     <Input
-                    id="quantidadeAdicionar"
+                    id="quantidadeAdicionarKg"
                     type="number"
-                    placeholder="Ex: 1000"
-                    value={quantidadeAdicionar}
-                    onChange={(e) => setQuantidadeAdicionar(e.target.value)}
+                    step="1" // Ensure whole numbers for kg
+                    placeholder="Ex: 1 (para 1kg)"
+                    value={quantidadeAdicionarKg}
+                    onChange={(e) => setQuantidadeAdicionarKg(e.target.value)}
                     className="mt-1"
                     />
                 </div>
