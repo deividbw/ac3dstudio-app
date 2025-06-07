@@ -72,8 +72,7 @@ export function ProductsTab() {
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [filterNome, setFilterNome] = useState("");
-  const [filterFilamentTipo, setFilterFilamentTipo] = useState("");
-  const [filterPrinterMarca, setFilterPrinterMarca] = useState("");
+  const [filterPrinterMarca, setFilterPrinterMarca] = useState(""); // Renamed from filterPrinterMarca for clarity
 
   const [sortField, setSortField] = useState<SortableProductField>('nome');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -112,7 +111,7 @@ export function ProductsTab() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterNome, filterFilamentTipo, filterPrinterMarca, sortField, sortDirection, itemsPerPage]);
+  }, [filterNome, filterPrinterMarca, sortField, sortDirection, itemsPerPage]);
 
 
   const getBrandNameById = useCallback((brandId?: string) => {
@@ -145,13 +144,11 @@ export function ProductsTab() {
 
   const paginatedData = useMemo(() => {
     let filtered = products.filter(product => {
-      const filament = filaments.find(f => f.id === product.filamentoId);
       const printer = printers.find(p => p.id === product.impressoraId);
       const printerBrandName = printer ? getBrandNameById(printer.marcaId) : "";
 
       return (
         (filterNome === "" || product.nome.toLowerCase().includes(filterNome.toLowerCase())) &&
-        (filterFilamentTipo === "" || (filament && filament.tipo.toLowerCase().includes(filterFilamentTipo.toLowerCase()))) &&
         (filterPrinterMarca === "" || printerBrandName.toLowerCase().includes(filterPrinterMarca.toLowerCase()))
       );
     });
@@ -207,7 +204,7 @@ export function ProductsTab() {
       totalFilteredItems,
       startIndex,
     };
-  }, [products, filaments, printers, getBrandNameById, getPrinterDisplayName, getFilamentDisplayName, filterNome, filterFilamentTipo, filterPrinterMarca, sortField, sortDirection, currentPage, itemsPerPage]);
+  }, [products, filaments, printers, getBrandNameById, getPrinterDisplayName, getFilamentDisplayName, filterNome, filterPrinterMarca, sortField, sortDirection, currentPage, itemsPerPage]);
 
   const renderSortIcon = (field: SortableProductField) => {
     if (sortField === field) {
@@ -218,7 +215,7 @@ export function ProductsTab() {
 
 
   const handleFormSuccess = (productData: Product) => {
-    loadData(); // Recarrega todos os dados, incluindo produtos
+    loadData(); 
     setIsFormOpen(false);
     setEditingProduct(null);
   };
@@ -228,7 +225,7 @@ export function ProductsTab() {
     const result = await mockDeleteProduct(id);
     if (result.success) {
       toast({ title: "Sucesso", description: "Produto excluído.", variant: "success" });
-      loadData(); // Recarrega os produtos
+      loadData(); 
     } else {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir o produto.", variant: "destructive" });
     }
@@ -352,7 +349,7 @@ export function ProductsTab() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          {!isLoadingData && isFormOpen && ( // Only render form when not loading and dialog is open
+          {!isLoadingData && isFormOpen && ( 
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
               <ProductForm
                 product={editingProduct}
@@ -371,17 +368,11 @@ export function ProductsTab() {
 
       <Card className="shadow-lg">
         <CardContent className="p-4 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             <Input
               placeholder="Filtrar por nome do produto..."
               value={filterNome}
               onChange={e => setFilterNome(e.target.value)}
-              className="h-9"
-            />
-            <Input
-              placeholder="Filtrar por tipo de filamento..."
-              value={filterFilamentTipo}
-              onChange={e => setFilterFilamentTipo(e.target.value)}
               className="h-9"
             />
             <Input
@@ -569,3 +560,5 @@ export function ProductsTab() {
     </div>
   );
 }
+
+    
