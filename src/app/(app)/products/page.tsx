@@ -33,8 +33,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductForm } from './components/ProductForm';
-import { CostDisplayDialog } from './components/CostDisplayDialog'; // Will need updates or replacement
-import type { Product, Filament, Printer, ProductCostBreakdown, Brand } from '@/lib/types';
+import { CostDisplayDialog } from './components/CostDisplayDialog';
+import type { Product, Filament, Printer, Brand } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { exportToCsv } from '@/lib/csv-export';
 import { getProducts as mockGetProducts, deleteProduct as mockDeleteProduct } from '@/lib/actions/product.actions';
@@ -180,7 +180,7 @@ export default function ProductsPage() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-0"> 
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0"> 
             <ProductForm 
               product={editingProduct} 
               filaments={filaments}
@@ -274,9 +274,11 @@ export default function ProductsPage() {
         <CostDisplayDialog 
           isOpen={isCostDisplayOpen}
           onOpenChange={setIsCostDisplayOpen}
-          product={currentProductForCostDisplay} // Pass the whole product
+          product={currentProductForCostDisplay}
         />
       )}
     </div>
   );
 }
+
+    
