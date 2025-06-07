@@ -12,21 +12,36 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 // Define specific icon background colors based on the image
 const iconColors = {
-  pedidos: "bg-primary", // Purple
-  agenda: "bg-accent", // Teal
+  pedidos: "bg-primary", 
+  agenda: "bg-accent", 
   financeiro: "bg-green-500",
   clientes: "bg-orange-500",
   pecasEstoque: "bg-blue-500",
-  servicos: "bg-indigo-500", // Cor para o card de Serviços
+  servicos: "bg-indigo-500", 
   novoPedido: "bg-primary",
   novoRecebimento: "bg-green-500",
   novoCompromisso: "bg-accent",
   novoCliente: "bg-orange-500",
+
+  // New summary card icon colors
+  pedidosConcluidos: "bg-green-100 dark:bg-green-900",
+  valoresAReceber: "bg-blue-100 dark:bg-blue-900",
+  valoresRecebidos: "bg-emerald-100 dark:bg-emerald-900", // Using emerald for a slightly different green
+  pedidosCancelados: "bg-red-100 dark:bg-red-900",
+  valoresEmAtraso: "bg-amber-100 dark:bg-amber-900", // Using amber for orange/yellowish
 };
+
+const iconTextColors = {
+  pedidosConcluidos: "text-green-600 dark:text-green-400",
+  valoresAReceber: "text-blue-600 dark:text-blue-400",
+  valoresRecebidos: "text-emerald-600 dark:text-emerald-400",
+  pedidosCancelados: "text-red-600 dark:text-red-400",
+  valoresEmAtraso: "text-amber-600 dark:text-amber-400",
+}
 
 
 export default function DashboardPage() {
-  const router = useRouter(); // Inicializar o router
+  const router = useRouter(); 
 
   return (
     <div className="space-y-6">
@@ -41,7 +56,7 @@ export default function DashboardPage() {
           icon={Icons.Settings2} 
           title="Serviços" 
           iconBgColor={iconColors.servicos} 
-          onClick={() => router.push('/servicos')} // Adicionar onClick para navegação
+          onClick={() => router.push('/servicos')} 
         />
       </div>
 
@@ -77,18 +92,56 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
-        <SummaryCard 
-          icon={Icons.CalendarDays}
-          iconBgColor={iconColors.agenda}
-          title="Agenda"
-          description="Compromissos hoje"
-          value={0}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <SummaryCard 
+            icon={Icons.CalendarCheck2}
+            iconBgColor={iconColors.pedidosConcluidos}
+            iconColor={iconTextColors.pedidosConcluidos}
+            title="Pedidos Concluídos Hoje"
+            mainValue="R$ 0,00"
+            subDescription="0 pedidos"
+            mainValueColorClass="text-green-600 dark:text-green-400"
+          />
+          <SummaryCard 
+            icon={Icons.Hourglass}
+            iconBgColor={iconColors.valoresAReceber}
+            iconColor={iconTextColors.valoresAReceber}
+            title="Valores a Receber Hoje"
+            mainValue="R$ 0,00"
+            subDescription="0 pedidos"
+            mainValueColorClass="text-blue-600 dark:text-blue-400"
+          />
+          <SummaryCard 
+            icon={Icons.WalletCards}
+            iconBgColor={iconColors.valoresRecebidos}
+            iconColor={iconTextColors.valoresRecebidos}
+            title="Valores Recebidos Hoje"
+            mainValue="R$ 0,00"
+            subDescription="0 pedidos"
+            mainValueColorClass="text-emerald-600 dark:text-emerald-400"
+          />
+          <SummaryCard 
+            icon={Icons.CalendarX2}
+            iconBgColor={iconColors.pedidosCancelados}
+            iconColor={iconTextColors.pedidosCancelados}
+            title="Pedidos Cancelados Hoje"
+            mainValue="R$ 0,00"
+            subDescription="0 pedidos"
+            mainValueColorClass="text-red-600 dark:text-red-400"
+          />
+          <SummaryCard 
+            icon={Icons.TrendingDown}
+            iconBgColor={iconColors.valoresEmAtraso}
+            iconColor={iconTextColors.valoresEmAtraso}
+            title="Valores em Atraso"
+            mainValue="R$ 0,00"
+            subDescription="0 pedidos"
+            mainValueColorClass="text-amber-600 dark:text-amber-400"
+          />
+        </div>
       </div>
       
-      {/* Fixed Action Button - This should be outside the scrollable main but above BottomNav */}
-      {/* For simplicity, placing it here makes it scroll with content. 
-          A true fixed button would be in layout.tsx or use fixed positioning. */}
+      {/* Fixed Action Button */}
       <div className="fixed bottom-20 left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 sm:w-auto sm:left-auto sm:right-4 sm:translate-x-0">
         <Button size="lg" className="w-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90">
           <Icons.FilePlus2 className="mr-2 h-5 w-5" />

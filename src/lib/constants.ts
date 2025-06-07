@@ -1,5 +1,6 @@
+
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare, MessageSquare, Menu, SlidersHorizontal, EyeOff, ChevronRight, FilePlus2, WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign, Users, PackageSearch, Settings2, Archive } from 'lucide-react';
+import { LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare, MessageSquare, Menu, SlidersHorizontal, EyeOff, ChevronRight, FilePlus2, WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign, Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass, WalletCards, CalendarX2, TrendingDown } from 'lucide-react';
 
 // Interface para itens de navegação, reutilizada do AppSidebar
 export interface NavItem {
@@ -90,4 +91,10 @@ export const Icons = {
   BarChart3,
   PercentSquare,
   Archive, // Adicionado para uso no menu lateral
+  CalendarCheck2,
+  Hourglass,
+  WalletCards,
+  CalendarX2,
+  TrendingDown,
 };
+
