@@ -5,9 +5,11 @@
 import type { Printer } from "@/lib/types";
 import { PrinterSchema } from "@/lib/schemas";
 
+const DEFAULT_ENERGY_COST_KWH = 0.75;
+
 let mockPrinters: Printer[] = [
-  { id: "1", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
-  { id: "2", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
+  { id: "1", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH },
+  { id: "2", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH },
 ];
 
 export async function getPrinters(): Promise<Printer[]> {
@@ -19,7 +21,11 @@ export async function getPrinterById(id: string): Promise<Printer | undefined> {
 }
 
 export async function createPrinter(data: Omit<Printer, 'id'>): Promise<{ success: boolean, printer?: Printer, error?: string }> {
-  const validation = PrinterSchema.safeParse(data);
+  const dataWithDefault = {
+    ...data,
+    custoEnergiaKwh: data.custoEnergiaKwh ?? DEFAULT_ENERGY_COST_KWH,
+  };
+  const validation = PrinterSchema.safeParse(dataWithDefault);
   if (!validation.success) {
     return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
   }
@@ -34,11 +40,16 @@ export async function updatePrinter(id: string, data: Partial<Omit<Printer, 'id'
     return { success: false, error: "Impressora não encontrada" };
   }
   
-  const dataWithPotentiallyEmptyStrings = { ...existingPrinter, ...data };
+  // Preserve existing custoEnergiaKwh if not explicitly provided in data (which it won't be from the form)
+  const dataToUpdate = {
+    ...data,
+    custoEnergiaKwh: data.custoEnergiaKwh ?? existingPrinter.custoEnergiaKwh,
+  };
+
+  const dataWithPotentiallyEmptyStrings = { ...existingPrinter, ...dataToUpdate };
   
   const cleanedData = {
     ...dataWithPotentiallyEmptyStrings,
-    // marcaId will be handled by the select, so it's either a valid ID string or undefined
     modelo: dataWithPotentiallyEmptyStrings.modelo?.trim() === '' ? undefined : dataWithPotentiallyEmptyStrings.modelo,
   };
 
@@ -60,4 +71,3 @@ export async function deletePrinter(id: string): Promise<{ success: boolean, err
   }
   return { success: true };
 }
-

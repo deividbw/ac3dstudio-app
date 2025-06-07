@@ -41,32 +41,31 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     resolver: zodResolver(PrinterSchema),
     defaultValues: printer ? {
       ...printer,
-      nome: printer.nome ?? undefined, // Keep for existing data, but not editable
+      nome: printer.nome ?? undefined,
       marcaId: printer.marcaId ?? undefined,
       modelo: printer.modelo ?? undefined,
+      custoEnergiaKwh: printer.custoEnergiaKwh, // Preserve existing if editing
     } : {
-      // nome is removed from form inputs
       nome: undefined, 
       marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
       consumoEnergiaHora: 0.1,
       taxaDepreciacaoHora: 0,
-      custoEnergiaKwh: 0.75,
+      // custoEnergiaKwh will be set by default in the action for new printers
     },
   });
 
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
     try {
-      // nome is no longer directly from form 'values', it's either existing or undefined
       const dataForAction: Omit<Printer, 'id'> = {
-        nome: printer?.nome, // Preserve existing name if editing, undefined if new
+        nome: printer?.nome, 
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
         consumoEnergiaHora: Number(values.consumoEnergiaHora),
         taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
-        custoEnergiaKwh: Number(values.custoEnergiaKwh),
+        custoEnergiaKwh: printer ? printer.custoEnergiaKwh : values.custoEnergiaKwh, // Preserve for edit, action sets default for new
       };
 
       let actionResult;
@@ -120,13 +119,12 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         <DialogTitle className="font-headline">{printer ? "Editar Impressora" : "Adicionar Nova Impressora"}</DialogTitle>
         <DialogDescription>
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
-          O nome da impressora é opcional e pode ser deixado em branco.
+          O nome da impressora é opcional. O custo de energia por kWh será um valor padrão do sistema.
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="p-6 space-y-3">
-            {/* Nome field removed from here */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -203,38 +201,23 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="taxaDepreciacaoHora"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Depreciação (R$/hora)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 0.50" 
-                             value={getNumericFieldValue(field.value)}
-                             onChange={e => handleNumericInputChange(field, e.target.value)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="custoEnergiaKwh"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Custo Energia (R$/kWh)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 0.75" 
-                             value={getNumericFieldValue(field.value)}
-                             onChange={e => handleNumericInputChange(field, e.target.value)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Taxa de Depreciação agora ocupa a linha inteira */}
+            <FormField
+              control={form.control}
+              name="taxaDepreciacaoHora"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Depreciação (R$/hora)*</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" placeholder="Ex: 0.50" 
+                            value={getNumericFieldValue(field.value)}
+                            onChange={e => handleNumericInputChange(field, e.target.value)} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Custo Energia (R$/kWh) field removed */}
           </div>
           <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
              <DialogClose asChild>
