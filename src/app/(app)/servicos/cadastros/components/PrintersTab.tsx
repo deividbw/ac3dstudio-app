@@ -44,7 +44,6 @@ export function PrintersTab() {
   const [deletingPrinterId, setDeletingPrinterId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [filterNome, setFilterNome] = useState("");
   const [filterMarca, setFilterMarca] = useState("");
   const [filterModelo, setFilterModelo] = useState("");
 
@@ -69,11 +68,10 @@ export function PrintersTab() {
 
   const filteredPrinters = useMemo(() => {
     return printers.filter(p => 
-      (filterNome === "" || (p.nome && p.nome.toLowerCase().includes(filterNome.toLowerCase()))) &&
       (filterMarca === "" || getBrandNameById(p.marcaId).toLowerCase().includes(filterMarca.toLowerCase())) &&
       (filterModelo === "" || (p.modelo && p.modelo.toLowerCase().includes(filterModelo.toLowerCase())))
     );
-  }, [printers, filterNome, filterMarca, filterModelo, getBrandNameById]);
+  }, [printers, filterMarca, filterModelo, getBrandNameById]);
 
   const handleFormSuccess = () => {
     loadData();
@@ -131,12 +129,6 @@ export function PrintersTab() {
         <CardContent className="p-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-2 mb-4">
             <Input 
-              placeholder="Filtrar por nome..." 
-              value={filterNome} 
-              onChange={e => setFilterNome(e.target.value)}
-              className="h-9"
-            />
-            <Input 
               placeholder="Filtrar por marca..." 
               value={filterMarca} 
               onChange={e => setFilterMarca(e.target.value)}
@@ -166,7 +158,6 @@ export function PrintersTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-2 py-2 font-semibold uppercase">Nome</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Marca</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Modelo</TableHead>
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Consumo (kWh)</TableHead>
@@ -178,7 +169,6 @@ export function PrintersTab() {
               <TableBody>
                 {filteredPrinters.map((printer) => (
                   <TableRow key={printer.id}>
-                    <TableCell className="font-medium px-2 py-1.5">{printer.nome || "N/A"}</TableCell>
                     <TableCell className="px-2 py-1.5">{getBrandNameById(printer.marcaId)}</TableCell>
                     <TableCell className="px-2 py-1.5">{printer.modelo || "N/A"}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{printer.consumoEnergiaHora.toFixed(2)}</TableCell>
@@ -227,3 +217,4 @@ export function PrintersTab() {
     </div>
   );
 }
+

@@ -6,8 +6,8 @@ import type { Printer } from "@/lib/types";
 import { PrinterSchema } from "@/lib/schemas";
 
 let mockPrinters: Printer[] = [
-  { id: "1", nome: "Ender 3 V2", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
-  { id: "2", nome: "Prusa MK3S+", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
+  { id: "1", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: 0.75 },
+  { id: "2", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: 0.75 },
 ];
 
 export async function getPrinters(): Promise<Printer[]> {
@@ -60,3 +60,4 @@ export async function deletePrinter(id: string): Promise<{ success: boolean, err
   }
   return { success: true };
 }
+
