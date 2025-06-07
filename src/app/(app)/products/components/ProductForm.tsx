@@ -412,11 +412,16 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                 />
             </div>
             
-            {showCostSection && costBreakdown && (
-              <div className="mt-4 p-4 border rounded-md bg-muted/50 space-y-2 text-sm shadow">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-semibold text-base text-foreground">Previsão de Custos e Preço do Produto:</h4>
-                  {isCalculating && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+            {isCalculating && !costBreakdown ? (
+                <div className="mt-3 pt-3 border-t text-xs text-muted-foreground text-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto mb-1" />
+                    Calculando...
+                </div>
+            ) : showCostSection && costBreakdown ? (
+              <div className="mt-3 pt-3 border-t space-y-1.5 text-xs">
+                <div className="flex justify-between items-center mb-1.5">
+                  <h4 className="font-semibold text-sm text-foreground">Previsão de Custos e Preço:</h4>
+                  {isCalculating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                 </div>
                 {!isCalculating && (
                   <>
@@ -424,24 +429,17 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                     <div className="flex justify-between"><span className="text-muted-foreground">Custo Impressão:</span> <span className="font-medium">{formatCurrency(costBreakdown.custoImpressaoCalculado)}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Custo Modelagem:</span> <span className="font-medium">{formatCurrency(form.getValues("custoModelagem"))}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Custos Extras:</span> <span className="font-medium">{formatCurrency(form.getValues("custosExtras"))}</span></div>
-                    <hr className="my-1.5"/>
+                    <hr className="my-1"/>
                     <div className="flex justify-between font-semibold"><span className="text-foreground">Custo Total Produção:</span> <span className="text-foreground">{formatCurrency(costBreakdown.custoTotalProducaoCalculado)}</span></div>
-                    <hr className="my-1.5"/>
+                    <hr className="my-1"/>
                     <div className="flex justify-between"><span className="text-muted-foreground">Margem de Lucro ({form.getValues("margemLucroPercentual")}%):</span> <span className="font-medium">{formatCurrency(costBreakdown.lucroCalculado)}</span></div>
-                    <div className="flex justify-between font-bold text-lg text-primary mt-1"><span >Preço Final de Venda (Base):</span> <span>{formatCurrency(costBreakdown.precoVendaCalculado)}</span></div>
+                    <div className="flex justify-between font-semibold text-base text-primary mt-1.5 pt-1.5 border-t"><span >Preço Final (Base):</span> <span>{formatCurrency(costBreakdown.precoVendaCalculado)}</span></div>
                   </>
                 )}
               </div>
-            )}
-            {!showCostSection && !isCalculating && (
-                 <div className="mt-4 p-4 border rounded-md bg-muted/50 text-sm text-muted-foreground italic text-center">
-                    Selecione Filamento e Impressora, e preencha peso e tempo para ver a previsão de custos.
-                </div>
-            )}
-             {isCalculating && !costBreakdown && (
-                <div className="mt-4 p-4 border rounded-md bg-muted/50 space-y-2 text-sm text-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto mb-2" />
-                    Calculando...
+            ) : (
+                 <div className="mt-3 pt-3 border-t text-xs text-muted-foreground italic text-center">
+                    Preencha os campos obrigatórios (*) para ver a previsão de custos.
                 </div>
             )}
 
