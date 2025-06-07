@@ -157,15 +157,13 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
   const handleUpdateOrcamentoItemQuantity = (index: number, newQuantityStr: string) => {
     const newQuantity = parseInt(newQuantityStr, 10);
     if (isNaN(newQuantity) || newQuantity <= 0) {
-        // Optionally show a toast or handle invalid input, or simply don't update
-        // For now, let's assume we only proceed with valid numbers or remove if it becomes <=0
         const currentItem = fields[index];
         update(index, {
             ...currentItem,
-            quantidade: 0, // Or some other handling for invalid
+            quantidade: 0, 
             valorTotalItem: 0
         });
-        toast({title: "Quantidade Inválida", description: "A quantidade foi zerada. Se desejar, remova o item.", variant: "default"})
+        toast({title: "Quantidade Inválida", description: "A quantidade foi zerada. Se desejar, remova o item ou corrija a quantidade antes de salvar.", variant: "default"})
         return;
     }
     const currentItem = fields[index];
@@ -179,15 +177,6 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
 
   async function onSubmit(values: OrcamentoFormValues) {
     try {
-        if (values.itens.length === 0) {
-            toast({
-                title: "Itens Vazios",
-                description: "O orçamento deve conter pelo menos um item.",
-                variant: "destructive",
-            });
-            return;
-        }
-        
         const itensParaSalvar = values.itens.filter(item => item.quantidade > 0).map(item => ({
             produtoId: item.produtoId,
             quantidade: item.quantidade,
@@ -196,7 +185,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
         if (itensParaSalvar.length === 0) {
              toast({
                 title: "Itens Vazios",
-                description: "Todos os itens têm quantidade zero. Adicione itens com quantidade válida.",
+                description: "O orçamento deve conter pelo menos um item com quantidade válida.",
                 variant: "destructive",
             });
             return;
@@ -256,15 +245,15 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
 
   return (
     <>
-      <DialogHeader className="sticky top-0 z-10 bg-background p-6 border-b">
+      <DialogHeader className="sticky top-0 z-10 bg-background p-6 border-b flex-shrink-0">
         <DialogTitle className="font-headline">{orcamento ? "Editar Orçamento" : "Novo Orçamento"}</DialogTitle>
         <DialogDescription>
           {orcamento ? "Modifique os detalhes do orçamento." : "Preencha as informações do novo orçamento."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <ScrollArea className="max-h-[calc(90vh-180px)]"> {/* Adjusted max height */}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow min-h-0"> {/* Form takes remaining space */}
+          <ScrollArea className="flex-grow min-h-0"> {/* ScrollArea for form content */}
             <div className="p-6 space-y-4">
               <FormField
                 control={form.control}
@@ -295,8 +284,8 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
 
               <div className="space-y-3 pt-4 border-t">
                 <h4 className="text-md font-semibold">Adicionar Item ao Orçamento</h4>
-                <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-end"> {/* Grid for product, qty, add button */}
-                  <FormItem className="col-span-3 sm:col-span-1"> {/* Product selection takes more space on small screens */}
+                <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-end">
+                  <FormItem>
                     <FormLabel>Produto*</FormLabel>
                     <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
                       <PopoverTrigger asChild>
@@ -359,7 +348,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
                    <Button
                       type="button"
                       size="sm"
-                      className="h-9"
+                      className="h-9" 
                       onClick={handleProductAddToBudget}
                       disabled={!selectedProductForAddition || quantityForAddition <= 0}
                     >
@@ -386,7 +375,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
                             <Input
                                 type="number"
                                 id={`item-qty-${index}`}
-                                min="0" // Allow 0 to potentially remove or just update
+                                min="0" 
                                 value={item.quantidade}
                                 onChange={(e) => handleUpdateOrcamentoItemQuantity(index, e.target.value)}
                                 className="w-full h-8 px-2 py-1 border-gray-300 rounded-md text-sm text-center"
@@ -461,7 +450,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
 
             </div>
           </ScrollArea>
-          <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
+          <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t flex-shrink-0">
             <DialogClose asChild>
               <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
@@ -474,3 +463,4 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
     </>
   );
 }
+
