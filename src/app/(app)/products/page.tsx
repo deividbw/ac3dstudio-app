@@ -34,24 +34,23 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductForm } from './components/ProductForm';
 import { CostDisplayDialog } from './components/CostDisplayDialog';
-import type { Product, Filament, Printer, Brand, FilamentType, PowerOverride } from '@/lib/types'; // Added FilamentType, PowerOverride
+import type { Product, Filament, Printer, Brand, FilamentType, PowerOverride } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { exportToCsv } from '@/lib/csv-export';
 import { getProducts as mockGetProducts, deleteProduct as mockDeleteProduct } from '@/lib/actions/product.actions';
 import { getFilaments as mockGetFilaments } from '@/lib/actions/filament.actions';
 import { getPrinters as mockGetPrinters } from '@/lib/actions/printer.actions';
 import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
-import { getFilamentTypes as mockGetFilamentTypes } from '@/lib/actions/filamentType.actions'; // Added
+import { getFilamentTypes as mockGetFilamentTypes } from '@/lib/actions/filamentType.actions';
+import { getPowerOverrides as mockGetPowerOverrides } from '@/lib/actions/powerOverride.actions'; // Import action for power overrides
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]); // Added
-  // NOTE: PowerOverrides would ideally be fetched from a persistent store.
-  // For now, it's an empty array, meaning ProductForm will use default printer consumption.
-  const [powerOverrides, setPowerOverrides] = useState<PowerOverride[]>([]); // Added
+  const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
+  const [powerOverrides, setPowerOverrides] = useState<PowerOverride[]>([]); 
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -63,24 +62,20 @@ export default function ProductsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [productsData, filamentsData, printersData, brandsData, filamentTypesData] = await Promise.all([
+      const [productsData, filamentsData, printersData, brandsData, filamentTypesData, powerOverridesData] = await Promise.all([
         mockGetProducts(),
         mockGetFilaments(),
         mockGetPrinters(),
         mockGetBrands(),
-        mockGetFilamentTypes(), // Fetch filament types
-        // Mock fetching powerOverrides (in a real app, this would come from a database/config)
-        Promise.resolve([] as PowerOverride[]) // Simulating empty or fetched overrides
+        mockGetFilamentTypes(),
+        mockGetPowerOverrides(), // Fetch power overrides
       ]);
       setProducts(productsData);
       setFilaments(filamentsData);
       setPrinters(printersData);
       setBrands(brandsData);
-      setFilamentTypes(filamentTypesData); // Set filament types
-      // setPowerOverrides(powerOverridesData); // Set power overrides
-      // For now, explicitly setting to empty as there's no source for these yet.
-      // This part would be updated if/when `powerOverrides` are globally available.
-      // For example, if they were stored in a DB and fetched via an action.
+      setFilamentTypes(filamentTypesData);
+      setPowerOverrides(powerOverridesData); // Set power overrides
     } catch (error) {
       console.error("Failed to load initial data:", error);
       toast({ title: "Erro ao carregar dados", description: "Não foi possível buscar todos os dados necessários.", variant: "destructive" });
@@ -219,8 +214,8 @@ export default function ProductsPage() {
               filaments={filaments}
               printers={printers}
               brands={brands}
-              filamentTypes={filamentTypes} // Pass filamentTypes
-              powerOverrides={powerOverrides} // Pass powerOverrides (currently empty)
+              filamentTypes={filamentTypes}
+              powerOverrides={powerOverrides} // Pass fetched powerOverrides
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
             />

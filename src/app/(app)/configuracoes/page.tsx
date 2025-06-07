@@ -32,24 +32,14 @@ import {
 } from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import type { Printer, FilamentType, Brand } from '@/lib/types';
+import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField } from '@/lib/types';
 import { getPrinters } from '@/lib/actions/printer.actions';
 import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
-
-interface PowerOverride {
-  id: string; // printerId_filamentTypeId
-  printerId: string;
-  printerName: string;
-  filamentTypeId: string;
-  filamentTypeName: string;
-  powerWatts: number;
-}
-
-type SortableOverrideField = 'printerName' | 'filamentTypeName' | 'powerWatts';
+import { getPowerOverrides, savePowerOverride } from '@/lib/actions/powerOverride.actions'; // Import actions for power overrides
 
 export default function ConfiguracoesPage() {
-  const [kwhValue, setKwhValue] = useState("0.75");
+  const [kwhValue, setKwhValue] = useState("0.75"); // Default to 0.75
   const { toast } = useToast();
 
   const [printers, setPrinters] = useState<Printer[]>([]);
@@ -65,29 +55,31 @@ export default function ConfiguracoesPage() {
   const [sortConfigOverrides, setSortConfigOverrides] = useState<{ key: SortableOverrideField; direction: 'ascending' | 'descending' }>({ key: 'printerName', direction: 'ascending' });
 
 
-  const loadDropdownData = useCallback(async () => {
+  const loadConfigData = useCallback(async () => {
     try {
-      const [printersData, filamentTypesData, brandsData] = await Promise.all([
+      const [printersData, filamentTypesData, brandsData, powerOverridesData] = await Promise.all([
         getPrinters(),
         getFilamentTypes(),
         getBrands(),
+        getPowerOverrides(), // Fetch power overrides
       ]);
       setPrinters(printersData);
       setFilamentTypes(filamentTypesData);
       setBrands(brandsData);
+      setConfiguredOverrides(powerOverridesData); // Set power overrides to state
     } catch (error) {
-      console.error("Failed to load data for dropdowns:", error);
+      console.error("Failed to load data:", error);
       toast({
         title: "Erro ao carregar dados",
-        description: "Não foi possível carregar impressoras ou tipos de filamento.",
+        description: "Não foi possível carregar dados para configurações.",
         variant: "destructive",
       });
     }
   }, [toast]);
 
   useEffect(() => {
-    loadDropdownData();
-  }, [loadDropdownData]);
+    loadConfigData();
+  }, [loadConfigData]);
 
   const getBrandNameById = useCallback((brandId?: string) => {
     if (!brandId) return "";
@@ -104,15 +96,16 @@ export default function ConfiguracoesPage() {
 
 
   const handleSaveKwh = () => {
+    // In a real app, this would be saved to a backend or global config store
     console.log("Salvar valor kWh:", kwhValue);
     toast({
       title: "Configuração Salva",
-      description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}. (Simulação)`,
+      description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}. (Simulação de salvamento)`,
       variant: "success",
     });
   };
 
-  const handleSaveSpecificPowerConsumption = () => {
+  const handleSaveSpecificPowerConsumption = async () => {
     if (!selectedPrinterId || !selectedFilamentTypeId || !specificPowerWatts) {
       toast({
         title: "Campos Obrigatórios",
@@ -153,21 +146,27 @@ export default function ConfiguracoesPage() {
       powerWatts: power,
     };
 
-    setConfiguredOverrides(prevOverrides => {
-      const existingIndex = prevOverrides.findIndex(ov => ov.id === overrideId);
-      if (existingIndex !== -1) {
-        const updatedOverrides = [...prevOverrides];
-        updatedOverrides[existingIndex] = newOverride;
-        return updatedOverrides;
-      }
-      return [...prevOverrides, newOverride];
-    });
-
-    toast({
-      title: "Configuração Específica Salva",
-      description: `Potência de ${power}W para ${getPrinterDisplayName(printer)} com ${filamentType.nome} salva. (Simulação)`,
-      variant: "success",
-    });
+    const result = await savePowerOverride(newOverride);
+    if (result.success) {
+      toast({
+        title: "Configuração Específica Salva",
+        description: `Potência de ${power}W para ${getPrinterDisplayName(printer)} com ${filamentType.nome} salva.`,
+        variant: "success",
+      });
+      // Reload overrides to reflect the change
+      const updatedOverrides = await getPowerOverrides();
+      setConfiguredOverrides(updatedOverrides);
+      // Clear form fields
+      setSelectedPrinterId("");
+      setSelectedFilamentTypeId("");
+      setSpecificPowerWatts("");
+    } else {
+      toast({
+        title: "Erro ao Salvar",
+        description: result.error || "Não foi possível salvar a configuração específica.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSortOverrides = (key: SortableOverrideField) => {
@@ -209,7 +208,7 @@ export default function ConfiguracoesPage() {
     <div className="space-y-6">
       <PageHeader title="Configurações do Sistema" />
 
-      <Accordion type="single" collapsible className="w-full space-y-4">
+      <Accordion type="single" collapsible className="w-full space-y-4" defaultValue="item-1">
         <AccordionItem value="item-1" className="border rounded-lg bg-card shadow-sm">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center text-lg font-semibold">
@@ -320,21 +319,21 @@ export default function ConfiguracoesPage() {
                           <TableHeader>
                             <TableRow>
                               <TableHead 
-                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground"
+                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
                                 onClick={() => handleSortOverrides('printerName')}
                                 role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('printerName'); }} aria-label="Sort by Impressora"
                               >
                                 <div className="flex items-center">Impressora <span className="ml-1">{renderSortIcon('printerName')}</span></div>
                               </TableHead>
                               <TableHead 
-                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground"
+                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
                                 onClick={() => handleSortOverrides('filamentTypeName')}
                                 role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('filamentTypeName'); }} aria-label="Sort by Filamento"
                               >
                                <div className="flex items-center">Filamento <span className="ml-1">{renderSortIcon('filamentTypeName')}</span></div>
                               </TableHead>
                               <TableHead 
-                                className="px-3 py-2 text-xs text-right cursor-pointer hover:text-foreground"
+                                className="px-3 py-2 text-xs text-right cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
                                 onClick={() => handleSortOverrides('powerWatts')}
                                 role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('powerWatts'); }} aria-label="Sort by Potência"
                               >
@@ -363,9 +362,6 @@ export default function ConfiguracoesPage() {
                     </Card>
                   </div>
                 )}
-                 <p className="text-xs text-muted-foreground mt-2">
-                  (Em desenvolvimento) A integração destes valores com o cálculo de custo dos produtos será implementada.
-                </p>
               </div>
 
               <Separator className="my-6" />
