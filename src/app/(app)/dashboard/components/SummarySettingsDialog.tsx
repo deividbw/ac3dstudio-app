@@ -16,8 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { SummaryCardConfig } from '@/lib/constants';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
-// Renaming local type to avoid conflict if SummaryCardConfig is also imported for other reasons.
 interface DialogSummaryCardConfig extends SummaryCardConfig {
   visible: boolean;
 }
@@ -38,8 +38,6 @@ export function SummarySettingsDialog({
   const [localSettings, setLocalSettings] = useState<DialogSummaryCardConfig[]>([]);
 
   useEffect(() => {
-    // Create a new array with shallow copies of card objects to avoid mutating the prop
-    // and to ensure local state is distinct. This preserves function components like icons.
     if (isOpen) {
       setLocalSettings(currentSettings.map(card => ({ ...card })));
     }
@@ -53,14 +51,29 @@ export function SummarySettingsDialog({
     );
   };
 
+  const handleMoveItem = (index: number, direction: 'up' | 'down') => {
+    setLocalSettings(prevSettings => {
+      const newSettings = [...prevSettings];
+      const itemToMove = newSettings[index];
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+
+      if (swapIndex < 0 || swapIndex >= newSettings.length) {
+        return prevSettings; // Should not happen if buttons are disabled correctly
+      }
+
+      newSettings[index] = newSettings[swapIndex];
+      newSettings[swapIndex] = itemToMove;
+      return newSettings;
+    });
+  };
+
   const handleSaveChanges = () => {
     onSave(localSettings);
-    onOpenChange(false); // Close dialog on save
+    onOpenChange(false); 
   };
 
   const handleCancel = () => {
     onOpenChange(false);
-    // No need to reset localSettings here as useEffect will handle it if reopened with original currentSettings
   };
 
   return (
@@ -69,21 +82,45 @@ export function SummarySettingsDialog({
         <DialogHeader>
           <DialogTitle>Personalizar Resumo</DialogTitle>
           <DialogDescription>
-            Selecione os cards que você deseja exibir no painel de resumo.
+            Selecione os cards que você deseja exibir e ordene-os no painel de resumo.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] p-1 pr-3">
-          <div className="space-y-3 py-3">
-            {localSettings.map(card => (
-              <div key={card.id} className="flex items-center space-x-3">
-                <Checkbox
-                  id={`summary-card-${card.id}`}
-                  checked={card.visible}
-                  onCheckedChange={(checked) => handleCheckboxChange(card.id, !!checked)}
-                />
-                <Label htmlFor={`summary-card-${card.id}`} className="text-sm font-normal cursor-pointer flex-1">
-                  {card.title}
-                </Label>
+          <div className="space-y-2 py-3">
+            {localSettings.map((card, index) => (
+              <div key={card.id} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50">
+                <div className="flex items-center space-x-3 flex-grow">
+                  <Checkbox
+                    id={`summary-card-${card.id}`}
+                    checked={card.visible}
+                    onCheckedChange={(checked) => handleCheckboxChange(card.id, !!checked)}
+                  />
+                  <Label htmlFor={`summary-card-${card.id}`} className="text-sm font-normal cursor-pointer flex-1">
+                    {card.title}
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-1 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleMoveItem(index, 'up')}
+                    disabled={index === 0}
+                    aria-label={`Mover ${card.title} para cima`}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleMoveItem(index, 'down')}
+                    disabled={index === localSettings.length - 1}
+                    aria-label={`Mover ${card.title} para baixo`}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
             {localSettings.length === 0 && (
@@ -103,4 +140,3 @@ export function SummarySettingsDialog({
     </Dialog>
   );
 }
-
