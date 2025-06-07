@@ -41,31 +41,31 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     resolver: zodResolver(PrinterSchema),
     defaultValues: printer ? {
       ...printer,
-      nome: printer.nome ?? undefined,
+      // nome: printer.nome ?? undefined, // Nome foi removido
       marcaId: printer.marcaId ?? undefined,
       modelo: printer.modelo ?? undefined,
-      custoEnergiaKwh: printer.custoEnergiaKwh, // Preserve existing if editing
+      custoEnergiaKwh: printer.custoEnergiaKwh, 
     } : {
-      nome: undefined, 
+      // nome: undefined, 
       marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
-      consumoEnergiaHora: 0.1,
+      consumoEnergiaHora: 0.1, // Em kWh (ex: 100W -> 0.1 kWh)
       taxaDepreciacaoHora: 0,
-      // custoEnergiaKwh will be set by default in the action for new printers
+      // custoEnergiaKwh será definido por padrão na action para novas impressoras
     },
   });
 
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
     try {
       const dataForAction: Omit<Printer, 'id'> = {
-        nome: printer?.nome, 
+        // nome: values.nome, // Nome foi removido
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
-        consumoEnergiaHora: Number(values.consumoEnergiaHora),
+        consumoEnergiaHora: Number(values.consumoEnergiaHora), // Este valor já está em kWh devido à conversão no input
         taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
-        custoEnergiaKwh: printer ? printer.custoEnergiaKwh : values.custoEnergiaKwh, // Preserve for edit, action sets default for new
+        custoEnergiaKwh: printer ? printer.custoEnergiaKwh : values.custoEnergiaKwh, 
       };
 
       let actionResult;
@@ -78,7 +78,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       if (actionResult.success && actionResult.printer) {
         toast({
           title: printer ? "Impressora Atualizada" : "Impressora Criada",
-          description: `A impressora ${actionResult.printer.nome || `${actionResult.printer.modelo || 'sem nome'}`} foi salva.`,
+          description: `A impressora ${actionResult.printer.modelo || 'sem nome'} foi salva.`,
           variant: "success",
         });
         onSuccess(actionResult.printer);
@@ -99,8 +99,8 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     }
   }
   
-  const handleNumericInputChange = (field: any, value: string) => {
-    if (value === '') {
+  const handleGenericNumericInputChange = (field: any, value: string) => {
+    if (value.trim() === '') {
       field.onChange(undefined);
     } else {
       const num = parseFloat(value);
@@ -108,9 +108,29 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     }
   };
   
-  const getNumericFieldValue = (value: number | undefined | null) => {
+  const getGenericNumericFieldValue = (value: number | undefined | null) => {
       return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
+
+  const handlePotenciaWattsInputChange = (field: any, valueInWattsStr: string) => {
+    if (valueInWattsStr.trim() === '') {
+      field.onChange(undefined);
+    } else {
+      const numWatts = parseFloat(valueInWattsStr);
+      if (Number.isNaN(numWatts)) {
+        field.onChange(undefined);
+      } else {
+        field.onChange(numWatts / 1000); // Converte Watts para kWh para o estado do formulário
+      }
+    }
+  };
+
+  const getPotenciaWattsFieldValue = (valueInKwh: number | undefined | null) => {
+    if (valueInKwh === undefined || valueInKwh === null || Number.isNaN(valueInKwh)) {
+      return '';
+    }
+    return String(valueInKwh * 1000); // Converte kWh do estado do formulário para Watts para exibição
+  };
 
 
   return (
@@ -177,8 +197,8 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                     <FormLabel>Custo Aquisição (R$)*</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" placeholder="Ex: 1500.00" 
-                             value={getNumericFieldValue(field.value)}
-                             onChange={e => handleNumericInputChange(field, e.target.value)} />
+                             value={getGenericNumericFieldValue(field.value)}
+                             onChange={e => handleGenericNumericInputChange(field, e.target.value)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -186,14 +206,18 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
               />
               <FormField
                 control={form.control}
-                name="consumoEnergiaHora"
+                name="consumoEnergiaHora" // Internamente, este campo armazena kWh
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Consumo Energia (kWh)*</FormLabel>
+                    <FormLabel>Potência Watts *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 0.2" 
-                             value={getNumericFieldValue(field.value)}
-                             onChange={e => handleNumericInputChange(field, e.target.value)} />
+                      <Input 
+                        type="number" 
+                        step="1" // Comum para Watts
+                        placeholder="Ex: 150" // Exemplo em Watts
+                        value={getPotenciaWattsFieldValue(field.value)}
+                        onChange={e => handlePotenciaWattsInputChange(field, e.target.value)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -201,7 +225,6 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
               />
             </div>
 
-            {/* Taxa de Depreciação agora ocupa a linha inteira */}
             <FormField
               control={form.control}
               name="taxaDepreciacaoHora"
@@ -210,14 +233,13 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                   <FormLabel>Depreciação (R$/hora)*</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="Ex: 0.50" 
-                            value={getNumericFieldValue(field.value)}
-                            onChange={e => handleNumericInputChange(field, e.target.value)} />
+                            value={getGenericNumericFieldValue(field.value)}
+                            onChange={e => handleGenericNumericInputChange(field, e.target.value)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {/* Custo Energia (R$/kWh) field removed */}
           </div>
           <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
              <DialogClose asChild>
