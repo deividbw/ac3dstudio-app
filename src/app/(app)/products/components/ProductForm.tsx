@@ -66,14 +66,12 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     const currentValues = form.getValues();
     
     if (!currentValues.filamentoId || !currentValues.impressoraId) {
-      if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
-      setShowCostSection(false);
+      // This case should be handled by the useEffect's else block now
       return;
     }
     
     if (Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
-       if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
-       setShowCostSection(false);
+       // This case should be handled by the useEffect's else block now
        return;
     }
 
@@ -82,12 +80,13 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
     if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
       toast({ title: "Filamento Inválido", description: "O filamento selecionado não possui um preço por Kg válido para cálculo.", variant: "destructive" });
-      if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
+      setCostBreakdown(undefined); 
       setShowCostSection(false);
       return;
     }
     if (!selectedPrinter) {
-      if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
+      // This case should be handled by the useEffect's else block now
+      setCostBreakdown(undefined); 
       setShowCostSection(false);
       return;
     }
@@ -125,7 +124,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     } finally {
         setIsCalculating(false);
     }
-  }, [form, filaments, printers, toast, costBreakdown]); // Added costBreakdown here as it's read indirectly via the `if (costBreakdown !== undefined)` checks before early returns
+  }, [form, filaments, printers, toast]);
 
   const filamentoId = form.watch("filamentoId");
   const impressoraId = form.watch("impressoraId");
@@ -136,21 +135,16 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
   const margemLucroPercentualWatched = form.watch("margemLucroPercentual");
 
   useEffect(() => {
-    const currentPesoGramas = form.getValues("pesoGramas");
-    const currentTempoImpressaoHoras = form.getValues("tempoImpressaoHoras");
+    const currentPesoGramasValue = form.getValues("pesoGramas");
+    const currentTempoImpressaoHorasValue = form.getValues("tempoImpressaoHoras");
 
-    if (filamentoId && impressoraId && Number(currentPesoGramas) > 0 && Number(currentTempoImpressaoHoras) > 0) {
+    if (filamentoId && impressoraId && Number(currentPesoGramasValue) > 0 && Number(currentTempoImpressaoHorasValue) > 0) {
       triggerCostCalculation();
     } else {
-       // Only update state if it's actually changing to avoid unnecessary re-renders
-       if (costBreakdown !== undefined) {
-           setCostBreakdown(undefined);
-       }
-       if (showCostSection) {
-           setShowCostSection(false);
-       }
+      // Unconditionally reset if conditions are not met to avoid needing costBreakdown/showCostSection in deps
+      setCostBreakdown(undefined);
+      setShowCostSection(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     filamentoId, 
     impressoraId, 
@@ -159,9 +153,8 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     custoModelagemWatched, 
     custosExtrasWatched, 
     margemLucroPercentualWatched,
-    triggerCostCalculation, // This is now memoized
-    costBreakdown, // For the conditional reset
-    showCostSection // For the conditional reset
+    triggerCostCalculation,
+    form // form.getValues is used in the effect's condition check
   ]);
 
 
