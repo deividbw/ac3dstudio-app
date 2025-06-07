@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from "@/components/ui/label"; // Added import
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -19,8 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { Filament, Brand } from '@/lib/types';
 import { getFilaments, updateFilamentStockBatch } from '@/lib/actions/filament.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
-import { Edit, PackageSearch, Filter } from 'lucide-react'; 
+import { Edit, PackageSearch, Filter, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import { FilamentStockUpdateDialog } from './components/FilamentStockUpdateDialog';
+
+type SortableField = 'marcaId' | 'tipo' | 'cor' | 'modelo';
 
 export default function FilamentStockPage() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
@@ -30,6 +32,9 @@ export default function FilamentStockPage() {
 
   const [filterTipo, setFilterTipo] = useState("");
   const [filterCor, setFilterCor] = useState("");
+
+  const [sortField, setSortField] = useState<SortableField>('marcaId');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
   const [editingFilamentForStock, setEditingFilamentForStock] = useState<Filament | null>(null);
@@ -61,12 +66,54 @@ export default function FilamentStockPage() {
     return brand ? brand.nome : "Desconhecida";
   }, [brands]);
 
-  const filteredFilaments = useMemo(() => {
-    return filaments.filter(f =>
+  const handleSort = (field: SortableField) => {
+    if (field === sortField) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedAndFilteredFilaments = useMemo(() => {
+    let items = filaments.filter(f =>
       (filterTipo === "" || f.tipo.toLowerCase().includes(filterTipo.toLowerCase())) &&
       (filterCor === "" || f.cor.toLowerCase().includes(filterCor.toLowerCase()))
     );
-  }, [filaments, filterTipo, filterCor]);
+
+    if (sortField) {
+      items.sort((a, b) => {
+        let valA: string | number = '';
+        let valB: string | number = '';
+
+        switch (sortField) {
+          case 'marcaId':
+            valA = getBrandNameById(a.marcaId)?.toLowerCase() || '';
+            valB = getBrandNameById(b.marcaId)?.toLowerCase() || '';
+            break;
+          case 'tipo':
+            valA = a.tipo.toLowerCase();
+            valB = b.tipo.toLowerCase();
+            break;
+          case 'cor':
+            valA = a.cor.toLowerCase();
+            valB = b.cor.toLowerCase();
+            break;
+          case 'modelo':
+            valA = a.modelo?.toLowerCase() || '';
+            valB = b.modelo?.toLowerCase() || '';
+            break;
+          default:
+            return 0;
+        }
+
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return items;
+  }, [filaments, filterTipo, filterCor, sortField, sortDirection, getBrandNameById]);
 
   const handleOpenStockUpdateDialog = (filament: Filament) => {
     setEditingFilamentForStock(filament);
@@ -78,12 +125,12 @@ export default function FilamentStockPage() {
       toast({ title: "Nenhuma Alteração", description: "Nenhuma quantidade ou preço foi fornecido para atualização.", variant: "default" });
       return;
     }
-    setIsLoading(true); 
+    setIsLoading(true);
     try {
-      const result = await updateFilamentStockBatch([update]); 
+      const result = await updateFilamentStockBatch([update]);
       if (result.success && result.updatedCount > 0) {
         toast({ title: "Estoque Atualizado", description: `Filamento atualizado com sucesso.`, variant: "success" });
-        loadData(); 
+        loadData();
       } else if (result.errors && result.errors.length > 0) {
          toast({ title: "Erro ao Atualizar", description: result.errors[0].error, variant: "destructive" });
       } else if (!result.success) {
@@ -96,16 +143,22 @@ export default function FilamentStockPage() {
       setIsLoading(false);
     }
   };
-  
+
   const formatCurrency = (value?: number) => {
     if (value === undefined || value === null || Number.isNaN(value)) return "N/A";
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  const renderSortIcon = (field: SortableField) => {
+    if (sortField === field) {
+      return sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />;
+    }
+    return <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />;
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Estoque de Filamentos">
-        {/* Placeholder for potential future actions like export */}
       </PageHeader>
 
       <Card className="shadow-lg">
@@ -128,18 +181,18 @@ export default function FilamentStockPage() {
             />
           </div>
            <div className="mb-3 text-sm text-muted-foreground">
-             Exibindo {filteredFilaments.length} de {filaments.length} filamento(s).
+             Exibindo {sortedAndFilteredFilaments.length} de {filaments.length} filamento(s).
           </div>
 
-          {isLoading && filteredFilaments.length === 0 ? (
+          {isLoading && sortedAndFilteredFilaments.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground">Carregando filamentos...</div>
-          ) : !isLoading && filaments.length === 0 ? ( 
+          ) : !isLoading && filaments.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground flex flex-col items-center space-y-3">
               <PackageSearch className="h-12 w-12" />
               <p className="font-medium">Nenhum filamento cadastrado ainda.</p>
-              <p className="text-sm">Vá para <a href="/servicos/cadastros" className="text-primary hover:underline">Cadastros &gt; Filamentos</a> para adicionar.</p>
+              <p className="text-sm">Vá para <a href="/servicos/cadastros?tab=filaments" className="text-primary hover:underline">Cadastros &gt; Filamentos</a> para adicionar.</p>
             </div>
-          ) : !isLoading && filteredFilaments.length === 0 && filaments.length > 0 ? ( 
+          ) : !isLoading && sortedAndFilteredFilaments.length === 0 && filaments.length > 0 ? (
              <div className="p-6 text-center text-muted-foreground">
               Nenhum filamento encontrado com os filtros aplicados. Limpe os filtros para ver todos os itens.
             </div>
@@ -148,17 +201,33 @@ export default function FilamentStockPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[120px] px-2 py-2 font-semibold uppercase">Marca</TableHead>
-                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">Tipo</TableHead>
-                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">Cor</TableHead>
-                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">Modelo</TableHead>
+                    <TableHead className="min-w-[120px] px-2 py-2 font-semibold uppercase">
+                       <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('marcaId')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('marcaId'); }} aria-label="Sort by Marca">
+                        Marca <span className="ml-1">{renderSortIcon('marcaId')}</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">
+                      <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('tipo')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('tipo'); }} aria-label="Sort by Tipo">
+                        Tipo <span className="ml-1">{renderSortIcon('tipo')}</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">
+                       <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('cor')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('cor'); }} aria-label="Sort by Cor">
+                        Cor <span className="ml-1">{renderSortIcon('cor')}</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">
+                      <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('modelo')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('modelo'); }} aria-label="Sort by Modelo">
+                        Modelo <span className="ml-1">{renderSortIcon('modelo')}</span>
+                      </div>
+                    </TableHead>
                     <TableHead className="text-right min-w-[100px] px-2 py-2 font-semibold uppercase">Qtd. Atual (g)</TableHead>
                     <TableHead className="text-right min-w-[120px] px-2 py-2 font-semibold uppercase">Preço Atual (R$/kg)</TableHead>
                     <TableHead className="w-[80px] text-center px-2 py-2 font-semibold uppercase">Ação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredFilaments.map((f) => (
+                  {sortedAndFilteredFilaments.map((f) => (
                     <TableRow key={f.id}>
                       <TableCell className="font-medium px-2 py-1.5">{getBrandNameById(f.marcaId)}</TableCell>
                       <TableCell className="px-2 py-1.5">{f.tipo}</TableCell>
@@ -197,3 +266,5 @@ export default function FilamentStockPage() {
     </div>
   );
 }
+
+    
