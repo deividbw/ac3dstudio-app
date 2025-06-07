@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import type { ShortcutCardConfig } from '@/lib/constants';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ALL_SHORTCUT_CARDS_CONFIG } from '@/lib/constants'; // Import for robust icon re-assignment
 
 interface DialogShortcutCardConfig extends ShortcutCardConfig {
   visible: boolean;
@@ -39,8 +40,21 @@ export function ShortcutSettingsDialog({
 
   useEffect(() => {
     if (isOpen) {
-      // Create a new array of new objects to avoid direct state mutation
-      setLocalSettings(currentSettings.map(card => ({ ...card })));
+      // Ensure icon references are correctly preserved or re-assigned from original config
+      const initializedSettings = currentSettings.map(userSetting => {
+        const originalCard = ALL_SHORTCUT_CARDS_CONFIG.find(c => c.id === userSetting.id);
+        return {
+          ...userSetting, // Start with user's settings (like 'visible' and order)
+          ...(originalCard ? { // Overlay original static props to ensure they are not corrupted
+            icon: originalCard.icon,
+            label: originalCard.label,
+            iconBgColor: originalCard.iconBgColor,
+            defaultVisible: originalCard.defaultVisible,
+          } : {}),
+          visible: userSetting.visible, // Ensure user's visibility choice is paramount
+        };
+      });
+      setLocalSettings(initializedSettings);
     }
   }, [currentSettings, isOpen]);
 

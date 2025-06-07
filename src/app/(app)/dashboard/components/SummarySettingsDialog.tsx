@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import type { SummaryCardConfig } from '@/lib/constants';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ALL_SUMMARY_CARDS_CONFIG } from '@/lib/constants'; // Import for robust icon re-assignment
 
 interface DialogSummaryCardConfig extends SummaryCardConfig {
   visible: boolean;
@@ -39,7 +40,23 @@ export function SummarySettingsDialog({
 
   useEffect(() => {
     if (isOpen) {
-      setLocalSettings(currentSettings.map(card => ({ ...card })));
+      // Ensure icon references are correctly preserved or re-assigned from original config
+      const initializedSettings = currentSettings.map(userSetting => {
+        const originalCard = ALL_SUMMARY_CARDS_CONFIG.find(c => c.id === userSetting.id);
+        return {
+          ...userSetting, // Start with user's settings (like 'visible' and order)
+          ...(originalCard ? { // Overlay original static props to ensure they are not corrupted
+            icon: originalCard.icon,
+            title: originalCard.title,
+            iconBgColor: originalCard.iconBgColor,
+            iconTextColor: originalCard.iconTextColor,
+            mainValueColorClass: originalCard.mainValueColorClass,
+            defaultVisible: originalCard.defaultVisible,
+          } : {}),
+          visible: userSetting.visible, // Ensure user's visibility choice is paramount
+        };
+      });
+      setLocalSettings(initializedSettings);
     }
   }, [currentSettings, isOpen]);
 
@@ -58,7 +75,7 @@ export function SummarySettingsDialog({
       const swapIndex = direction === 'up' ? index - 1 : index + 1;
 
       if (swapIndex < 0 || swapIndex >= newSettings.length) {
-        return prevSettings; // Should not happen if buttons are disabled correctly
+        return prevSettings; 
       }
 
       newSettings[index] = newSettings[swapIndex];
