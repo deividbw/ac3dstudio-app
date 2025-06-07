@@ -27,7 +27,6 @@ import { PrinterSchema } from "@/lib/schemas";
 import type { Printer, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createPrinter, updatePrinter } from '@/lib/actions/printer.actions';
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PrinterFormProps {
   printer?: Printer | null;
@@ -114,142 +113,139 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
 
   return (
     <>
-      <DialogHeader>
+      <DialogHeader className="sticky top-0 z-10 bg-background p-6 border-b">
         <DialogTitle className="font-headline">{printer ? "Editar Impressora" : "Adicionar Nova Impressora"}</DialogTitle>
         <DialogDescription>
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
         </DialogDescription>
       </DialogHeader>
-      <Form {...form} className="flex-grow flex flex-col min-h-0">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow flex flex-col min-h-0">
-          <ScrollArea className="flex-grow min-h-0 p-1 pr-3">
-            <div className="space-y-3 py-2">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="p-6 space-y-3">
+            <FormField
+              control={form.control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome da Impressora*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Ender 3, Prusa MK3" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="nome"
+                name="marcaId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da Impressora*</FormLabel>
+                    <FormLabel>Marca</FormLabel>
+                     <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value ?? ""}
+                      >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma marca" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {brands.map((brand) => (
+                          <SelectItem key={brand.id} value={brand.id}>
+                            {brand.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="modelo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modelo</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ex: Ender 3, Prusa MK3" {...field} />
+                      <Input placeholder="Ex: V2, MK3S+" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="marcaId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marca</FormLabel>
-                       <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value ?? ""}
-                        >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma marca" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {/* <SelectItem value="">Nenhuma</SelectItem> REMOVED */}
-                          {brands.map((brand) => (
-                            <SelectItem key={brand.id} value={brand.id}>
-                              {brand.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="modelo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Modelo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: V2, MK3S+" {...field} value={field.value ?? ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="custoAquisicao"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Custo Aquisição (R$)*</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 1500.00" 
-                               value={getNumericFieldValue(field.value)}
-                               onChange={e => handleNumericInputChange(field, e.target.value)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="consumoEnergiaHora"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Consumo Energia (kWh)*</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 0.2" 
-                               value={getNumericFieldValue(field.value)}
-                               onChange={e => handleNumericInputChange(field, e.target.value)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="taxaDepreciacaoHora"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Depreciação (R$/hora)*</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 0.50" 
-                               value={getNumericFieldValue(field.value)}
-                               onChange={e => handleNumericInputChange(field, e.target.value)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="custoEnergiaKwh"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Custo Energia (R$/kWh)*</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 0.75" 
-                               value={getNumericFieldValue(field.value)}
-                               onChange={e => handleNumericInputChange(field, e.target.value)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
-          </ScrollArea>
-          <DialogFooter className="pt-4 flex-shrink-0">
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="custoAquisicao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custo Aquisição (R$)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Ex: 1500.00" 
+                             value={getNumericFieldValue(field.value)}
+                             onChange={e => handleNumericInputChange(field, e.target.value)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="consumoEnergiaHora"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Consumo Energia (kWh)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Ex: 0.2" 
+                             value={getNumericFieldValue(field.value)}
+                             onChange={e => handleNumericInputChange(field, e.target.value)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="taxaDepreciacaoHora"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Depreciação (R$/hora)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Ex: 0.50" 
+                             value={getNumericFieldValue(field.value)}
+                             onChange={e => handleNumericInputChange(field, e.target.value)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="custoEnergiaKwh"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custo Energia (R$/kWh)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="Ex: 0.75" 
+                             value={getNumericFieldValue(field.value)}
+                             onChange={e => handleNumericInputChange(field, e.target.value)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+          <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
              <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
