@@ -1,8 +1,8 @@
 
 "use client";
 
-import React from 'react';
-import { useRouter } from 'next/navigation'; // Importar useRouter
+import React, { useState } from 'react'; // Import useState
+import { useRouter } from 'next/navigation';
 import { Icons } from '@/lib/constants';
 import { FeatureCard } from '@/components/FeatureCard';
 import { ShortcutCard } from '@/components/ShortcutCard';
@@ -10,7 +10,6 @@ import { SummaryCard } from '@/components/SummaryCard';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-// Define specific icon background colors based on the image
 const iconColors = {
   pedidos: "bg-primary", 
   agenda: "bg-accent", 
@@ -22,13 +21,11 @@ const iconColors = {
   novoRecebimento: "bg-green-500",
   novoCompromisso: "bg-accent",
   novoCliente: "bg-orange-500",
-
-  // New summary card icon colors
   pedidosConcluidos: "bg-green-100 dark:bg-green-900",
   valoresAReceber: "bg-blue-100 dark:bg-blue-900",
-  valoresRecebidos: "bg-emerald-100 dark:bg-emerald-900", // Using emerald for a slightly different green
+  valoresRecebidos: "bg-emerald-100 dark:bg-emerald-900",
   pedidosCancelados: "bg-red-100 dark:bg-red-900",
-  valoresEmAtraso: "bg-amber-100 dark:bg-amber-900", // Using amber for orange/yellowish
+  valoresEmAtraso: "bg-amber-100 dark:bg-amber-900",
 };
 
 const iconTextColors = {
@@ -39,9 +36,13 @@ const iconTextColors = {
   valoresEmAtraso: "text-amber-600 dark:text-amber-400",
 }
 
-
 export default function DashboardPage() {
   const router = useRouter(); 
+  const [showSummaryValues, setShowSummaryValues] = useState(true);
+
+  const toggleSummaryValuesVisibility = () => {
+    setShowSummaryValues(prevState => !prevState);
+  };
 
   return (
     <div className="space-y-6">
@@ -84,8 +85,13 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider">Resumo</h2>
           <div className="flex items-center space-x-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
-              <Icons.EyeOff className="h-5 w-5" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-muted-foreground"
+              onClick={toggleSummaryValuesVisibility}
+            >
+              {showSummaryValues ? <Icons.EyeOff className="h-5 w-5" /> : <Icons.Eye className="h-5 w-5" />}
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
               <Icons.SlidersHorizontal className="h-5 w-5" />
@@ -101,6 +107,7 @@ export default function DashboardPage() {
             mainValue="R$ 0,00"
             subDescription="0 pedidos"
             mainValueColorClass="text-green-600 dark:text-green-400"
+            isValueVisible={showSummaryValues}
           />
           <SummaryCard 
             icon={Icons.Hourglass}
@@ -110,6 +117,7 @@ export default function DashboardPage() {
             mainValue="R$ 0,00"
             subDescription="0 pedidos"
             mainValueColorClass="text-blue-600 dark:text-blue-400"
+            isValueVisible={showSummaryValues}
           />
           <SummaryCard 
             icon={Icons.WalletCards}
@@ -119,6 +127,7 @@ export default function DashboardPage() {
             mainValue="R$ 0,00"
             subDescription="0 pedidos"
             mainValueColorClass="text-emerald-600 dark:text-emerald-400"
+            isValueVisible={showSummaryValues}
           />
           <SummaryCard 
             icon={Icons.CalendarX2}
@@ -128,6 +137,7 @@ export default function DashboardPage() {
             mainValue="R$ 0,00"
             subDescription="0 pedidos"
             mainValueColorClass="text-red-600 dark:text-red-400"
+            isValueVisible={showSummaryValues}
           />
           <SummaryCard 
             icon={Icons.TrendingDown}
@@ -137,6 +147,7 @@ export default function DashboardPage() {
             mainValue="R$ 0,00"
             subDescription="0 pedidos"
             mainValueColorClass="text-amber-600 dark:text-amber-400"
+            isValueVisible={showSummaryValues}
           />
         </div>
       </div>

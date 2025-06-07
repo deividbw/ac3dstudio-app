@@ -12,6 +12,7 @@ interface SummaryCardProps {
   subDescription: string;
   mainValueColorClass?: string; // e.g., "text-green-600", "text-red-500"
   onClick?: () => void;
+  isValueVisible?: boolean; // New prop
 }
 
 export function SummaryCard({ 
@@ -22,12 +23,15 @@ export function SummaryCard({
   mainValue,
   subDescription,
   mainValueColorClass = "text-primary",
-  onClick 
+  onClick,
+  isValueVisible = true, // Default to true
 }: SummaryCardProps) {
+  const displayValue = isValueVisible ? mainValue : "R$ •••,••";
+  
   return (
     <Card 
       className="shadow-md hover:shadow-lg transition-shadow"
-      onClick={onClick} // Removed cursor-pointer if onClick is not always present or handled differently now
+      onClick={onClick} 
     >
       <CardContent className="flex items-start space-x-3 p-3">
         <div className={cn("p-2.5 rounded-lg shadow-sm", iconBgColor)}>
@@ -35,7 +39,7 @@ export function SummaryCard({
         </div>
         <div className="flex-1 space-y-0.5">
           <p className="text-xs text-muted-foreground">{title}</p>
-          <h3 className={cn("text-lg font-bold", mainValueColorClass)}>{mainValue}</h3>
+          <h3 className={cn("text-lg font-bold", mainValueColorClass)}>{displayValue}</h3>
           <p className="text-xs text-muted-foreground">{subDescription}</p>
         </div>
       </CardContent>
