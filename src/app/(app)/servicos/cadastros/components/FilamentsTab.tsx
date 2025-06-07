@@ -29,10 +29,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
 import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
-import type { Filament, Brand } from '@/lib/types';
+import type { Filament, Brand, FilamentType } from '@/lib/types'; // Import FilamentType
 import { useToast } from '@/hooks/use-toast';
 import { getFilaments as mockGetFilaments, deleteFilament as mockDeleteFilament, updateFilamentStockBatch } from '@/lib/actions/filament.actions';
 import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions';
+import { getFilamentTypes as mockGetFilamentTypes } from '@/lib/actions/filamentType.actions'; // Import action for filament types
 import {
   Table,
   TableBody,
@@ -49,6 +50,7 @@ type SortableFilamentField = 'marcaId' | 'tipo' | 'cor' | 'modelo' | 'densidade'
 export function FilamentsTab() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]); // State for filament types
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
   const [deletingFilamentId, setDeletingFilamentId] = useState<string | null>(null);
@@ -71,12 +73,14 @@ export function FilamentsTab() {
 
 
   const loadData = useCallback(async () => {
-    const [filamentsData, brandsData] = await Promise.all([
+    const [filamentsData, brandsData, filamentTypesData] = await Promise.all([ // Fetch filament types
       mockGetFilaments(),
-      mockGetBrands()
+      mockGetBrands(),
+      mockGetFilamentTypes() 
     ]);
     setFilaments(filamentsData);
     setBrands(brandsData);
+    setFilamentTypes(filamentTypesData); // Set filament types state
   }, []);
 
   useEffect(() => {
@@ -252,6 +256,7 @@ export function FilamentsTab() {
             <FilamentForm
               filament={editingFilament}
               brands={brands}
+              filamentTypes={filamentTypes} // Pass filamentTypes to the form
               allFilaments={filaments} 
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingFilament(null); }}

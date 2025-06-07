@@ -24,19 +24,20 @@ import {
 } from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { FilamentSchema } from "@/lib/schemas";
-import type { Filament, Brand } from "@/lib/types";
+import type { Filament, Brand, FilamentType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
 
 interface FilamentFormProps {
   filament?: Filament | null;
   brands: Brand[];
+  filamentTypes: FilamentType[]; // Nova prop
   allFilaments: Filament[];
-  onSuccess: (filament: Filament, isNew: boolean) => void; // Modificado para incluir isNew
+  onSuccess: (filament: Filament, isNew: boolean) => void;
   onCancel: () => void;
 }
 
-export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCancel }: FilamentFormProps) {
+export function FilamentForm({ filament, brands, filamentTypes, allFilaments, onSuccess, onCancel }: FilamentFormProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof FilamentSchema>>({
     resolver: zodResolver(FilamentSchema),
@@ -49,7 +50,6 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
       modelo: filament.modelo ?? undefined,
       temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
       temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
-      // precoPorKg and quantidadeEstoqueGramas are not managed here
     } : {
       tipo: "",
       cor: "",
@@ -58,7 +58,6 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
       modelo: undefined,
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
-      // precoPorKg and quantidadeEstoqueGramas will default via schema or backend
     },
   });
 
@@ -80,7 +79,6 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
     try {
       const isCreatingNew = !filament || !filament.id;
 
-      // Validação de duplicidade ANTES de qualquer ação
       if (isCreatingNew) {
         const tipoLowerCase = values.tipo.toLowerCase();
         const corLowerCase = values.cor.toLowerCase();
@@ -122,7 +120,7 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
       let actionResult;
       if (isCreatingNew) {
         actionResult = await createFilament(dataForAction as Omit<Filament, 'id' | 'precoPorKg' | 'quantidadeEstoqueGramas'>);
-      } else { // Editing existing filament
+      } else { 
         const updatePayload: Partial<Omit<Filament, 'id'>> = {
           ...dataForAction,
           precoPorKg: filament.precoPorKg, 
@@ -137,7 +135,7 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
           description: `O filamento foi salvo.`,
           variant: "success",
         });
-        onSuccess(actionResult.filament, isCreatingNew); // Pass isNew flag
+        onSuccess(actionResult.filament, isCreatingNew);
       } else {
         toast({
           title: "Erro ao Salvar",
@@ -174,9 +172,23 @@ export function FilamentForm({ filament, brands, allFilaments, onSuccess, onCanc
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo do Filamento*</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: PLA, ABS" {...field} />
-                    </FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {filamentTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.nome}>
+                            {type.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
