@@ -49,9 +49,6 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
   const [showCostSection, setShowCostSection] = useState(!!product?.custoDetalhado);
   const [powerOverrideWarning, setPowerOverrideWarning] = useState<string | null>(null);
 
-  console.log("ProductForm Debug: Received powerOverrides prop:", JSON.stringify(powerOverrides.map(po => ({pid: po.printerId, fid: po.filamentTypeId, watts: po.powerWatts}))));
-
-
   const form = useForm<z.infer<typeof ProductSchema>>({
     resolver: zodResolver(ProductSchema),
     defaultValues: product || {
@@ -86,43 +83,30 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
     const currentValues = form.getValues();
     setPowerOverrideWarning(null);
 
-    console.log("ProductForm Debug: --- Initiating Cost Calculation ---");
-    console.log("ProductForm Debug: Current Form Values:", currentValues);
-    console.log("ProductForm Debug: Selected Filament ID:", currentValues.filamentoId);
-    console.log("ProductForm Debug: Selected Printer ID:", currentValues.impressoraId);
-
     if (!currentValues.filamentoId || !currentValues.impressoraId) {
       setCostBreakdown(undefined);
       setShowCostSection(false);
-      console.log("ProductForm Debug: Calculation aborted - missing filament or printer ID.");
       return;
     }
 
     if (Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
        setCostBreakdown(undefined);
        setShowCostSection(false);
-       console.log("ProductForm Debug: Calculation aborted - peso or tempo is zero or less.");
        return;
     }
 
     const selectedFilament = filaments.find(f => f.id === currentValues.filamentoId);
     const selectedPrinter = printers.find(p => p.id === currentValues.impressoraId);
 
-    console.log("ProductForm Debug: Selected Filament Object:", selectedFilament);
-    console.log("ProductForm Debug: Selected Printer Object:", selectedPrinter);
-
-
     if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
       toast({ title: "Filamento Inválido", description: "O filamento selecionado não possui um preço por Kg válido para cálculo.", variant: "destructive" });
       setCostBreakdown(undefined);
       setShowCostSection(false);
-      console.log("ProductForm Debug: Calculation aborted - invalid filament or filament price.");
       return;
     }
     if (!selectedPrinter) {
       setCostBreakdown(undefined);
       setShowCostSection(false);
-      console.log("ProductForm Debug: Calculation aborted - printer not found.");
       return;
     }
 
@@ -136,29 +120,17 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
 
       const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
 
-      let consumoEnergiaHoraParaCalculo = 0; 
+      let consumoEnergiaHoraParaCalculo = 0;
       let localPowerOverrideWarning: string | null = null;
-
-      console.log("ProductForm Debug: --- Override Lookup ---");
-      console.log("ProductForm Debug: Looking for Printer ID:", selectedPrinter.id, `(${getPrinterDisplayName(selectedPrinter)})`);
-      console.log("ProductForm Debug: Looking for Filament Tipo:", selectedFilament.tipo);
-      // console.log("ProductForm Debug: Full Available FilamentTypes prop:", JSON.stringify(filamentTypes.map(ft => ({id: ft.id, nome: ft.nome}))));
 
       const filamentType = filamentTypes.find(ft => ft.nome.toUpperCase() === selectedFilament.tipo.toUpperCase());
 
-      console.log("ProductForm Debug: Matched FilamentType Object for Override lookup:", filamentType ? {id: filamentType.id, nome: filamentType.nome} : "None found");
-      // console.log("ProductForm Debug: Full Available PowerOverrides prop (for lookup):", JSON.stringify(powerOverrides.map(po => ({printerId: po.printerId, filamentTypeId: po.filamentTypeId, watts: po.powerWatts }))));
-
-
       if (filamentType && selectedPrinter) {
-        console.log(`ProductForm Debug: Attempting lookup in powerOverrides with printerId: "${selectedPrinter.id}" and filamentTypeId: "${filamentType.id}"`);
         const override = powerOverrides.find(
           ov => ov.printerId === selectedPrinter.id && ov.filamentTypeId === filamentType.id
         );
-        console.log("ProductForm Debug: Found Override object:", override);
         if (override) {
-          consumoEnergiaHoraParaCalculo = override.powerWatts / 1000; 
-          console.log("ProductForm Debug: Using Override Power (kW):", consumoEnergiaHoraParaCalculo);
+          consumoEnergiaHoraParaCalculo = override.powerWatts / 1000;
         } else {
           localPowerOverrideWarning = `Config. de potência não encontrada para ${getPrinterDisplayName(selectedPrinter)} com ${selectedFilament.tipo}. Custo de energia será 0. Verifique Configurações.`;
           toast({
@@ -167,12 +139,10 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
             variant: "default",
             duration: 7000,
           });
-          console.log("ProductForm Debug: Override NOT found. Warning set.");
         }
       } else {
          if (!filamentType) {
             localPowerOverrideWarning = `Tipo de filamento '${selectedFilament.tipo}' não mapeado no sistema para busca de override de potência. Verifique os cadastros de Tipos de Filamento.`;
-            console.log("ProductForm Debug: FilamentType not found for selectedFilament.tipo:", selectedFilament.tipo);
          } else {
             localPowerOverrideWarning = `Impressora ou Tipo de Filamento não selecionado corretamente para busca de override.`;
          }
@@ -183,7 +153,6 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
             duration: 7000,
           });
       }
-      console.log("ProductForm Debug: --- Override Lookup Ended ---");
       setPowerOverrideWarning(localPowerOverrideWarning);
 
       const custoEnergiaImpressao = consumoEnergiaHoraParaCalculo * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
@@ -203,16 +172,14 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
       };
       setCostBreakdown(newBreakdown);
       setShowCostSection(true);
-      console.log("ProductForm Debug: Calculation successful. Breakdown:", newBreakdown);
 
     } catch (error: any) {
         toast({ title: "Erro no Cálculo", description: error.message || "Ocorreu um erro ao calcular o custo.", variant: "destructive" });
         setCostBreakdown(undefined);
         setShowCostSection(false);
-        console.error("ProductForm Debug: Error during calculation:", error);
+        console.error("Erro durante cálculo de custo:", error);
     } finally {
         setIsCalculating(false);
-        console.log("ProductForm Debug: --- Cost Calculation Ended ---");
     }
   }, [form, filaments, printers, toast, filamentTypes, powerOverrides, brands, getPrinterDisplayName]);
 

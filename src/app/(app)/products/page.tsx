@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, Trash2, DollarSign, Download, PackageSearch, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, DollarSign, Download, PackageSearch, AlertTriangle, Loader2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -59,8 +59,11 @@ export default function ProductsPage() {
   const [currentProductForCostDisplay, setCurrentProductForCostDisplay] = useState<Product | null>(null);
   
   const { toast } = useToast();
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
 
   const loadData = useCallback(async () => {
+    setIsLoadingData(true);
     try {
       const [productsData, filamentsData, printersData, brandsData, filamentTypesData, powerOverridesData] = await Promise.all([
         mockGetProducts(),
@@ -70,7 +73,6 @@ export default function ProductsPage() {
         mockGetFilamentTypes(),
         mockGetPowerOverrides(), 
       ]);
-      console.log("ProductsPage Debug: Fetched powerOverrides:", powerOverridesData); // DEBUG LOG
       setProducts(productsData);
       setFilaments(filamentsData);
       setPrinters(printersData);
@@ -80,6 +82,8 @@ export default function ProductsPage() {
     } catch (error) {
       console.error("Failed to load initial data:", error);
       toast({ title: "Erro ao carregar dados", description: "Não foi possível buscar todos os dados necessários.", variant: "destructive" });
+    } finally {
+      setIsLoadingData(false);
     }
   }, [toast]);
 
@@ -157,17 +161,36 @@ export default function ProductsPage() {
   };
 
   const openEditDialog = (product: Product) => {
+    if (isLoadingData) {
+      toast({ title: "Aguarde", description: "Os dados ainda estão carregando.", variant: "default" });
+      return;
+    }
     setEditingProduct(product);
     setIsFormOpen(true);
   };
 
   const openNewDialog = () => {
+    if (isLoadingData) {
+      toast({ title: "Aguarde", description: "Os dados ainda estão carregando.", variant: "default" });
+      return;
+    }
     setEditingProduct(null); 
     setIsFormOpen(true);
   };
   
-  const hasRequiredDataForProducts = filaments.length > 0 && printers.length > 0 && brands.length > 0 && filamentTypes.length > 0;
+  const hasRequiredDataForProducts = !isLoadingData && filaments.length > 0 && printers.length > 0 && brands.length > 0 && filamentTypes.length > 0;
 
+
+  if (isLoadingData) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Gerenciar Produtos e Custos" />
+        <div className="flex justify-center items-center p-10">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   if (!hasRequiredDataForProducts && (filaments.length === 0 || printers.length === 0 || brands.length === 0 || filamentTypes.length === 0)) {
     return (
@@ -209,18 +232,20 @@ export default function ProductsPage() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0"> 
-            <ProductForm 
-              product={editingProduct} 
-              filaments={filaments}
-              printers={printers}
-              brands={brands}
-              filamentTypes={filamentTypes}
-              powerOverrides={powerOverrides} 
-              onSuccess={handleFormSuccess}
-              onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
-            />
-          </DialogContent>
+          {!isLoadingData && isFormOpen && ( // Only render ProductForm when data is loaded and dialog is open
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0"> 
+              <ProductForm 
+                product={editingProduct} 
+                filaments={filaments}
+                printers={printers}
+                brands={brands}
+                filamentTypes={filamentTypes}
+                powerOverrides={powerOverrides} 
+                onSuccess={handleFormSuccess}
+                onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
+              />
+            </DialogContent>
+          )}
         </Dialog>
       </PageHeader>
 
