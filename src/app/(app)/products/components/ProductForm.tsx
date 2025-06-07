@@ -62,27 +62,17 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     },
   });
 
-  const watchedFields = form.watch([
-    "filamentoId", 
-    "impressoraId", 
-    "pesoGramas", 
-    "tempoImpressaoHoras",
-    "custoModelagem",
-    "custosExtras",
-    "margemLucroPercentual"
-  ]);
-
   const triggerCostCalculation = useCallback(async () => {
     const currentValues = form.getValues();
     
     if (!currentValues.filamentoId || !currentValues.impressoraId) {
-      if (costBreakdown !== undefined) setCostBreakdown(undefined);
+      if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
       setShowCostSection(false);
       return;
     }
     
     if (Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
-       if (costBreakdown !== undefined) setCostBreakdown(undefined);
+       if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
        setShowCostSection(false);
        return;
     }
@@ -92,12 +82,12 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
     if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
       toast({ title: "Filamento Inválido", description: "O filamento selecionado não possui um preço por Kg válido para cálculo.", variant: "destructive" });
-      if (costBreakdown !== undefined) setCostBreakdown(undefined);
+      if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
       setShowCostSection(false);
       return;
     }
     if (!selectedPrinter) {
-      if (costBreakdown !== undefined) setCostBreakdown(undefined);
+      if (costBreakdown !== undefined) setCostBreakdown(undefined); // Check internal state directly
       setShowCostSection(false);
       return;
     }
@@ -106,16 +96,16 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     try {
       const pesoGramas = Number(currentValues.pesoGramas) || 0;
       const tempoProducaoHoras = Number(currentValues.tempoImpressaoHoras) || 0;
-      const custoModelagem = Number(currentValues.custoModelagem) || 0;
-      const custosExtras = Number(currentValues.custosExtras) || 0;
-      const margemLucroPercentual = Number(currentValues.margemLucroPercentual) || 0;
+      const custoModelagemValue = Number(currentValues.custoModelagem) || 0;
+      const custosExtrasValue = Number(currentValues.custosExtras) || 0;
+      const margemLucroPercentualValue = Number(currentValues.margemLucroPercentual) || 0;
 
       const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
       const custoEnergiaImpressao = selectedPrinter.consumoEnergiaHora * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
       const custoDepreciacaoImpressao = selectedPrinter.taxaDepreciacaoHora * tempoProducaoHoras;
       const custoImpressaoCalculado = custoEnergiaImpressao + custoDepreciacaoImpressao;
-      const custoTotalProducaoCalculado = custoMaterialCalculado + custoImpressaoCalculado + custoModelagem + custosExtras;
-      const lucroCalculado = custoTotalProducaoCalculado * (margemLucroPercentual / 100);
+      const custoTotalProducaoCalculado = custoMaterialCalculado + custoImpressaoCalculado + custoModelagemValue + custosExtrasValue;
+      const lucroCalculado = custoTotalProducaoCalculado * (margemLucroPercentualValue / 100);
       const precoVendaCalculado = custoTotalProducaoCalculado + lucroCalculado;
 
       const newBreakdown: ProductCostBreakdown = {
@@ -135,21 +125,44 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     } finally {
         setIsCalculating(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, filaments, printers, toast, costBreakdown]); 
+  }, [form, filaments, printers, toast, costBreakdown]); // Added costBreakdown here as it's read indirectly via the `if (costBreakdown !== undefined)` checks before early returns
+
+  const filamentoId = form.watch("filamentoId");
+  const impressoraId = form.watch("impressoraId");
+  const pesoGramas = form.watch("pesoGramas");
+  const tempoImpressaoHoras = form.watch("tempoImpressaoHoras");
+  const custoModelagemWatched = form.watch("custoModelagem");
+  const custosExtrasWatched = form.watch("custosExtras");
+  const margemLucroPercentualWatched = form.watch("margemLucroPercentual");
 
   useEffect(() => {
-    const { filamentoId, impressoraId, pesoGramas, tempoImpressaoHoras } = form.getValues();
-    if (filamentoId && impressoraId && Number(pesoGramas) > 0 && Number(tempoImpressaoHoras) > 0) {
+    const currentPesoGramas = form.getValues("pesoGramas");
+    const currentTempoImpressaoHoras = form.getValues("tempoImpressaoHoras");
+
+    if (filamentoId && impressoraId && Number(currentPesoGramas) > 0 && Number(currentTempoImpressaoHoras) > 0) {
       triggerCostCalculation();
     } else {
+       // Only update state if it's actually changing to avoid unnecessary re-renders
        if (costBreakdown !== undefined) {
            setCostBreakdown(undefined);
        }
-       setShowCostSection(false);
+       if (showCostSection) {
+           setShowCostSection(false);
+       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedFields, triggerCostCalculation]);
+  }, [
+    filamentoId, 
+    impressoraId, 
+    pesoGramas, 
+    tempoImpressaoHoras, 
+    custoModelagemWatched, 
+    custosExtrasWatched, 
+    margemLucroPercentualWatched,
+    triggerCostCalculation, // This is now memoized
+    costBreakdown, // For the conditional reset
+    showCostSection // For the conditional reset
+  ]);
 
 
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
