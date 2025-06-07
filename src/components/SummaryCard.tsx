@@ -19,7 +19,7 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({ 
-  icon: IconInput, // Renamed prop alias to avoid confusion if IconInput itself is an object
+  icon: IconInput, 
   iconBgColor, 
   iconColor = "text-white", 
   title, 
@@ -31,16 +31,31 @@ export function SummaryCard({
 }: SummaryCardProps) {
   const displayValue = isValueVisible ? mainValue : "R$ •••,••";
   
-  // Resolve the actual component.
-  // If IconInput is already a function (the expected component), use it.
-  // If IconInput is an object (e.g., a module with a default export), try to use its .default property.
-  const IconComponent = typeof IconInput === 'function' 
-    ? IconInput 
-    : (IconInput as any)?.default;
+  let IconComponent: React.ElementType | undefined = undefined;
 
-  // Guard against an invalid IconComponent
+  if (typeof IconInput === 'function') {
+    IconComponent = IconInput;
+  } else if (IconInput && typeof IconInput === 'object' && typeof (IconInput as any).default === 'function') {
+    IconComponent = (IconInput as any).default;
+  }
+
   if (typeof IconComponent !== 'function') {
-    console.error('Invalid icon provided to SummaryCard. Prop was:', IconInput, 'Resolved to:', IconComponent);
+    if (IconInput && typeof IconInput === 'object' && Object.keys(IconInput).length === 0 && IconInput.constructor === Object) {
+      // Specific log for empty object case
+      console.error(
+        'Invalid icon provided to SummaryCard: Received an empty object {}. Icon prop value was:', 
+        IconInput
+      );
+    } else {
+      // General log for other invalid cases
+      console.error(
+        'Invalid icon provided to SummaryCard. Prop value was:', 
+        IconInput, 
+        'Resolved IconComponent to:', 
+        IconComponent
+      );
+    }
+    
     // Render a fallback or null to prevent crashing
     return (
       <Card className="shadow-md hover:shadow-lg transition-shadow" onClick={onClick}>
