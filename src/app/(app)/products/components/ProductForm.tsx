@@ -125,21 +125,16 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     } finally {
         setIsCalculating(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, filaments, printers, product, toast, isCalculating]); // Removed setCalculatedCostForDisplay, setIsCalculating from deps as they cause re-runs
+  }, [form, filaments, printers, product, toast, isCalculating, setCalculatedCostForDisplay, setIsCalculating]); 
 
   useEffect(() => {
     const { filamentoId, impressoraId, pesoGramas, tempoImpressaoHoras } = form.getValues();
     if (filamentoId && impressoraId && pesoGramas && tempoImpressaoHoras && pesoGramas > 0 && tempoImpressaoHoras > 0) {
       triggerAutomaticCostCalculation();
     } else {
-      // Clean up cost display if inputs are no longer valid for calculation
-      if (calculatedCostForDisplay !== undefined) { 
-          setCalculatedCostForDisplay(undefined);
-      }
+      setCalculatedCostForDisplay(undefined);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, calculatedCostForDisplay]); // triggerAutomaticCostCalculation removed as it has its own deps. calculatedCostForDisplay is needed for cleanup logic.
+  }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, triggerAutomaticCostCalculation, setCalculatedCostForDisplay]); 
 
 
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
@@ -208,25 +203,15 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
   return (
     <>
       <DialogHeader className="px-6 pt-6 flex-shrink-0">
-        <DialogTitle className="font-headline">{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
+        <DialogTitle className="font-headline text-xl">{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
         <DialogDescription>
           {product ? "Modifique os detalhes do produto. O custo será recalculado automaticamente." : "Preencha as informações do novo produto. O custo será calculado automaticamente."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        {/* This <form> tag is crucial for layout.
-            - flex-1: allows it to take available vertical space in DialogContent (which is flex-col)
-            - flex flex-col: makes its children (ScrollArea, DialogFooter) layout vertically
-            - min-h-0: essential for allowing ScrollArea to shrink and actually scroll
-            - overflow-hidden: ensures that if ScrollArea fails, content doesn't spill out of this form container
-        */}
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* ScrollArea takes the available space within the form, above the footer
-              - flex-1: allows it to grow and shrink
-              - min-h-0: allows it to shrink smaller than its content, enabling scroll
-          */}
           <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-3 px-6 py-4"> {/* Padding for the actual form content */}
+            <div className="space-y-3 px-6 py-4">
               <FormField
                 control={form.control}
                 name="nome"
@@ -372,7 +357,6 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
               </div>
             </div>
           </ScrollArea>
-          {/* DialogFooter is a flex-shrink-0 item, so it stays at the bottom of the form container */}
           <DialogFooter className="px-6 pb-6 pt-4 border-t flex-shrink-0">
             <DialogClose asChild>
               <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
@@ -387,4 +371,3 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     </>
   );
 }
-

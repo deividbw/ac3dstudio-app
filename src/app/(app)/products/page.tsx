@@ -88,16 +88,6 @@ export default function ProductsPage() {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir o produto.", variant: "destructive" });
     }
   };
-
-  // Esta função não é mais necessária para atualizar o estado da página dinamicamente com o custo,
-  // pois o ProductForm gerencia a exibição do custo internamente.
-  // E a action calculateProductCostAction não modifica mais o mockProducts.
-  // const handleCostCalculatedInForm = (cost: ProductCost) => {
-  //   if (editingProduct) {
-  //     // Não atualizar setEditingProduct ou setProducts aqui para evitar a percepção de "salvo automático"
-  //     console.log("Custo calculado para produto em edição (não salvo ainda na lista principal):", cost);
-  //   }
-  // };
   
   const handleShowCost = (product: Product) => {
     if (product.custoCalculado) {
@@ -187,7 +177,6 @@ export default function ProductsPage() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          {/* Removido p-6 do DialogContent para permitir que ProductForm controle seu próprio padding e rolagem */}
           <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col p-0"> 
             <ProductForm 
               product={editingProduct} 
@@ -196,7 +185,6 @@ export default function ProductsPage() {
               brands={brands}
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingProduct(null); }}
-              // onCostCalculated prop removida
             />
           </DialogContent>
         </Dialog>
