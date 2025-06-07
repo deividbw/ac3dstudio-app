@@ -8,8 +8,8 @@ import { PrinterSchema } from "@/lib/schemas";
 const DEFAULT_ENERGY_COST_KWH = 0.75;
 
 let mockPrinters: Printer[] = [
-  { id: "1", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH },
-  { id: "2", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH },
+  { id: "1", marcaId: "3", modelo: "Ender 3 V2", custoAquisicao: 1500, consumoEnergiaHora: 0.2, taxaDepreciacaoHora: 0.5, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH, vidaUtilAnos: 3, horasTrabalhoDia: 8 },
+  { id: "2", marcaId: "4", modelo: "MK3S+", custoAquisicao: 4500, consumoEnergiaHora: 0.15, taxaDepreciacaoHora: 1.0, custoEnergiaKwh: DEFAULT_ENERGY_COST_KWH, vidaUtilAnos: 5, horasTrabalhoDia: 12 },
 ];
 
 export async function getPrinters(): Promise<Printer[]> {
@@ -24,6 +24,7 @@ export async function createPrinter(data: Omit<Printer, 'id'>): Promise<{ succes
   const dataWithDefault = {
     ...data,
     custoEnergiaKwh: data.custoEnergiaKwh ?? DEFAULT_ENERGY_COST_KWH,
+    horasTrabalhoDia: data.horasTrabalhoDia ?? 8, // Default if not provided, though schema makes it required
   };
   const validation = PrinterSchema.safeParse(dataWithDefault);
   if (!validation.success) {
@@ -40,10 +41,10 @@ export async function updatePrinter(id: string, data: Partial<Omit<Printer, 'id'
     return { success: false, error: "Impressora não encontrada" };
   }
   
-  // Preserve existing custoEnergiaKwh if not explicitly provided in data (which it won't be from the form)
   const dataToUpdate = {
     ...data,
     custoEnergiaKwh: data.custoEnergiaKwh ?? existingPrinter.custoEnergiaKwh,
+    horasTrabalhoDia: data.horasTrabalhoDia ?? existingPrinter.horasTrabalhoDia, // Preserve if not in partial update
   };
 
   const dataWithPotentiallyEmptyStrings = { ...existingPrinter, ...dataToUpdate };

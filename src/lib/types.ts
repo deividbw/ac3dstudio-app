@@ -14,13 +14,15 @@ export interface Filament {
 
 export interface Printer {
   id: string;
-  nome?: string; // Made optional
+  // nome?: string; // Made optional, then removed from display
   marcaId?: string; // ID da marca
   modelo?: string;
   custoAquisicao: number;
   consumoEnergiaHora: number; // kWh
   taxaDepreciacaoHora: number; // R$/hora - Custo por hora da impressora (depreciação)
   custoEnergiaKwh: number; // R$/kWh - Custo da energia
+  vidaUtilAnos: number;
+  horasTrabalhoDia: number; // Novo campo
 }
 
 // Nova estrutura para o detalhamento do custo e preço do produto

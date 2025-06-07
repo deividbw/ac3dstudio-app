@@ -4,6 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type * as z from "zod";
+import React, { useEffect } from 'react';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ import { PrinterSchema } from "@/lib/schemas";
 import type { Printer, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createPrinter, updatePrinter } from '@/lib/actions/printer.actions';
+import { Separator } from "@/components/ui/separator";
 
 interface PrinterFormProps {
   printer?: Printer | null;
@@ -43,43 +45,59 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       ...printer,
       marcaId: printer.marcaId ?? undefined,
       modelo: printer.modelo ?? undefined,
-      // custoEnergiaKwh é gerenciado no backend/mock
       vidaUtilAnos: printer.vidaUtilAnos ?? 0,
+      horasTrabalhoDia: printer.horasTrabalhoDia ?? 8, // Default if editing existing without this field
+      taxaDepreciacaoHora: printer.taxaDepreciacaoHora ?? 0,
     } : {
       marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
-      consumoEnergiaHora: 0.1, // Em kWh (ex: 100W -> 0.1 kWh)
-      taxaDepreciacaoHora: 0,
+      consumoEnergiaHora: 0.1, 
       vidaUtilAnos: 0,
-      // custoEnergiaKwh será definido por padrão na action para novas impressoras
+      horasTrabalhoDia: 8, // Default for new printers
+      taxaDepreciacaoHora: 0,
     },
   });
 
+  const custoAquisicaoWatched = form.watch("custoAquisicao");
+  const vidaUtilAnosWatched = form.watch("vidaUtilAnos");
+  const horasTrabalhoDiaWatched = form.watch("horasTrabalhoDia");
+
+  useEffect(() => {
+    const custoAquisicao = Number(custoAquisicaoWatched) || 0;
+    const vidaUtilAnos = Number(vidaUtilAnosWatched) || 0;
+    const horasTrabalhoDia = Number(horasTrabalhoDiaWatched) || 0;
+
+    if (custoAquisicao > 0 && vidaUtilAnos > 0 && horasTrabalhoDia > 0) {
+      const horasOperacionaisTotais = vidaUtilAnos * 365 * horasTrabalhoDia;
+      const depreciacaoCalculada = custoAquisicao / horasOperacionaisTotais;
+      form.setValue("taxaDepreciacaoHora", depreciacaoCalculada);
+    } else {
+      form.setValue("taxaDepreciacaoHora", 0);
+    }
+  }, [custoAquisicaoWatched, vidaUtilAnosWatched, horasTrabalhoDiaWatched, form]);
+
+
   async function onSubmit(values: z.infer<typeof PrinterSchema>) {
     try {
-      // Base data from the form, excluding custoEnergiaKwh which is handled by actions or preserved
       const dataForActionBase = {
         marcaId: values.marcaId || undefined,
         modelo: values.modelo || undefined,
         custoAquisicao: Number(values.custoAquisicao),
-        consumoEnergiaHora: Number(values.consumoEnergiaHora), // Este valor já está em kWh
-        taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
+        consumoEnergiaHora: Number(values.consumoEnergiaHora),
         vidaUtilAnos: Number(values.vidaUtilAnos),
+        horasTrabalhoDia: Number(values.horasTrabalhoDia),
+        taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora), // This will be the calculated value
       };
 
       let actionResult;
       if (printer && printer.id) {
-        // For updates, explicitly pass the existing custoEnergiaKwh to preserve it,
-        // as it's not part of the form values.
         const dataForUpdate: Partial<Omit<Printer, 'id'>> = {
           ...dataForActionBase,
-          custoEnergiaKwh: printer.custoEnergiaKwh,
+          custoEnergiaKwh: printer.custoEnergiaKwh, // Preserve existing energy cost
         };
         actionResult = await updatePrinter(printer.id, dataForUpdate);
       } else {
-        // For creates, custoEnergiaKwh will be set to default by the createPrinter action.
-        // We pass it as undefined so the action knows to apply its default.
         const dataForCreate: Omit<Printer, 'id'> = {
           ...dataForActionBase,
           custoEnergiaKwh: undefined, // Action will apply default
@@ -132,7 +150,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       if (Number.isNaN(numWatts)) {
         field.onChange(undefined);
       } else {
-        field.onChange(numWatts / 1000); // Converte Watts para kWh para o estado do formulário
+        field.onChange(numWatts / 1000); 
       }
     }
   };
@@ -141,7 +159,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     if (valueInKwh === undefined || valueInKwh === null || Number.isNaN(valueInKwh)) {
       return '';
     }
-    return String(valueInKwh * 1000); // Converte kWh do estado do formulário para Watts para exibição
+    return String(valueInKwh * 1000); 
   };
 
 
@@ -218,15 +236,15 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
               />
               <FormField
                 control={form.control}
-                name="consumoEnergiaHora" // Internamente, este campo armazena kWh
+                name="consumoEnergiaHora" 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Potência Watts *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
-                        step="1" // Comum para Watts
-                        placeholder="Ex: 150" // Exemplo em Watts
+                        step="1" 
+                        placeholder="Ex: 150" 
                         value={getPotenciaWattsFieldValue(field.value)}
                         onChange={e => handlePotenciaWattsInputChange(field, e.target.value)}
                       />
@@ -236,38 +254,71 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                 )}
               />
             </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="vidaUtilAnos"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vida útil (anos)*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="1" placeholder="Ex: 3"
+                              value={getGenericNumericFieldValue(field.value)}
+                              onChange={e => handleGenericNumericInputChange(field, e.target.value, true)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="horasTrabalhoDia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Horas trabalho dia*</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="1" placeholder="Ex: 8"
+                              value={getGenericNumericFieldValue(field.value)}
+                              onChange={e => handleGenericNumericInputChange(field, e.target.value, true)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="taxaDepreciacaoHora"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Depreciação (R$/hora)*</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" placeholder="Ex: 0.50"
-                            value={getGenericNumericFieldValue(field.value)}
-                            onChange={e => handleGenericNumericInputChange(field, e.target.value, false)} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <Separator className="my-4" />
 
-            <FormField
-              control={form.control}
-              name="vidaUtilAnos"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Vida útil (anos)*</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="1" placeholder="Ex: 3"
-                            value={getGenericNumericFieldValue(field.value)}
-                            onChange={e => handleGenericNumericInputChange(field, e.target.value, true)} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-1">
+                <FormLabel>Depreciação Calculada (R$/hora)</FormLabel>
+                <Input 
+                    type="text" 
+                    readOnly 
+                    value={
+                        form.getValues("taxaDepreciacaoHora") > 0
+                        ? `R$ ${form.getValues("taxaDepreciacaoHora").toFixed(4)}`
+                        : "R$ 0.0000"
+                    }
+                    className="bg-muted text-muted-foreground cursor-default"
+                />
+                <p className="text-xs text-muted-foreground">
+                    Calculado com base no Custo de Aquisição, Vida Útil e Horas de Trabalho Dia.
+                </p>
+            </div>
+             <FormField
+                control={form.control}
+                name="taxaDepreciacaoHora"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+
           </div>
           <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
              <DialogClose asChild>

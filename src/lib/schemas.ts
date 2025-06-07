@@ -17,14 +17,13 @@ export const FilamentSchema = z.object({
 
 export const PrinterSchema = z.object({
   id: z.string().optional(),
-  // nome: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val), // Nome foi removido
   marcaId: z.string().optional().nullable().transform(val => val === "" ? undefined : val),
   modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   custoAquisicao: z.coerce.number().nonnegative({ message: "Custo de aquisição não pode ser negativo" }),
   consumoEnergiaHora: z.coerce.number().positive({ message: "Consumo de energia deve ser positivo" }),
   taxaDepreciacaoHora: z.coerce.number().nonnegative({ message: "Taxa de depreciação não pode ser negativa" }),
-  // custoEnergiaKwh: z.coerce.number().positive({ message: "Custo de energia deve ser positivo" }), // Removido do form, default no backend
   vidaUtilAnos: z.coerce.number().int({ message: "Vida útil deve ser um número inteiro" }).nonnegative({ message: "Vida útil não pode ser negativa" }),
+  horasTrabalhoDia: z.coerce.number().int({ message: "Horas de trabalho por dia deve ser um número inteiro"}).positive({message: "Horas de trabalho por dia deve ser um número positivo"}),
 });
 
 export const ProductSchema = z.object({
