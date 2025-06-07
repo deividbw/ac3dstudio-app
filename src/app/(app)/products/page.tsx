@@ -180,7 +180,7 @@ export default function ProductsPage() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0"> 
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0"> 
             <ProductForm 
               product={editingProduct} 
               filaments={filaments}
@@ -280,5 +280,7 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+    
 
     
