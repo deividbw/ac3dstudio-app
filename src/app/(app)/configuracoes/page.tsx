@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from 'react'; // Added React import
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/lib/constants';
