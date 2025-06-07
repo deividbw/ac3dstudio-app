@@ -37,6 +37,7 @@ import { getProducts } from '@/lib/actions/product.actions';
 import { getOrcamentos, createOrcamento, updateOrcamento, deleteOrcamento } from '@/lib/actions/orcamento.actions';
 import { OrcamentoForm } from './components/OrcamentoForm'; // Novo formulário
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils'; // Added import for cn
 
 export default function OrcamentosPage() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
