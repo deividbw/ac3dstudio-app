@@ -36,9 +36,9 @@ let mockProducts: Product[] = [
     tempoImpressaoHoras: 5,
     pesoGramas: 120,
     imageUrl: "https://placehold.co/300x200.png",
-    custoModelagem: 0,
-    custosExtras: 0,
-    margemLucroPercentual: 150,
+    custoModelagem: 0, // Defaulted
+    custosExtras: 0,    // Defaulted
+    margemLucroPercentual: 150, // Defaulted
     // custoDetalhado: undefined, // A ser calculado pelo formulário
   },
 ];
@@ -51,18 +51,23 @@ export async function getProductById(id: string): Promise<Product | undefined> {
   return mockProducts.find(p => p.id === id);
 }
 
-export async function createProduct(data: Product): Promise<{ success: boolean, product?: Product, error?: string }> {
-  // Schema validation should happen in the form, but good to double check essential parts or use full schema
+export async function createProduct(data: Omit<Product, 'id'>): Promise<{ success: boolean, product?: Product, error?: string }> {
   const validation = ProductSchema.safeParse(data);
   if (!validation.success) {
-    // Log detailed error for server-side debugging if needed
     console.error("Server-side validation failed for createProduct:", validation.error.flatten());
     return { success: false, error: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') };
   }
   
-  const newProduct: Product = { ...validation.data, id: `prod_${String(Date.now())}` } as Product;
-  // Ensure custoDetalhado from the form (which comes from validation.data) is preserved
-  newProduct.custoDetalhado = data.custoDetalhado; 
+  const newProductData = validation.data;
+  const newProduct: Product = { 
+    ...newProductData, 
+    id: `prod_${String(Date.now())}`,
+    // Explicitly carry over values from validated data that might not be direct form inputs but are part of the schema
+    custoModelagem: newProductData.custoModelagem,
+    custosExtras: newProductData.custosExtras,
+    margemLucroPercentual: newProductData.margemLucroPercentual,
+    custoDetalhado: data.custoDetalhado, // Pass through the calculated breakdown from form submission
+  };
   mockProducts.push(newProduct);
   return { success: true, product: newProduct };
 }
@@ -79,9 +84,16 @@ export async function updateProduct(id: string, data: Product): Promise<{ succes
     return { success: false, error: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') };
   }
 
-  const updatedProduct = { ...mockProducts[existingProductIndex], ...validation.data } as Product;
-  // Ensure custoDetalhado from the form (which comes from validation.data) is preserved
-  updatedProduct.custoDetalhado = data.custoDetalhado; 
+  const updatedProductData = validation.data;
+  const updatedProduct: Product = { 
+    ...mockProducts[existingProductIndex], 
+    ...updatedProductData,
+    // Explicitly carry over values from validated data
+    custoModelagem: updatedProductData.custoModelagem,
+    custosExtras: updatedProductData.custosExtras,
+    margemLucroPercentual: updatedProductData.margemLucroPercentual,
+    custoDetalhado: data.custoDetalhado, // Pass through the calculated breakdown from form submission
+  };
 
   mockProducts[existingProductIndex] = updatedProduct;
   return { success: true, product: updatedProduct};
@@ -95,15 +107,3 @@ export async function deleteProduct(id: string): Promise<{ success: boolean, err
   }
   return { success: true };
 }
-
-// Removing the AI-based cost calculation action
-// export async function calculateProductCostAction(calculationInput: ProductCostCalculationInput): Promise<{ success: boolean, cost?: ProductCost, error?: string}> {
-//   try {
-//     const costOutput = await productCostCalculation(calculationInput);
-//     return { success: true, cost: costOutput };
-//   } catch (error: any) {
-//     console.error("Error in AI cost calculation:", error);
-//     const errorMessage = error.message || "Falha ao calcular custo com IA.";
-//     return { success: false, error: errorMessage };
-//   }
-// }

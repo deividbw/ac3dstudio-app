@@ -44,9 +44,9 @@ export interface Product {
   imageUrl?: string;
 
   // Novos campos de entrada para o formulário
-  custoModelagem?: number;
-  custosExtras?: number;
-  margemLucroPercentual?: number; // Em % (ex: 20 para 20%)
+  custoModelagem: number; // Alterado de opcional para obrigatório com default no schema
+  custosExtras: number; // Alterado de opcional para obrigatório com default no schema
+  margemLucroPercentual: number; // Alterado de opcional para obrigatório com default no schema
 
   custoDetalhado?: ProductCostBreakdown; // Armazena todos os valores calculados
 }
@@ -55,3 +55,4 @@ export interface Brand {
   id: string;
   nome: string;
 }
+

@@ -34,9 +34,9 @@ export const ProductSchema = z.object({
   tempoImpressaoHoras: z.coerce.number().positive({ message: "Tempo de produção deve ser positivo" }),
   pesoGramas: z.coerce.number().positive({ message: "Material usado (peso) deve ser positivo" }),
   imageUrl: z.string().url({ message: "URL da imagem inválida" }).optional().or(z.literal('')),
-  custoModelagem: z.coerce.number().nonnegative({message: "Custo de modelagem não pode ser negativo"}).optional().default(0),
-  custosExtras: z.coerce.number().nonnegative({message: "Custos extras não podem ser negativos"}).optional().default(0),
-  margemLucroPercentual: z.coerce.number().nonnegative({message: "Margem de lucro não pode ser negativa"}).optional().default(20), // Default 20%
+  custoModelagem: z.coerce.number().nonnegative({message: "Custo de modelagem não pode ser negativo"}).default(0),
+  custosExtras: z.coerce.number().nonnegative({message: "Custos extras não podem ser negativos"}).default(0),
+  margemLucroPercentual: z.coerce.number().nonnegative({message: "Margem de lucro não pode ser negativa"}).default(20),
   // custoDetalhado será calculado e não faz parte da validação do formulário em si, mas dos dados do produto.
 });
 
@@ -44,3 +44,4 @@ export const BrandSchema = z.object({
   id: z.string().optional(),
   nome: z.string().min(1, { message: "Nome da marca é obrigatório" }).max(100, { message: "Nome da marca deve ter no máximo 100 caracteres" }),
 });
+
