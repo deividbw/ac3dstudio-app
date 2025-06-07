@@ -103,11 +103,6 @@ export function FilamentsTab() {
     setDeletingFilamentId(null);
   };
   
-  const formatCurrency = (value?: number) => {
-    if (value === undefined || value === null || Number.isNaN(value)) return "N/A";
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
-
   return (
     <div className="space-y-4">
       <PageHeader title="Gerenciar Filamentos">
@@ -175,7 +170,6 @@ export function FilamentsTab() {
                   <TableHead className="px-2 py-2 font-semibold uppercase">Tipo</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Cor</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Modelo</TableHead>
-                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Preço (R$/Kg)</TableHead>
                   <TableHead className="px-2 py-2 text-right font-semibold uppercase">Densidade</TableHead>
                   <TableHead className="w-[100px] px-2 py-2 text-center font-semibold uppercase">Ações</TableHead>
                 </TableRow>
@@ -187,7 +181,6 @@ export function FilamentsTab() {
                     <TableCell className="px-2 py-1.5">{filament.tipo}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.cor}</TableCell>
                     <TableCell className="px-2 py-1.5">{filament.modelo || "N/A"}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-right">{formatCurrency(filament.precoPorKg)}</TableCell>
                     <TableCell className="px-2 py-1.5 text-right">{filament.densidade} g/cm³</TableCell>
                     <TableCell className="px-2 py-1.5 text-center">
                       <Button
