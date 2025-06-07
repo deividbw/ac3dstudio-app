@@ -49,6 +49,8 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
   const [showCostSection, setShowCostSection] = useState(!!product?.custoDetalhado);
   const [powerOverrideWarning, setPowerOverrideWarning] = useState<string | null>(null);
 
+  console.log("ProductForm Debug: Received powerOverrides prop:", JSON.stringify(powerOverrides.map(po => ({pid: po.printerId, fid: po.filamentTypeId, watts: po.powerWatts}))));
+
 
   const form = useForm<z.infer<typeof ProductSchema>>({
     resolver: zodResolver(ProductSchema),
@@ -134,27 +136,28 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
 
       const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
 
-      let consumoEnergiaHoraParaCalculo = 0; // Default to 0 kWh (potência em Watts / 1000)
+      let consumoEnergiaHoraParaCalculo = 0; 
       let localPowerOverrideWarning: string | null = null;
 
       console.log("ProductForm Debug: --- Override Lookup ---");
-      console.log("ProductForm Debug: Selected Printer ID for Override:", selectedPrinter.id, `(${getPrinterDisplayName(selectedPrinter)})`);
-      console.log("ProductForm Debug: Selected Filament Tipo for Override:", selectedFilament.tipo);
-      console.log("ProductForm Debug: Available FilamentTypes prop:", JSON.stringify(filamentTypes.map(ft => ({id: ft.id, nome: ft.nome}))));
+      console.log("ProductForm Debug: Looking for Printer ID:", selectedPrinter.id, `(${getPrinterDisplayName(selectedPrinter)})`);
+      console.log("ProductForm Debug: Looking for Filament Tipo:", selectedFilament.tipo);
+      // console.log("ProductForm Debug: Full Available FilamentTypes prop:", JSON.stringify(filamentTypes.map(ft => ({id: ft.id, nome: ft.nome}))));
 
       const filamentType = filamentTypes.find(ft => ft.nome.toUpperCase() === selectedFilament.tipo.toUpperCase());
 
-      console.log("ProductForm Debug: Matched FilamentType Object for Override:", filamentType);
-      console.log("ProductForm Debug: Available PowerOverrides prop:", JSON.stringify(powerOverrides.map(po => ({printerId: po.printerId, filamentTypeId: po.filamentTypeId, watts: po.powerWatts }))));
+      console.log("ProductForm Debug: Matched FilamentType Object for Override lookup:", filamentType ? {id: filamentType.id, nome: filamentType.nome} : "None found");
+      // console.log("ProductForm Debug: Full Available PowerOverrides prop (for lookup):", JSON.stringify(powerOverrides.map(po => ({printerId: po.printerId, filamentTypeId: po.filamentTypeId, watts: po.powerWatts }))));
 
 
-      if (filamentType) {
+      if (filamentType && selectedPrinter) {
+        console.log(`ProductForm Debug: Attempting lookup in powerOverrides with printerId: "${selectedPrinter.id}" and filamentTypeId: "${filamentType.id}"`);
         const override = powerOverrides.find(
           ov => ov.printerId === selectedPrinter.id && ov.filamentTypeId === filamentType.id
         );
-        console.log("ProductForm Debug: Found Override:", override);
+        console.log("ProductForm Debug: Found Override object:", override);
         if (override) {
-          consumoEnergiaHoraParaCalculo = override.powerWatts / 1000; // Convert Watts to kWh
+          consumoEnergiaHoraParaCalculo = override.powerWatts / 1000; 
           console.log("ProductForm Debug: Using Override Power (kW):", consumoEnergiaHoraParaCalculo);
         } else {
           localPowerOverrideWarning = `Config. de potência não encontrada para ${getPrinterDisplayName(selectedPrinter)} com ${selectedFilament.tipo}. Custo de energia será 0. Verifique Configurações.`;
@@ -167,10 +170,14 @@ export function ProductForm({ product, filaments, printers, brands, filamentType
           console.log("ProductForm Debug: Override NOT found. Warning set.");
         }
       } else {
-         localPowerOverrideWarning = `Tipo de filamento '${selectedFilament.tipo}' não mapeado no sistema para busca de override de potência. Verifique os cadastros de Tipos de Filamento.`;
-         console.log("ProductForm Debug: FilamentType not found for selectedFilament.tipo:", selectedFilament.tipo);
+         if (!filamentType) {
+            localPowerOverrideWarning = `Tipo de filamento '${selectedFilament.tipo}' não mapeado no sistema para busca de override de potência. Verifique os cadastros de Tipos de Filamento.`;
+            console.log("ProductForm Debug: FilamentType not found for selectedFilament.tipo:", selectedFilament.tipo);
+         } else {
+            localPowerOverrideWarning = `Impressora ou Tipo de Filamento não selecionado corretamente para busca de override.`;
+         }
          toast({
-            title: "Aviso de Tipo de Filamento",
+            title: "Aviso de Tipo de Filamento/Impressora",
             description: localPowerOverrideWarning,
             variant: "default",
             duration: 7000,
