@@ -1,5 +1,6 @@
 
 import { z } from 'zod';
+import { OrcamentoStatusOptions } from './types';
 
 export const FilamentSchema = z.object({
   id: z.string().optional(),
@@ -50,3 +51,26 @@ export const FilamentTypeSchema = z.object({
   nome: z.string().min(1, { message: "Nome do tipo de filamento é obrigatório" }).max(50, { message: "Nome do tipo deve ter no máximo 50 caracteres" }),
 });
 
+// Esquema para um item do orçamento
+export const OrcamentoItemSchema = z.object({
+  id: z.string().uuid({ message: "ID do item inválido" }),
+  produtoId: z.string().min(1, { message: "Produto é obrigatório" }),
+  produtoNome: z.string(), // Não validado aqui, pego do produto
+  quantidade: z.coerce.number().int().min(1, { message: "Quantidade deve ser no mínimo 1" }),
+  valorUnitario: z.coerce.number().nonnegative({ message: "Valor unitário não pode ser negativo" }),
+  valorTotalItem: z.coerce.number().nonnegative(), // Calculado
+});
+
+// Esquema principal para o Orçamento
+export const OrcamentoSchema = z.object({
+  id: z.string().optional(),
+  nomeOrcamento: z.string().min(1, { message: "Nome do orçamento é obrigatório" }),
+  clienteNome: z.string().min(1, { message: "Nome do cliente é obrigatório" }),
+  dataCriacao: z.string().datetime().optional(), // Será preenchido na action
+  status: z.enum(OrcamentoStatusOptions, {
+    errorMap: () => ({ message: "Status inválido" }),
+  }),
+  observacao: z.string().optional(),
+  itens: z.array(OrcamentoItemSchema).min(1, { message: "Orçamento deve ter pelo menos um item" }),
+  valorTotalCalculado: z.coerce.number().nonnegative().optional(), // Será preenchido na action
+});

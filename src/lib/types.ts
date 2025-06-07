@@ -66,3 +66,27 @@ export interface PowerOverride {
 }
 
 export type SortableOverrideField = 'printerName' | 'filamentTypeName' | 'powerWatts';
+
+// Tipos para Orçamento
+export const OrcamentoStatusOptions = ["Pendente", "Aprovado", "Rejeitado", "Concluído"] as const;
+export type OrcamentoStatus = typeof OrcamentoStatusOptions[number];
+
+export interface Orcamento {
+  id: string;
+  nomeOrcamento: string;
+  clienteNome: string;
+  dataCriacao: string; // ISO string date
+  status: OrcamentoStatus;
+  observacao?: string;
+  itens: OrcamentoItem[]; // Array de itens do orçamento
+  valorTotalCalculado: number;
+}
+
+export interface OrcamentoItem {
+  id: string; // uuid ou similar para o item dentro do orçamento
+  produtoId: string;
+  produtoNome: string;
+  quantidade: number;
+  valorUnitario: number; // Preço do produto no momento da adição ao orçamento
+  valorTotalItem: number;
+}

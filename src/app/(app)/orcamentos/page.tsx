@@ -1,51 +1,135 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FilePlus2, Filter, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-
-// Placeholder data type - replace with actual Budget type later
-interface Budget {
-  id: string;
-  clientName: string;
-  productName: string;
-  date: string;
-  status: 'Pendente' | 'Aprovado' | 'Rejeitado' | 'Concluído';
-  totalValue: number;
-}
-
-const placeholderBudgets: Budget[] = [
-  { id: 'orc001', clientName: 'João Silva', productName: 'Suporte Articulado V2', date: '05/06/2024', status: 'Aprovado', totalValue: 55.90 },
-  { id: 'orc002', clientName: 'Maria Oliveira', productName: 'Vaso Decorativo G', date: '04/06/2024', status: 'Pendente', totalValue: 75.00 },
-  { id: 'orc003', clientName: 'Carlos Pereira', productName: 'Engrenagem Especial XT', date: '03/06/2024', status: 'Concluído', totalValue: 120.50 },
-  { id: 'orc004', clientName: 'Ana Costa', productName: 'Miniatura Dragão', date: '02/06/2024', status: 'Rejeitado', totalValue: 88.00 },
-];
+import { FilePlus2, Filter, Search, Edit, Trash2, DollarSign } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger as AlertDialogPrimitiveTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
+import type { Orcamento, Product, OrcamentoStatus } from '@/lib/types';
+import { getProducts } from '@/lib/actions/product.actions';
+import { getOrcamentos, createOrcamento, updateOrcamento, deleteOrcamento } from '@/lib/actions/orcamento.actions';
+import { OrcamentoForm } from './components/OrcamentoForm'; // Novo formulário
+import { Badge } from '@/components/ui/badge';
 
 export default function OrcamentosPage() {
-  // Basic state for search, more complex filtering can be added later
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingOrcamento, setEditingOrcamento] = useState<Orcamento | null>(null);
+  const [deletingOrcamentoId, setDeletingOrcamentoId] = useState<string | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
 
-  const filteredBudgets = placeholderBudgets.filter(budget => 
-    budget.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    budget.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    budget.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [orcamentosData, productsData] = await Promise.all([
+        getOrcamentos(),
+        getProducts(),
+      ]);
+      setOrcamentos(orcamentosData.sort((a,b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()));
+      setProducts(productsData);
+    } catch (error) {
+      console.error("Erro ao carregar dados para orçamentos:", error);
+      toast({ title: "Erro ao Carregar Dados", description: "Não foi possível buscar os orçamentos ou produtos.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const filteredOrcamentos = useMemo(() => {
+    return orcamentos.filter(orc => 
+      orc.nomeOrcamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      orc.clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      orc.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [orcamentos, searchTerm]);
+
+  const handleFormSuccess = (orcamento: Orcamento) => {
+    loadData(); // Recarrega os orçamentos
+    setIsFormOpen(false);
+    setEditingOrcamento(null);
+  };
+
+  const handleOpenEditDialog = (orcamento: Orcamento) => {
+    setEditingOrcamento(orcamento);
+    setIsFormOpen(true);
+  };
+  
+  const handleOpenNewDialog = () => {
+    setEditingOrcamento(null);
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingOrcamentoId) return;
+    const result = await deleteOrcamento(deletingOrcamentoId);
+    if (result.success) {
+      toast({ title: "Sucesso", description: "Orçamento excluído." });
+      loadData();
+    } else {
+      toast({ title: "Erro", description: result.error || "Não foi possível excluir o orçamento.", variant: "destructive" });
+    }
+    setDeletingOrcamentoId(null);
+  };
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const getStatusBadgeColor = (status: Budget['status']) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const getStatusBadgeVariant = (status: OrcamentoStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-      case 'Pendente': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-      case 'Aprovado': return 'bg-green-100 text-green-700 border-green-300';
-      case 'Rejeitado': return 'bg-red-100 text-red-700 border-red-300';
-      case 'Concluído': return 'bg-blue-100 text-blue-700 border-blue-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'Pendente': return 'default'; // Amarelo visualmente, mas shadcn default pode ser azul/primary
+      case 'Aprovado': return 'secondary'; // Verde visualmente
+      case 'Rejeitado': return 'destructive';
+      case 'Concluído': return 'outline'; // Azul claro/cinza visualmente
+      default: return 'default';
+    }
+  };
+   const getStatusBadgeColorClass = (status: OrcamentoStatus) => {
+    switch (status) {
+      case 'Pendente': return 'bg-yellow-500 text-yellow-50 hover:bg-yellow-500/90';
+      case 'Aprovado': return 'bg-green-600 text-green-50 hover:bg-green-600/90';
+      case 'Rejeitado': return 'bg-red-600 text-red-50 hover:bg-red-600/90';
+      case 'Concluído': return 'bg-blue-600 text-blue-50 hover:bg-blue-600/90';
+      default: return 'bg-gray-500 text-gray-50 hover:bg-gray-500/90';
     }
   };
 
@@ -53,10 +137,27 @@ export default function OrcamentosPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Orçamentos">
-        <Button size="sm">
-          <FilePlus2 className="mr-2 h-4 w-4" />
-          Novo Orçamento
-        </Button>
+        <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
+            setIsFormOpen(isOpen);
+            if (!isOpen) setEditingOrcamento(null);
+        }}>
+          <DialogTrigger asChild>
+            <Button size="sm" onClick={handleOpenNewDialog}>
+              <FilePlus2 className="mr-2 h-4 w-4" />
+              Novo Orçamento
+            </Button>
+          </DialogTrigger>
+          {isFormOpen && ( // Renderiza o formulário condicionalmente para garantir que `products` esteja carregado
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0">
+                <OrcamentoForm
+                    orcamento={editingOrcamento}
+                    products={products}
+                    onSuccess={handleFormSuccess}
+                    onCancel={() => { setIsFormOpen(false); setEditingOrcamento(null);}}
+                />
+            </DialogContent>
+          )}
+        </Dialog>
       </PageHeader>
 
       <Card>
@@ -68,7 +169,7 @@ export default function OrcamentosPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 type="search"
-                placeholder="Buscar por cliente, produto, ID..."
+                placeholder="Buscar por nome, cliente, ID..."
                 className="pl-8 h-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -81,29 +182,61 @@ export default function OrcamentosPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredBudgets.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredBudgets.map((budget) => (
-                <Card key={budget.id} className="shadow-md hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{budget.productName}</CardTitle>
-                      <span 
-                        className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${getStatusBadgeColor(budget.status)}`}
-                      >
-                        {budget.status}
-                      </span>
-                    </div>
-                    <CardDescription>Cliente: {budget.clientName}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-1 text-sm">
-                    <p>ID: <span className="font-medium">{budget.id}</span></p>
-                    <p>Data: <span className="font-medium">{budget.date}</span></p>
-                    <p className="text-base">Total: <span className="font-bold text-primary">{formatCurrency(budget.totalValue)}</span></p>
-                  </CardContent>
-                  {/* Add CardFooter for actions if needed */}
-                </Card>
-              ))}
+          {isLoading ? (
+            <p className="text-center py-10 text-muted-foreground">Carregando orçamentos...</p>
+          ) : filteredOrcamentos.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome Orçamento</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead className="text-center w-[100px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrcamentos.map((orc) => (
+                    <TableRow key={orc.id}>
+                      <TableCell className="font-medium">{orc.nomeOrcamento}</TableCell>
+                      <TableCell>{orc.clienteNome}</TableCell>
+                      <TableCell>{formatDate(orc.dataCriacao)}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(orc.status)} className={cn(getStatusBadgeColorClass(orc.status))}>
+                            {orc.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-primary">{formatCurrency(orc.valorTotalCalculado)}</TableCell>
+                      <TableCell className="text-center">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-yellow-500 hover:bg-yellow-100" onClick={() => handleOpenEditDialog(orc)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                            <AlertDialogPrimitiveTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-100" onClick={() => setDeletingOrcamentoId(orc.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogPrimitiveTrigger>
+                           <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir o orçamento "{orc.nomeOrcamento}"? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setDeletingOrcamentoId(null)}>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="text-center py-10 text-muted-foreground">
@@ -114,7 +247,6 @@ export default function OrcamentosPage() {
           )}
         </CardContent>
       </Card>
-      {/* Add pagination if list becomes long */}
     </div>
   );
 }
