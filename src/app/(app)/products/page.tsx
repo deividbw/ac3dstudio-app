@@ -79,6 +79,7 @@ export default function ProductsPage() {
       setBrands(brandsData);
       setFilamentTypes(filamentTypesData);
       setPowerOverrides(powerOverridesData); 
+      console.log("ProductsPage Debug: Fetched powerOverrides:", powerOverridesData);
     } catch (error) {
       console.error("Failed to load initial data:", error);
       toast({ title: "Erro ao carregar dados", description: "Não foi possível buscar todos os dados necessários.", variant: "destructive" });
@@ -184,7 +185,7 @@ export default function ProductsPage() {
   if (isLoadingData) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Gerenciar Produtos e Custos" />
+        <PageHeader title="Gerenciar Produtos e Custos" backButtonHref="/servicos/cadastros" />
         <div className="flex justify-center items-center p-10">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
@@ -195,7 +196,7 @@ export default function ProductsPage() {
   if (!hasRequiredDataForProducts && (filaments.length === 0 || printers.length === 0 || brands.length === 0 || filamentTypes.length === 0)) {
     return (
        <div className="space-y-6">
-        <PageHeader title="Gerenciar Produtos e Custos" />
+        <PageHeader title="Gerenciar Produtos e Custos" backButtonHref="/servicos/cadastros" />
         <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle className="flex items-center"><AlertTriangle className="mr-2 h-6 w-6 text-destructive" /> Dados Incompletos</CardTitle>
@@ -217,7 +218,7 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Gerenciar Produtos e Custos">
+      <PageHeader title="Gerenciar Produtos e Custos" backButtonHref="/servicos/cadastros">
         <Button onClick={handleExport} variant="outline" size="sm" className="mr-2">
           <Download className="mr-2 h-4 w-4" />
           Exportar CSV
@@ -232,7 +233,7 @@ export default function ProductsPage() {
               Adicionar Produto
             </Button>
           </DialogTrigger>
-          {!isLoadingData && isFormOpen && ( // Only render ProductForm when data is loaded and dialog is open
+          {!isLoadingData && isFormOpen && ( 
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0"> 
               <ProductForm 
                 product={editingProduct} 
@@ -336,5 +337,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    

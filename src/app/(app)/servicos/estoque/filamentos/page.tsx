@@ -158,7 +158,7 @@ export default function FilamentStockPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Estoque de Filamentos">
+      <PageHeader title="Estoque de Filamentos" backButtonHref="/servicos/cadastros">
       </PageHeader>
 
       <Card className="shadow-lg">
