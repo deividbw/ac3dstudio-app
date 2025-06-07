@@ -8,7 +8,7 @@ import { Icons } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap } from 'lucide-react'; // Added Zap
+import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -16,32 +16,33 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator'; // Added Separator
+import { Separator } from '@/components/ui/separator';
 
 export default function ConfiguracoesPage() {
   const [kwhValue, setKwhValue] = React.useState("0.75"); // Example value
   const { toast } = useToast();
 
-  // State for filament power consumption percentages
-  const [plaPowerConsumption, setPlaPowerConsumption] = React.useState("80");
-  const [absPowerConsumption, setAbsPowerConsumption] = React.useState("100");
-  const [petgPowerConsumption, setPetgPowerConsumption] = React.useState("90");
+  // State for filament power consumption in Watts
+  const [plaPowerWatts, setPlaPowerWatts] = React.useState("60"); // Ex: 60 Watts
+  const [absPowerWatts, setAbsPowerWatts] = React.useState("100"); // Ex: 100 Watts
+  const [petgPowerWatts, setPetgPowerWatts] = React.useState("80"); // Ex: 80 Watts
 
   const handleSaveKwh = () => {
+    // In a real app, this would save to a DB / global state (e.g., Firestore, localStorage)
     console.log("Salvar valor kWh:", kwhValue);
     toast({ 
       title: "Configuração Salva", 
-      description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}.`,
+      description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}. (Simulação)`,
       variant: "success",
     });
   };
 
-  const handleSavePowerConsumptionPercentages = () => {
+  const handleSavePowerConsumptionWatts = () => {
     // In a real app, this would save to a DB / global state
-    console.log("Salvando percentuais de consumo:", { pla: plaPowerConsumption, abs: absPowerConsumption, petg: petgPowerConsumption });
+    console.log("Salvando potência média por filamento (Watts):", { pla: plaPowerWatts, abs: absPowerWatts, petg: petgPowerWatts });
     toast({
-      title: "Ajustes Salvos",
-      description: "Percentuais de consumo de energia por filamento foram salvos.",
+      title: "Ajustes de Potência Salvos",
+      description: "Potência média consumida por tipo de filamento foi salva. (Simulação)",
       variant: "success",
     });
   };
@@ -87,64 +88,63 @@ export default function ConfiguracoesPage() {
               <div>
                 <h4 className="font-medium text-md mb-2 flex items-center">
                   <Zap className="mr-2 h-5 w-5 text-primary/80" />
-                  Ajuste de Consumo de Energia por Tipo de Filamento
+                  Potência Média Consumida por Tipo de Filamento
                 </h4>
                 <CardDescription className="mb-3 text-xs">
-                  Defina o percentual da potência máxima da impressora que cada tipo de filamento normalmente consome.
-                  Isso refinará o cálculo de custo de energia.
+                  Informe a potência média em Watts que sua impressora consome ao utilizar cada tipo de filamento,
+                  baseado em suas medições (ex: com uma peça de teste padrão).
+                  Este valor refinará o cálculo de custo de energia dos produtos. Se não informado para um tipo, será usada a potência nominal da impressora.
                 </CardDescription>
                 <div className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
-                      <Label htmlFor="plaConsumption" className="text-sm">PLA (%)</Label>
+                      <Label htmlFor="plaPowerWatts" className="text-sm">PLA (Watts)</Label>
                       <Input
-                        id="plaConsumption"
+                        id="plaPowerWatts"
                         type="number"
-                        min="0"
-                        max="100"
                         step="1"
-                        value={plaPowerConsumption}
-                        onChange={(e) => setPlaPowerConsumption(e.target.value)}
-                        placeholder="Ex: 80"
+                        min="0"
+                        value={plaPowerWatts}
+                        onChange={(e) => setPlaPowerWatts(e.target.value)}
+                        placeholder="Ex: 60"
                         className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="absConsumption" className="text-sm">ABS (%)</Label>
+                      <Label htmlFor="absPowerWatts" className="text-sm">ABS (Watts)</Label>
                       <Input
-                        id="absConsumption"
+                        id="absPowerWatts"
                         type="number"
-                        min="0"
-                        max="100"
                         step="1"
-                        value={absPowerConsumption}
-                        onChange={(e) => setAbsPowerConsumption(e.target.value)}
+                        min="0"
+                        value={absPowerWatts}
+                        onChange={(e) => setAbsPowerWatts(e.target.value)}
                         placeholder="Ex: 100"
                         className="mt-1"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="petgConsumption" className="text-sm">PETG (%)</Label>
+                      <Label htmlFor="petgPowerWatts" className="text-sm">PETG (Watts)</Label>
                       <Input
-                        id="petgConsumption"
+                        id="petgPowerWatts"
                         type="number"
-                        min="0"
-                        max="100"
                         step="1"
-                        value={petgPowerConsumption}
-                        onChange={(e) => setPetgPowerConsumption(e.target.value)}
-                        placeholder="Ex: 90"
+                        min="0"
+                        value={petgPowerWatts}
+                        onChange={(e) => setPetgPowerWatts(e.target.value)}
+                        placeholder="Ex: 80"
                         className="mt-1"
                       />
                     </div>
                   </div>
-                   {/* Add more filament types as needed */}
+                   {/* Adicionar mais tipos de filamento conforme necessário */}
                   <div className="pt-2">
-                    <Button onClick={handleSavePowerConsumptionPercentages} size="sm">Salvar Ajustes de Consumo</Button>
+                    <Button onClick={handleSavePowerConsumptionWatts} size="sm">Salvar Potências Médias</Button>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   (Em desenvolvimento) No futuro, será possível adicionar/remover tipos de filamento desta lista.
+                  A integração destes valores com o cálculo de custo dos produtos será implementada.
                 </p>
               </div>
 
@@ -209,4 +209,3 @@ export default function ConfiguracoesPage() {
     </div>
   );
 }
-
