@@ -10,7 +10,7 @@ export const FilamentSchema = z.object({
   modelo: z.string().trim().optional().nullable().transform(val => val === "" ? undefined : val),
   temperaturaBicoIdeal: z.coerce.number().optional(),
   temperaturaMesaIdeal: z.coerce.number().optional(),
-  precoPorKg: z.coerce.number().nonnegative({ message: "Preço por Kg não pode ser negativo" }).optional(), // RE-ADDED
+  precoPorKg: z.coerce.number().nonnegative({ message: "Preço por Kg não pode ser negativo" }).optional(),
 });
 
 
@@ -31,9 +31,13 @@ export const ProductSchema = z.object({
   descricao: z.string().optional(),
   filamentoId: z.string().min(1, { message: "Filamento é obrigatório" }),
   impressoraId: z.string().min(1, { message: "Impressora é obrigatória" }),
-  tempoImpressaoHoras: z.coerce.number().positive({ message: "Tempo de impressão deve ser positivo" }),
-  pesoGramas: z.coerce.number().positive({ message: "Peso deve ser positivo" }),
+  tempoImpressaoHoras: z.coerce.number().positive({ message: "Tempo de produção deve ser positivo" }),
+  pesoGramas: z.coerce.number().positive({ message: "Material usado (peso) deve ser positivo" }),
   imageUrl: z.string().url({ message: "URL da imagem inválida" }).optional().or(z.literal('')),
+  custoModelagem: z.coerce.number().nonnegative({message: "Custo de modelagem não pode ser negativo"}).optional().default(0),
+  custosExtras: z.coerce.number().nonnegative({message: "Custos extras não podem ser negativos"}).optional().default(0),
+  margemLucroPercentual: z.coerce.number().nonnegative({message: "Margem de lucro não pode ser negativa"}).optional().default(20), // Default 20%
+  // custoDetalhado será calculado e não faz parte da validação do formulário em si, mas dos dados do produto.
 });
 
 export const BrandSchema = z.object({

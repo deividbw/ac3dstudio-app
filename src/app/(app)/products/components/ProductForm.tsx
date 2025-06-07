@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,10 +26,9 @@ import {
 } from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { ProductSchema } from "@/lib/schemas";
-import type { Product, Filament, Printer, ProductCost, Brand } from "@/lib/types";
+import type { Product, Filament, Printer, ProductCostBreakdown, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { calculateProductCostAction, createProduct, updateProduct } from '@/lib/actions/product.actions';
-import type { ProductCostCalculationInput } from '@/ai/flows/product-cost-calculation';
+import { createProduct, updateProduct } from '@/lib/actions/product.actions';
 import { Loader2 } from "lucide-react";
 
 interface ProductFormProps {
@@ -43,7 +43,8 @@ interface ProductFormProps {
 export function ProductForm({ product, filaments, printers, brands, onSuccess, onCancel }: ProductFormProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
-  const [calculatedCostForDisplay, setCalculatedCostForDisplay] = useState<ProductCost | undefined>(product?.custoCalculado);
+  const [costBreakdown, setCostBreakdown] = useState<ProductCostBreakdown | undefined>(product?.custoDetalhado);
+  const [showCostSection, setShowCostSection] = useState(!!product?.custoDetalhado);
 
   const form = useForm<z.infer<typeof ProductSchema>>({
     resolver: zodResolver(ProductSchema),
@@ -55,99 +56,130 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
       tempoImpressaoHoras: 0,
       pesoGramas: 0,
       imageUrl: "",
+      custoModelagem: 0,
+      custosExtras: 0,
+      margemLucroPercentual: 20, // Default 20%
     },
   });
 
-  const watchedFilamentoId = form.watch("filamentoId");
-  const watchedImpressoraId = form.watch("impressoraId");
-  const watchedPesoGramas = form.watch("pesoGramas");
-  const watchedTempoImpressaoHoras = form.watch("tempoImpressaoHoras");
-  const watchedDescricao = form.watch("descricao");
-  const watchedNome = form.watch("nome");
+  const watchedFields = form.watch([
+    "filamentoId", 
+    "impressoraId", 
+    "pesoGramas", 
+    "tempoImpressaoHoras",
+    "custoModelagem",
+    "custosExtras",
+    "margemLucroPercentual"
+  ]);
 
-  const triggerAutomaticCostCalculation = useCallback(async () => {
+  const triggerCostCalculation = useCallback(async () => {
     const currentValues = form.getValues();
     
-    if (!currentValues.filamentoId || !currentValues.impressoraId || !currentValues.pesoGramas || !currentValues.tempoImpressaoHoras || 
-        Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
-      if (calculatedCostForDisplay !== undefined) {
-        setCalculatedCostForDisplay(undefined);
-      }
+    if (!currentValues.filamentoId || !currentValues.impressoraId) {
+      if (costBreakdown !== undefined) setCostBreakdown(undefined);
+      setShowCostSection(false);
       return;
     }
-
-    const isValid = await form.trigger(["filamentoId", "impressoraId", "pesoGramas", "tempoImpressaoHoras"]);
-    if (!isValid) {
-      if (calculatedCostForDisplay !== undefined) {
-        setCalculatedCostForDisplay(undefined);
-      }
-      return;
+    
+    // Basic validation before attempting calculation
+    if (Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
+       if (costBreakdown !== undefined) setCostBreakdown(undefined);
+       setShowCostSection(false);
+       return;
     }
 
     const selectedFilament = filaments.find(f => f.id === currentValues.filamentoId);
     const selectedPrinter = printers.find(p => p.id === currentValues.impressoraId);
 
     if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
-      if (calculatedCostForDisplay !== undefined) {
-          setCalculatedCostForDisplay(undefined);
-      }
+      toast({ title: "Filamento Inválido", description: "O filamento selecionado não possui um preço por Kg válido para cálculo.", variant: "destructive" });
+      if (costBreakdown !== undefined) setCostBreakdown(undefined);
+      setShowCostSection(false);
       return;
     }
     if (!selectedPrinter) {
-      if (calculatedCostForDisplay !== undefined) {
-          setCalculatedCostForDisplay(undefined);
-      }
+      if (costBreakdown !== undefined) setCostBreakdown(undefined);
+      setShowCostSection(false);
       return;
     }
 
     setIsCalculating(true);
     try {
-      const calculationInput: ProductCostCalculationInput = {
-        filamentCostPerKg: selectedFilament.precoPorKg,
-        filamentUsedKg: Number(currentValues.pesoGramas) / 1000,
-        printingTimeHours: Number(currentValues.tempoImpressaoHoras),
-        printerEnergyConsumptionPerHour: selectedPrinter.consumoEnergiaHora,
-        energyCostPerKWh: selectedPrinter.custoEnergiaKwh,
-        printerDepreciationPerHour: selectedPrinter.taxaDepreciacaoHora,
-        additionalDetails: currentValues.descricao || `Cálculo para produto: ${currentValues.nome || product?.nome || 'Novo Produto'}`,
+      const pesoGramas = Number(currentValues.pesoGramas) || 0;
+      const tempoProducaoHoras = Number(currentValues.tempoImpressaoHoras) || 0;
+      const custoModelagem = Number(currentValues.custoModelagem) || 0;
+      const custosExtras = Number(currentValues.custosExtras) || 0;
+      const margemLucroPercentual = Number(currentValues.margemLucroPercentual) || 0;
+
+      // 1. Custo do Material
+      const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
+
+      // 2. Custo de Impressão
+      const custoEnergiaImpressao = selectedPrinter.consumoEnergiaHora * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
+      const custoDepreciacaoImpressao = selectedPrinter.taxaDepreciacaoHora * tempoProducaoHoras;
+      const custoImpressaoCalculado = custoEnergiaImpressao + custoDepreciacaoImpressao;
+
+      // 3. Custo Total de Produção
+      const custoTotalProducaoCalculado = custoMaterialCalculado + custoImpressaoCalculado + custoModelagem + custosExtras;
+
+      // 4. Cálculo do Lucro
+      const lucroCalculado = custoTotalProducaoCalculado * (margemLucroPercentual / 100);
+
+      // 5. Preço Final de Venda
+      const precoVendaCalculado = custoTotalProducaoCalculado + lucroCalculado;
+
+      const newBreakdown: ProductCostBreakdown = {
+        custoMaterialCalculado,
+        custoImpressaoCalculado,
+        custoTotalProducaoCalculado,
+        lucroCalculado,
+        precoVendaCalculado,
       };
+      setCostBreakdown(newBreakdown);
+      setShowCostSection(true);
 
-      const result = await calculateProductCostAction(calculationInput);
-
-      if (result.success && result.cost) {
-        setCalculatedCostForDisplay(result.cost);
-      } else {
-        toast({ title: "Erro no Cálculo Automático", description: result.error || "Não foi possível calcular o custo.", variant: "destructive" });
-        setCalculatedCostForDisplay(undefined);
-      }
     } catch (error: any) {
-        toast({ title: "Erro Inesperado no Cálculo", description: error.message || "Ocorreu um erro ao tentar calcular o custo.", variant: "destructive" });
-        setCalculatedCostForDisplay(undefined);
+        toast({ title: "Erro no Cálculo", description: error.message || "Ocorreu um erro ao calcular o custo.", variant: "destructive" });
+        setCostBreakdown(undefined);
+        setShowCostSection(false);
     } finally {
         setIsCalculating(false);
     }
-  }, [form, filaments, printers, product, toast, setCalculatedCostForDisplay, setIsCalculating, calculatedCostForDisplay]); 
+  }, [form, filaments, printers, toast, costBreakdown, setCostBreakdown, setShowCostSection, setIsCalculating]); 
 
   useEffect(() => {
     const { filamentoId, impressoraId, pesoGramas, tempoImpressaoHoras } = form.getValues();
-    if (filamentoId && impressoraId && pesoGramas && tempoImpressaoHoras && Number(pesoGramas) > 0 && Number(tempoImpressaoHoras) > 0) {
-      triggerAutomaticCostCalculation();
+    if (filamentoId && impressoraId && Number(pesoGramas) > 0 && Number(tempoImpressaoHoras) > 0) {
+      triggerCostCalculation();
     } else {
-       if (calculatedCostForDisplay !== undefined) { // Only clear if it was previously set
-        setCalculatedCostForDisplay(undefined);
-      }
+       if (costBreakdown !== undefined) {
+           setCostBreakdown(undefined);
+       }
+       setShowCostSection(false);
     }
-  }, [watchedFilamentoId, watchedImpressoraId, watchedPesoGramas, watchedTempoImpressaoHoras, watchedDescricao, watchedNome, triggerAutomaticCostCalculation, calculatedCostForDisplay, form, setCalculatedCostForDisplay]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedFields, triggerCostCalculation]); // Depend on all watched fields
 
 
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
     try {
-      const dataToSave = {
+      // Recalculate one last time with final form values to ensure accuracy,
+      // especially if any debouncing was added or if state updates are async.
+      // For now, we assume costBreakdown state is up-to-date.
+      
+      const dataToSave: Product = {
         ...values,
+        nome: values.nome,
+        descricao: values.descricao || undefined,
+        filamentoId: values.filamentoId,
+        impressoraId: values.impressoraId,
         tempoImpressaoHoras: Number(values.tempoImpressaoHoras),
         pesoGramas: Number(values.pesoGramas),
         imageUrl: values.imageUrl || undefined,
-        custoCalculado: calculatedCostForDisplay, 
+        custoModelagem: Number(values.custoModelagem) || 0,
+        custosExtras: Number(values.custosExtras) || 0,
+        margemLucroPercentual: Number(values.margemLucroPercentual) || 0,
+        custoDetalhado: costBreakdown, 
       };
 
       let actionResult;
@@ -190,11 +222,11 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const handleNumericInputChange = (field: any, value: string, isFloat = false) => {
+  const handleNumericInputChange = (field: any, value: string) => {
     if (value.trim() === '') {
       field.onChange(undefined); 
     } else {
-      const num = isFloat ? parseFloat(value) : parseInt(value, 10);
+      const num = parseFloat(value);
       field.onChange(Number.isNaN(num) ? undefined : num);
     }
   };
@@ -205,15 +237,15 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
 
   return (
     <>
-      <DialogHeader className="px-6 pt-6 sticky top-0 bg-background z-10 border-b">
-        <DialogTitle className="font-headline text-xl">{product ? "Editar Produto" : "Adicionar Novo Produto"}</DialogTitle>
+      <DialogHeader className="sticky top-0 z-10 bg-background p-6 border-b">
+        <DialogTitle className="font-headline text-xl">{product ? "Editar Produto" : "Novo Produto"}</DialogTitle>
         <DialogDescription>
-          {product ? "Modifique os detalhes do produto. O custo será recalculado automaticamente." : "Preencha as informações do novo produto. O custo será calculado automaticamente."}
+          {product ? "Modifique os detalhes do produto." : "Preencha as informações do novo produto. Os custos serão calculados automaticamente."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}> 
-          <div className="px-6 py-4 space-y-3"> 
+          <div className="space-y-3 px-6 py-4"> 
             <FormField
               control={form.control}
               name="nome"
@@ -232,7 +264,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
               name="descricao"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição (Opcional)</FormLabel>
+                  <FormLabel>Descrição</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} value={field.value ?? ""} />
                   </FormControl>
@@ -245,23 +277,27 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
               name="imageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL da Imagem (Opcional)</FormLabel>
+                  <FormLabel>URL da Imagem</FormLabel>
                   <FormControl>
                     <Input placeholder="https://placehold.co/300x200.png" {...field} value={field.value ?? ""} />
                   </FormControl>
-                  {field.value && <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-32 object-cover rounded-md border" />}
+                  {field.value ? (
+                    <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-auto max-w-xs object-contain rounded-md border" />
+                  ) : (
+                    <img src="https://placehold.co/300x200.png" alt="Placeholder" data-ai-hint="product 3dprint" className="mt-2 h-24 w-auto max-w-xs object-contain rounded-md border opacity-50" />
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="filamentoId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Filamento Utilizado*</FormLabel>
+                    <FormLabel>Filamento*</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger>
@@ -285,7 +321,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                 name="impressoraId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Impressora Utilizada*</FormLabel>
+                    <FormLabel>Impressora*</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? ""}>
                       <FormControl>
                         <SelectTrigger>
@@ -305,7 +341,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                 )}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="pesoGramas"
@@ -313,9 +349,9 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                   <FormItem>
                     <FormLabel>Material Usado (g)*</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" placeholder="Ex: 50.5" 
+                      <Input type="number" step="0.1" placeholder="Ex: 50" 
                               value={getNumericFieldValue(field.value)}
-                              onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                              onChange={e => handleNumericInputChange(field, e.target.value)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -330,7 +366,7 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
                     <FormControl>
                       <Input type="number" step="0.1" placeholder="Ex: 2.5" 
                             value={getNumericFieldValue(field.value)}
-                            onChange={e => handleNumericInputChange(field, e.target.value, true)} />
+                            onChange={e => handleNumericInputChange(field, e.target.value)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -338,34 +374,97 @@ export function ProductForm({ product, filaments, printers, brands, onSuccess, o
               />
             </div>
             
-            <div className="mt-4 p-3 border rounded-md bg-muted/50 space-y-1 text-sm">
-              <div className="flex justify-between items-center mb-1">
-                <h4 className="font-medium text-foreground">Previsão de Custos do Produto:</h4>
-                {isCalculating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-              </div>
-              {calculatedCostForDisplay ? (
-                <>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span>{formatCurrency(calculatedCostForDisplay.materialCost)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Energia:</span> <span>{formatCurrency(calculatedCostForDisplay.energyCost)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custo Depreciação:</span> <span>{formatCurrency(calculatedCostForDisplay.depreciationCost)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Custos Adicionais (IA):</span> <span>{formatCurrency(calculatedCostForDisplay.additionalCostEstimate)}</span></div>
-                  <div className="flex justify-between font-semibold text-primary"><span >Custo Total (sem lucro):</span> <span>{formatCurrency(calculatedCostForDisplay.totalCost)}</span></div>
-                </>
-              ) : (
-                <p className="text-muted-foreground italic text-center py-2">
-                  {isCalculating ? 'Calculando...' : 'Preencha os campos para calcular o custo.'}
-                </p>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                    control={form.control}
+                    name="custoModelagem"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Custo Modelagem (R$)</FormLabel>
+                        <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 10.00" 
+                                value={getNumericFieldValue(field.value)}
+                                onChange={e => handleNumericInputChange(field, e.target.value)} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="custosExtras"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Custos Extras (R$)</FormLabel>
+                        <FormControl>
+                        <Input type="number" step="0.01" placeholder="Ex: 5.00" 
+                                value={getNumericFieldValue(field.value)}
+                                onChange={e => handleNumericInputChange(field, e.target.value)} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="margemLucroPercentual"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Margem Lucro (%)*</FormLabel>
+                        <FormControl>
+                        <Input type="number" step="1" placeholder="Ex: 100" 
+                                value={getNumericFieldValue(field.value)}
+                                onChange={e => handleNumericInputChange(field, e.target.value)} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </div>
+            
+            {showCostSection && costBreakdown && (
+              <div className="mt-4 p-4 border rounded-md bg-muted/50 space-y-2 text-sm shadow">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-semibold text-base text-foreground">Previsão de Custos e Preço do Produto:</h4>
+                  {isCalculating && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+                </div>
+                {!isCalculating && (
+                  <>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span className="font-medium">{formatCurrency(costBreakdown.custoMaterialCalculado)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Impressão:</span> <span className="font-medium">{formatCurrency(costBreakdown.custoImpressaoCalculado)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Modelagem:</span> <span className="font-medium">{formatCurrency(form.getValues("custoModelagem") || 0)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Custos Extras:</span> <span className="font-medium">{formatCurrency(form.getValues("custosExtras") || 0)}</span></div>
+                    <hr className="my-1.5"/>
+                    <div className="flex justify-between font-semibold"><span className="text-foreground">Custo Total Produção:</span> <span className="text-foreground">{formatCurrency(costBreakdown.custoTotalProducaoCalculado)}</span></div>
+                    <hr className="my-1.5"/>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Margem de Lucro ({form.getValues("margemLucroPercentual") || 0}%):</span> <span className="font-medium">{formatCurrency(costBreakdown.lucroCalculado)}</span></div>
+                    <div className="flex justify-between font-bold text-lg text-primary mt-1"><span >Preço Final de Venda (Base):</span> <span>{formatCurrency(costBreakdown.precoVendaCalculado)}</span></div>
+                  </>
+                )}
+              </div>
+            )}
+            {!showCostSection && !isCalculating && (
+                 <div className="mt-4 p-4 border rounded-md bg-muted/50 text-sm text-muted-foreground italic text-center">
+                    Selecione Filamento e Impressora, e preencha peso e tempo para ver a previsão de custos.
+                </div>
+            )}
+             {isCalculating && !costBreakdown && (
+                <div className="mt-4 p-4 border rounded-md bg-muted/50 space-y-2 text-sm text-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto mb-2" />
+                    Calculando...
+                </div>
+            )}
+
+
           </div> 
           
-          <DialogFooter className="px-6 pb-6 pt-4 border-t sticky bottom-0 bg-background z-10">
+          <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
             <DialogClose asChild>
               <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
             </DialogClose>
-            <Button type="submit" variant="default" disabled={isCalculating}>
+            <Button type="submit" variant="default" disabled={isCalculating || !showCostSection || !costBreakdown}>
               {isCalculating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar Produto
+              {product ? "Salvar Alterações" : "Adicionar Produto"}
             </Button>
           </DialogFooter>
         </form>

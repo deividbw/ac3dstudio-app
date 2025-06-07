@@ -8,7 +8,7 @@ export interface Filament {
   modelo?: string; // Ex: PLA+, Standard
   temperaturaBicoIdeal?: number; // em °C
   temperaturaMesaIdeal?: number; // em °C
-  precoPorKg?: number; // R$/kg - RE-ADDED FOR COST CALCULATION
+  precoPorKg?: number; // R$/kg - Essencial para o cálculo de custo do material
 }
 
 export interface Printer {
@@ -18,28 +18,37 @@ export interface Printer {
   modelo?: string;
   custoAquisicao: number;
   consumoEnergiaHora: number; // kWh
-  taxaDepreciacaoHora: number; // R$/hora
-  custoEnergiaKwh: number; // R$/kWh
+  taxaDepreciacaoHora: number; // R$/hora - Custo por hora da impressora (depreciação)
+  custoEnergiaKwh: number; // R$/kWh - Custo da energia
 }
 
-export interface ProductCost {
-  materialCost: number;
-  energyCost: number;
-  depreciationCost: number;
-  additionalCostEstimate: number;
-  totalCost: number;
+// Nova estrutura para o detalhamento do custo e preço do produto
+export interface ProductCostBreakdown {
+  custoMaterialCalculado: number;
+  custoImpressaoCalculado: number; // Combina depreciação e energia
+  // custoModelagem e custosExtras vêm diretamente do Product, mas são listados aqui para clareza no cálculo total
+  custoTotalProducaoCalculado: number; // Soma de material, impressão, modelagem, extras
+  // margemLucroPercentual vem diretamente do Product
+  lucroCalculado: number;
+  precoVendaCalculado: number;
 }
 
 export interface Product {
   id:string;
   nome: string;
   descricao?: string;
-  filamentoId: string;
-  impressoraId: string;
-  tempoImpressaoHoras: number;
-  pesoGramas: number; // gramas
+  filamentoId: string; // Obrigatório para cálculo
+  impressoraId: string; // Obrigatório para cálculo
+  tempoImpressaoHoras: number; // Obrigatório para cálculo
+  pesoGramas: number; // gramas - Obrigatório para cálculo
   imageUrl?: string;
-  custoCalculado?: ProductCost;
+
+  // Novos campos de entrada para o formulário
+  custoModelagem?: number;
+  custosExtras?: number;
+  margemLucroPercentual?: number; // Em % (ex: 20 para 20%)
+
+  custoDetalhado?: ProductCostBreakdown; // Armazena todos os valores calculados
 }
 
 export interface Brand {

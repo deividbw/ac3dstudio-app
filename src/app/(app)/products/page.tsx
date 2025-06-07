@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import Link from 'next/link'; // Ensure Link is imported
+import Link from 'next/link';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit, Trash2, DollarSign, Download, PackageSearch, AlertTriangle } from 'lucide-react';
@@ -33,8 +33,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProductForm } from './components/ProductForm';
-import { CostDisplayDialog } from './components/CostDisplayDialog';
-import type { Product, Filament, Printer, ProductCost, Brand } from '@/lib/types';
+import { CostDisplayDialog } from './components/CostDisplayDialog'; // Will need updates or replacement
+import type { Product, Filament, Printer, ProductCostBreakdown, Brand } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { exportToCsv } from '@/lib/csv-export';
 import { getProducts as mockGetProducts, deleteProduct as mockDeleteProduct } from '@/lib/actions/product.actions';
@@ -90,11 +90,11 @@ export default function ProductsPage() {
   };
   
   const handleShowCost = (product: Product) => {
-    if (product.custoCalculado) {
+    if (product.custoDetalhado) {
       setCurrentProductForCostDisplay(product);
       setIsCostDisplayOpen(true);
     } else {
-      toast({ title: "Custo Não Calculado", description: "Edite o produto e preencha os campos para calcular o custo de produção.", variant: "default" });
+      toast({ title: "Custo Não Calculado", description: "Os detalhes do custo para este produto não foram encontrados ou não foram calculados.", variant: "default" });
     }
   };
 
@@ -114,11 +114,14 @@ export default function ProductsPage() {
         Impressora: printer ? printer.nome : 'N/A',
         "Tempo Impressão (h)": p.tempoImpressaoHoras,
         "Peso (g)": p.pesoGramas,
-        "Custo Material (R$)": p.custoCalculado?.materialCost?.toFixed(2) || 'N/A',
-        "Custo Energia (R$)": p.custoCalculado?.energyCost?.toFixed(2) || 'N/A',
-        "Custo Depreciação (R$)": p.custoCalculado?.depreciationCost?.toFixed(2) || 'N/A',
-        "Custos Adicionais (R$)": p.custoCalculado?.additionalCostEstimate?.toFixed(2) || 'N/A',
-        "Custo Total (R$)": p.custoCalculado?.totalCost?.toFixed(2) || 'N/A',
+        "Custo Modelagem (R$)": p.custoModelagem?.toFixed(2) || '0.00',
+        "Custos Extras (R$)": p.custosExtras?.toFixed(2) || '0.00',
+        "Margem Lucro (%)": p.margemLucroPercentual?.toFixed(0) || '0',
+        "Custo Material (R$)": p.custoDetalhado?.custoMaterialCalculado?.toFixed(2) || 'N/A',
+        "Custo Impressão (R$)": p.custoDetalhado?.custoImpressaoCalculado?.toFixed(2) || 'N/A',
+        "Custo Total Produção (R$)": p.custoDetalhado?.custoTotalProducaoCalculado?.toFixed(2) || 'N/A',
+        "Lucro Calculado (R$)": p.custoDetalhado?.lucroCalculado?.toFixed(2) || 'N/A',
+        "Preço Venda Calculado (R$)": p.custoDetalhado?.precoVendaCalculado?.toFixed(2) || 'N/A',
         "URL Imagem": p.imageUrl || ''
       };
     }));
@@ -206,7 +209,7 @@ export default function ProductsPage() {
                   <TableHead className="px-2 py-2 font-semibold uppercase">Nome</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Filamento</TableHead>
                   <TableHead className="px-2 py-2 font-semibold uppercase">Impressora</TableHead>
-                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Custo Total (R$)</TableHead>
+                  <TableHead className="px-2 py-2 text-right font-semibold uppercase">Preço Venda (R$)</TableHead>
                   <TableHead className="w-[120px] px-2 py-2 text-center font-semibold uppercase">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -230,7 +233,7 @@ export default function ProductsPage() {
                       <TableCell className="px-2 py-1.5">{filament ? `${filament.tipo} (${filament.cor})` : 'N/A'}</TableCell>
                       <TableCell className="px-2 py-1.5">{printer ? printer.nome : 'N/A'}</TableCell>
                       <TableCell className="text-right font-semibold text-primary px-2 py-1.5">
-                        {product.custoCalculado ? product.custoCalculado.totalCost.toFixed(2) : 'N/A'}
+                        {product.custoDetalhado?.precoVendaCalculado ? product.custoDetalhado.precoVendaCalculado.toFixed(2) : 'N/A'}
                       </TableCell>
                       <TableCell className="px-2 py-1.5 text-center">
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:bg-blue-100 hover:text-blue-600" onClick={() => handleShowCost(product)} title="Ver Custo Detalhado">
@@ -271,8 +274,7 @@ export default function ProductsPage() {
         <CostDisplayDialog 
           isOpen={isCostDisplayOpen}
           onOpenChange={setIsCostDisplayOpen}
-          cost={currentProductForCostDisplay.custoCalculado}
-          productName={currentProductForCostDisplay.nome}
+          product={currentProductForCostDisplay} // Pass the whole product
         />
       )}
     </div>
