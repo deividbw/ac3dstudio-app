@@ -46,15 +46,15 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       marcaId: printer.marcaId ?? undefined,
       modelo: printer.modelo ?? undefined,
       vidaUtilAnos: printer.vidaUtilAnos ?? 0,
-      horasTrabalhoDia: printer.horasTrabalhoDia ?? 8, 
+      horasTrabalhoDia: printer.horasTrabalhoDia ?? 8,
       taxaDepreciacaoHora: printer.taxaDepreciacaoHora ?? 0,
     } : {
       marcaId: undefined,
       modelo: undefined,
       custoAquisicao: 0,
-      consumoEnergiaHora: 0.1, 
+      consumoEnergiaHora: 0.1,
       vidaUtilAnos: 0,
-      horasTrabalhoDia: 8, 
+      horasTrabalhoDia: 8,
       taxaDepreciacaoHora: 0,
     },
   });
@@ -71,8 +71,12 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
 
     if (custoAquisicao > 0 && vidaUtilAnos > 0 && horasTrabalhoDia > 0) {
       const horasOperacionaisTotais = vidaUtilAnos * 365 * horasTrabalhoDia;
-      const depreciacaoCalculada = custoAquisicao / horasOperacionaisTotais;
-      form.setValue("taxaDepreciacaoHora", depreciacaoCalculada);
+      if (horasOperacionaisTotais > 0) {
+        const depreciacaoCalculada = custoAquisicao / horasOperacionaisTotais;
+        form.setValue("taxaDepreciacaoHora", depreciacaoCalculada);
+      } else {
+        form.setValue("taxaDepreciacaoHora", 0);
+      }
     } else {
       form.setValue("taxaDepreciacaoHora", 0);
     }
@@ -88,20 +92,22 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         consumoEnergiaHora: Number(values.consumoEnergiaHora),
         vidaUtilAnos: Number(values.vidaUtilAnos),
         horasTrabalhoDia: Number(values.horasTrabalhoDia),
-        taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora), 
+        taxaDepreciacaoHora: Number(values.taxaDepreciacaoHora),
       };
 
       let actionResult;
       if (printer && printer.id) {
         const dataForUpdate: Partial<Omit<Printer, 'id'>> = {
           ...dataForActionBase,
-          custoEnergiaKwh: printer.custoEnergiaKwh, 
+          // custoEnergiaKwh will be preserved from existing data as it's not on the form
+          custoEnergiaKwh: printer.custoEnergiaKwh,
         };
         actionResult = await updatePrinter(printer.id, dataForUpdate);
       } else {
         const dataForCreate: Omit<Printer, 'id'> = {
           ...dataForActionBase,
-          custoEnergiaKwh: undefined, 
+          // custoEnergiaKwh will be set by default in the action for new printers
+          custoEnergiaKwh: undefined, // Will be defaulted in the action
         };
         actionResult = await createPrinter(dataForCreate);
       }
@@ -109,7 +115,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       if (actionResult.success && actionResult.printer) {
         toast({
           title: printer ? "Impressora Atualizada" : "Impressora Criada",
-          description: `A impressora ${actionResult.printer.modelo || actionResult.printer.marcaId || 'ID: ' + actionResult.printer.id} foi salva.`,
+          description: `A impressora ${actionResult.printer.modelo || getBrandNameById(actionResult.printer.marcaId) || 'ID: ' + actionResult.printer.id} foi salva.`,
           variant: "success",
         });
         onSuccess(actionResult.printer);
@@ -129,6 +135,12 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       });
     }
   }
+  
+  const getBrandNameById = (brandId?: string) => {
+    if (!brandId) return "";
+    const brand = brands.find(b => b.id === brandId);
+    return brand ? brand.nome : "";
+  };
 
   const handleGenericNumericInputChange = (field: any, value: string, isInt = false) => {
     if (value.trim() === '') {
@@ -151,7 +163,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
       if (Number.isNaN(numWatts)) {
         field.onChange(undefined);
       } else {
-        field.onChange(numWatts / 1000); 
+        field.onChange(numWatts / 1000);
       }
     }
   };
@@ -160,7 +172,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     if (valueInKwh === undefined || valueInKwh === null || Number.isNaN(valueInKwh)) {
       return '';
     }
-    return String(valueInKwh * 1000); 
+    return String(valueInKwh * 1000);
   };
 
 
@@ -170,7 +182,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
         <DialogTitle className="font-headline">{printer ? "Editar Impressora" : "Adicionar Nova Impressora"}</DialogTitle>
         <DialogDescription>
           {printer ? "Modifique os detalhes da impressora." : "Preencha as informações da nova impressora."}
-          O custo de energia por kWh será um valor padrão do sistema.
+          O custo de energia por kWh é um valor padrão do sistema (R$ {printer?.custoEnergiaKwh?.toFixed(2) || 'N/A'}).
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -237,15 +249,15 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
               />
               <FormField
                 control={form.control}
-                name="consumoEnergiaHora" 
+                name="consumoEnergiaHora"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Potência Watts *</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
-                        step="1" 
-                        placeholder="Ex: 150" 
+                        step="1"
+                        placeholder="Ex: 150"
                         value={getPotenciaWattsFieldValue(field.value)}
                         onChange={e => handlePotenciaWattsInputChange(field, e.target.value)}
                       />
@@ -255,7 +267,7 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
                 )}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -293,13 +305,13 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
 
             <div className="space-y-1">
                 <FormLabel>Depreciação Calculada (R$/hora)</FormLabel>
-                <Input 
-                    type="text" 
-                    readOnly 
+                <Input
+                    type="text"
+                    readOnly
                     value={
                         taxaDepreciacaoHoraWatched > 0
-                        ? `R$ ${taxaDepreciacaoHoraWatched.toFixed(4)}`
-                        : "R$ 0.0000"
+                        ? `R$ ${taxaDepreciacaoHoraWatched.toFixed(2)}`
+                        : "R$ 0.00"
                     }
                     className="bg-muted text-muted-foreground cursor-default"
                 />
@@ -332,4 +344,3 @@ export function PrinterForm({ printer, brands, onSuccess, onCancel }: PrinterFor
     </>
   );
 }
-
