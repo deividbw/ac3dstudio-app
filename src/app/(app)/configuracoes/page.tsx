@@ -8,26 +8,40 @@ import { Icons } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop } from 'lucide-react';
+import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap } from 'lucide-react'; // Added Zap
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator'; // Added Separator
 
 export default function ConfiguracoesPage() {
   const [kwhValue, setKwhValue] = React.useState("0.75"); // Example value
-  const { toast } = useToast(); // Initialize toast
+  const { toast } = useToast();
+
+  // State for filament power consumption percentages
+  const [plaPowerConsumption, setPlaPowerConsumption] = React.useState("80");
+  const [absPowerConsumption, setAbsPowerConsumption] = React.useState("100");
+  const [petgPowerConsumption, setPetgPowerConsumption] = React.useState("90");
 
   const handleSaveKwh = () => {
-    // In a real app, this would call a server action to save the kwhValue
-    // and potentially update a global state/context.
     console.log("Salvar valor kWh:", kwhValue);
     toast({ 
       title: "Configuração Salva", 
       description: `Valor do kWh padrão atualizado para R$ ${parseFloat(kwhValue).toFixed(2)}.`,
+      variant: "success",
+    });
+  };
+
+  const handleSavePowerConsumptionPercentages = () => {
+    // In a real app, this would save to a DB / global state
+    console.log("Salvando percentuais de consumo:", { pla: plaPowerConsumption, abs: absPowerConsumption, petg: petgPowerConsumption });
+    toast({
+      title: "Ajustes Salvos",
+      description: "Percentuais de consumo de energia por filamento foram salvos.",
       variant: "success",
     });
   };
@@ -67,10 +81,79 @@ export default function ConfiguracoesPage() {
                   Este valor será usado como padrão para novas impressoras e nos cálculos de custo de energia.
                 </p>
               </div>
-              <div className="mt-4 pt-4 border-t">
+
+              <Separator className="my-6" />
+
+              <div>
+                <h4 className="font-medium text-md mb-2 flex items-center">
+                  <Zap className="mr-2 h-5 w-5 text-primary/80" />
+                  Ajuste de Consumo de Energia por Tipo de Filamento
+                </h4>
+                <CardDescription className="mb-3 text-xs">
+                  Defina o percentual da potência máxima da impressora que cada tipo de filamento normalmente consome.
+                  Isso refinará o cálculo de custo de energia.
+                </CardDescription>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div>
+                      <Label htmlFor="plaConsumption" className="text-sm">PLA (%)</Label>
+                      <Input
+                        id="plaConsumption"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={plaPowerConsumption}
+                        onChange={(e) => setPlaPowerConsumption(e.target.value)}
+                        placeholder="Ex: 80"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="absConsumption" className="text-sm">ABS (%)</Label>
+                      <Input
+                        id="absConsumption"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={absPowerConsumption}
+                        onChange={(e) => setAbsPowerConsumption(e.target.value)}
+                        placeholder="Ex: 100"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="petgConsumption" className="text-sm">PETG (%)</Label>
+                      <Input
+                        id="petgConsumption"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={petgPowerConsumption}
+                        onChange={(e) => setPetgPowerConsumption(e.target.value)}
+                        placeholder="Ex: 90"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                   {/* Add more filament types as needed */}
+                  <div className="pt-2">
+                    <Button onClick={handleSavePowerConsumptionPercentages} size="sm">Salvar Ajustes de Consumo</Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  (Em desenvolvimento) No futuro, será possível adicionar/remover tipos de filamento desta lista.
+                </p>
+              </div>
+
+              <Separator className="my-6" />
+              
+              <div>
                 <h4 className="font-medium text-md mb-2 flex items-center">
                   <Sparkles className="mr-2 h-5 w-5 text-primary/80" />
-                  Percentuais por Tipo de Filamento
+                  Percentuais por Tipo de Filamento (Lucro/Desperdício)
                 </h4>
                 <p className="text-sm text-muted-foreground">
                   (Em desenvolvimento) Defina margens de lucro padrão ou taxas de desperdício por tipo de filamento.
@@ -126,3 +209,4 @@ export default function ConfiguracoesPage() {
     </div>
   );
 }
+
