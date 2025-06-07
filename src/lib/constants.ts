@@ -5,7 +5,7 @@ import {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown
+  WalletCards, CalendarX2, TrendingDown, Settings // Added Settings for explicitness if needed, though Settings2 is a gear
 } from 'lucide-react';
 
 // Interface para itens de navegação, reutilizada do AppSidebar
@@ -47,7 +47,7 @@ export const MOBILE_SIDEBAR_NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/servicos',
-    icon: Settings2,
+    icon: Settings2, // This is already used for "Serviços", which is fine for a general category
     label: 'Serviços',
   },
   {
@@ -59,6 +59,11 @@ export const MOBILE_SIDEBAR_NAV_ITEMS: NavItem[] = [
     href: '/products',
     icon: Package,
     label: 'Produtos e Custos',
+  },
+  {
+    href: '/configuracoes',
+    icon: Settings2, // Using Settings2 as it's a gear icon
+    label: 'Configurações',
   },
 ];
 
@@ -83,7 +88,7 @@ export const Icons = {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown
+  WalletCards, CalendarX2, TrendingDown, Settings
 };
 
 export interface SummaryCardConfig {
