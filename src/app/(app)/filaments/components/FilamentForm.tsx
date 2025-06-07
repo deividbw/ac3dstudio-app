@@ -40,21 +40,25 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
   const form = useForm<z.infer<typeof FilamentSchema>>({
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
-      ...filament,
+      // Spread only the fields relevant to this form
+      id: filament.id,
+      tipo: filament.tipo,
+      cor: filament.cor,
+      densidade: filament.densidade,
       marcaId: filament.marcaId ?? undefined,
       modelo: filament.modelo ?? undefined,
       temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
       temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
-      precoPorKg: filament.precoPorKg ?? undefined,
+      // precoPorKg and quantidadeEstoqueGramas are not managed here
     } : {
       tipo: "",
       cor: "",
-      densidade: 1.24,
+      densidade: 1.24, // Default density
       marcaId: undefined,
       modelo: undefined,
       temperaturaBicoIdeal: undefined,
       temperaturaMesaIdeal: undefined,
-      precoPorKg: undefined,
+      // precoPorKg and quantidadeEstoqueGramas will default via schema or backend
     },
   });
 
@@ -74,7 +78,7 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
 
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
     try {
-      // Ensure numeric fields are correctly typed or undefined
+      // Data for action only includes fields managed by this form
       const dataForAction = {
         tipo: values.tipo,
         cor: values.cor,
@@ -83,14 +87,23 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
         modelo: values.modelo || undefined,
         temperaturaBicoIdeal: values.temperaturaBicoIdeal !== undefined ? Number(values.temperaturaBicoIdeal) : undefined,
         temperaturaMesaIdeal: values.temperaturaMesaIdeal !== undefined ? Number(values.temperaturaMesaIdeal) : undefined,
-        precoPorKg: values.precoPorKg !== undefined ? Number(values.precoPorKg) : undefined,
+        // precoPorKg and quantidadeEstoqueGramas are handled below
       };
 
       let actionResult;
       if (filament && filament.id) {
-        actionResult = await updateFilament(filament.id, dataForAction);
+        // For updates, explicitly preserve existing precoPorKg and quantidadeEstoqueGramas
+        const updatePayload: Partial<Omit<Filament, 'id'>> = {
+          ...dataForAction,
+          precoPorKg: filament.precoPorKg, // Preserve existing price
+          quantidadeEstoqueGramas: filament.quantidadeEstoqueGramas, // Preserve existing stock
+        };
+        actionResult = await updateFilament(filament.id, updatePayload);
       } else {
-        actionResult = await createFilament(dataForAction);
+        // For creates, precoPorKg and quantidadeEstoqueGramas will be undefined/default
+        // as per schema, or handled by the backend upon creation.
+        // Pass only data from this form.
+        actionResult = await createFilament(dataForAction as Omit<Filament, 'id' | 'precoPorKg' | 'quantidadeEstoqueGramas'>);
       }
 
       if (actionResult.success && actionResult.filament) {
@@ -123,6 +136,7 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
         <DialogTitle className="font-headline">{filament ? "Editar Filamento" : "Adicionar Novo Filamento"}</DialogTitle>
         <DialogDescription>
           {filament ? "Modifique os detalhes do filamento." : "Preencha as informações do novo filamento."}
+          O preço por Kg e a quantidade em estoque são gerenciados na tela de Estoque.
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -200,39 +214,21 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="densidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Densidade (g/cm³)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 1.24" 
-                             value={getNumericFieldValue(field.value)}
-                             onChange={e => handleNumericInputChange(field, e.target.value, true)}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="precoPorKg"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço (R$/Kg)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="Ex: 120.50" 
-                             value={getNumericFieldValue(field.value)}
-                             onChange={e => handleNumericInputChange(field, e.target.value, true)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
+            <FormField
+              control={form.control}
+              name="densidade"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Densidade (g/cm³)*</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" placeholder="Ex: 1.24" 
+                           value={getNumericFieldValue(field.value)}
+                           onChange={e => handleNumericInputChange(field, e.target.value, true)}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
