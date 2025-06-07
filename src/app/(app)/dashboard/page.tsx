@@ -122,7 +122,7 @@ export default function DashboardPage() {
               size="icon"
               className="h-7 w-7 text-muted-foreground"
               onClick={toggleSummaryValuesVisibility}
-              title={showSummaryValues ? "Ocultar valores" : "Mostrar valores"}
+              title={showSummaryValues ? "Mostrar valores" : "Ocultar valores"}
             >
               {showSummaryValues ? <Icons.Eye className="h-5 w-5" /> : <Icons.EyeOff className="h-5 w-5" />}
             </Button>
@@ -163,7 +163,7 @@ export default function DashboardPage() {
       <div className="fixed bottom-20 left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 sm:w-auto sm:left-auto sm:right-4 sm:translate-x-0">
         <Button size="lg" className="w-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90">
           <Icons.FilePlus2 className="mr-2 h-5 w-5" />
-          Criar novo pedido
+          Criar novo orçamento
         </Button>
       </div>
 
@@ -183,3 +183,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
