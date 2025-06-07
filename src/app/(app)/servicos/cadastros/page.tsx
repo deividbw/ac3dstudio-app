@@ -46,18 +46,18 @@ export default function CadastrosPage() {
         </TabsContent>
         <TabsContent value="estoque">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow bg-green-100 dark:bg-green-900/30">
               <CardContent className="p-6 flex flex-col items-center justify-center space-y-3 h-48">
-                <Layers className="h-12 w-12 text-primary mb-2" />
-                <p className="text-xl font-semibold text-foreground">Filamentos</p>
-                <p className="text-3xl font-bold text-primary">0</p>
+                <Layers className="h-12 w-12 text-green-600 dark:text-green-400 mb-2" />
+                <p className="text-xl font-semibold text-green-800 dark:text-green-300">Filamentos</p>
+                <p className="text-3xl font-bold text-green-700 dark:text-green-400">0</p>
               </CardContent>
             </Card>
-            <Card className="shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow bg-orange-100 dark:bg-orange-900/30">
               <CardContent className="p-6 flex flex-col items-center justify-center space-y-3 h-48">
-                <Package className="h-12 w-12 text-primary mb-2" />
-                <p className="text-xl font-semibold text-foreground">Produtos</p>
-                <p className="text-3xl font-bold text-primary">0</p>
+                <Package className="h-12 w-12 text-orange-600 dark:text-orange-400 mb-2" />
+                <p className="text-xl font-semibold text-orange-800 dark:text-orange-300">Produtos</p>
+                <p className="text-3xl font-bold text-orange-700 dark:text-orange-400">0</p>
               </CardContent>
             </Card>
           </div>
