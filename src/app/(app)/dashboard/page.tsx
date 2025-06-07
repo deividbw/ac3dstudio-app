@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ALL_SUMMARY_CARDS_CONFIG, type SummaryCardConfig, ALL_SHORTCUT_CARDS_CONFIG, type ShortcutCardConfig } from '@/lib/constants';
 import { SummarySettingsDialog } from './components/SummarySettingsDialog';
-import { ShortcutSettingsDialog } from './components/ShortcutSettingsDialog'; // New dialog
+import { ShortcutSettingsDialog } from './components/ShortcutSettingsDialog';
 
 // Local type for state management, extending the config with a 'visible' property
 interface VisibleSummaryCardConfig extends SummaryCardConfig {
@@ -23,7 +23,7 @@ interface VisibleShortcutCardConfig extends ShortcutCardConfig {
 }
 
 const featureCardIconColors = {
-  pedidos: "bg-primary",
+  orcamentos: "bg-primary", // Changed from pedidos
   agenda: "bg-accent",
   financeiro: "bg-green-500",
   clientes: "bg-orange-500",
@@ -31,21 +31,28 @@ const featureCardIconColors = {
   servicos: "bg-indigo-500",
 };
 
-// shortcutCardIconColors is no longer needed as colors are in ALL_SHORTCUT_CARDS_CONFIG
-
 export default function DashboardPage() {
   const router = useRouter();
   const [showSummaryValues, setShowSummaryValues] = useState(true);
   
   const [isSummarySettingsDialogOpen, setIsSummarySettingsDialogOpen] = useState(false);
-  const [summaryCardSettings, setSummaryCardSettings] = useState<VisibleSummaryCardConfig[]>(
-    ALL_SUMMARY_CARDS_CONFIG.map(card => ({ ...card, visible: card.defaultVisible }))
-  );
+  const [summaryCardSettings, setSummaryCardSettings] = useState<VisibleSummaryCardConfig[]>(() => {
+    // Initialize from ALL_SUMMARY_CARDS_CONFIG, ensuring icons are correct references
+    return ALL_SUMMARY_CARDS_CONFIG.map(card => ({
+      ...card, // Spread all original properties
+      visible: card.defaultVisible,
+    }));
+  });
 
   const [isShortcutSettingsDialogOpen, setIsShortcutSettingsDialogOpen] = useState(false);
-  const [shortcutCardSettings, setShortcutCardSettings] = useState<VisibleShortcutCardConfig[]>(
-    ALL_SHORTCUT_CARDS_CONFIG.map(card => ({ ...card, visible: card.defaultVisible }))
-  );
+  const [shortcutCardSettings, setShortcutCardSettings] = useState<VisibleShortcutCardConfig[]>(() => {
+     // Initialize from ALL_SHORTCUT_CARDS_CONFIG
+    return ALL_SHORTCUT_CARDS_CONFIG.map(card => ({
+      ...card,
+      visible: card.defaultVisible,
+    }));
+  });
+
 
   const toggleSummaryValuesVisibility = () => {
     setShowSummaryValues(prevState => !prevState);
@@ -63,7 +70,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Main Features Grid */}
       <div className="grid grid-cols-2 gap-4">
-        <FeatureCard icon={Icons.ClipboardList} title="Pedidos" iconBgColor={featureCardIconColors.pedidos} />
+        <FeatureCard icon={Icons.ClipboardList} title="Orçamentos" iconBgColor={featureCardIconColors.orcamentos} />
         <FeatureCard icon={Icons.CalendarDays} title="Agenda" iconBgColor={featureCardIconColors.agenda} />
         <FeatureCard icon={Icons.DollarSign} title="Financeiro" iconBgColor={featureCardIconColors.financeiro} />
         <FeatureCard icon={Icons.Users} title="Clientes" iconBgColor={featureCardIconColors.clientes} />
@@ -122,7 +129,7 @@ export default function DashboardPage() {
               size="icon"
               className="h-7 w-7 text-muted-foreground"
               onClick={toggleSummaryValuesVisibility}
-              title={showSummaryValues ? "Mostrar valores" : "Ocultar valores"}
+              title={showSummaryValues ? "Ocultar valores" : "Mostrar valores"}
             >
               {showSummaryValues ? <Icons.Eye className="h-5 w-5" /> : <Icons.EyeOff className="h-5 w-5" />}
             </Button>
@@ -146,7 +153,7 @@ export default function DashboardPage() {
               iconColor={card.iconTextColor}
               title={card.title}
               mainValue="R$ 0,00" // Placeholder data
-              subDescription="0 pedidos" // Placeholder data
+              subDescription="0 orçamentos" // Placeholder data, changed from pedidos
               mainValueColorClass={card.mainValueColorClass}
               isValueVisible={showSummaryValues}
             />
@@ -183,4 +190,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

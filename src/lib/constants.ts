@@ -98,8 +98,8 @@ export interface SummaryCardConfig {
 
 export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
   {
-    id: 'pedidosConcluidos',
-    title: 'Pedidos Concluídos Hoje',
+    id: 'orcamentosConcluidos', // Changed from pedidosConcluidos
+    title: 'Orçamentos Concluídos Hoje', // Changed from Pedidos
     icon: CalendarCheck2,
     iconBgColor: "bg-green-100 dark:bg-green-900",
     iconTextColor: "text-green-600 dark:text-green-400",
@@ -125,8 +125,8 @@ export const ALL_SUMMARY_CARDS_CONFIG: SummaryCardConfig[] = [
     defaultVisible: true,
   },
   {
-    id: 'pedidosCancelados',
-    title: 'Pedidos Cancelados Hoje',
+    id: 'orcamentosCancelados', // Changed from pedidosCancelados
+    title: 'Orçamentos Cancelados Hoje', // Changed from Pedidos
     icon: CalendarX2,
     iconBgColor: "bg-red-100 dark:bg-red-900",
     iconTextColor: "text-red-600 dark:text-red-400",
@@ -155,8 +155,8 @@ export interface ShortcutCardConfig {
 
 export const ALL_SHORTCUT_CARDS_CONFIG: ShortcutCardConfig[] = [
   {
-    id: 'novoPedido',
-    label: 'Criar novo pedido',
+    id: 'novoOrcamento', // Changed from novoPedido
+    label: 'Criar novo orçamento', // Changed from pedido
     icon: FilePlus2,
     iconBgColor: 'bg-primary', // Using theme primary
     defaultVisible: true,

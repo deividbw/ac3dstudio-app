@@ -19,9 +19,9 @@ export default function ServicosPage() {
         />
         <ServiceCategoryCard 
           icon={ClipboardList} 
-          title="Pedidos" 
+          title="Orçamentos" 
           bgColor="bg-blue-500 hover:bg-blue-600" 
-          href="/servicos/pedidos" // Placeholder, adjust as needed
+          href="/servicos/orcamentos" // Placeholder, adjust as needed, changed from /pedidos
         />
         <ServiceCategoryCard 
           icon={SlidersHorizontal} 
