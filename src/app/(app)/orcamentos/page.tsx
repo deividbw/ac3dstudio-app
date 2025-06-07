@@ -35,9 +35,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { Orcamento, Product, OrcamentoStatus } from '@/lib/types';
 import { getProducts } from '@/lib/actions/product.actions';
 import { getOrcamentos, createOrcamento, updateOrcamento, deleteOrcamento } from '@/lib/actions/orcamento.actions';
-import { OrcamentoForm } from './components/OrcamentoForm'; // Novo formulário
+import { OrcamentoForm } from './components/OrcamentoForm'; 
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils'; // Added import for cn
+import { cn } from '@/lib/utils'; 
 
 export default function OrcamentosPage() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
@@ -58,7 +58,7 @@ export default function OrcamentosPage() {
         getProducts(),
       ]);
       setOrcamentos(orcamentosData.sort((a,b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()));
-      setProducts(productsData);
+      setProducts(productsData.filter(p => p.custoDetalhado?.precoVendaCalculado && p.custoDetalhado.precoVendaCalculado > 0)); // Ensure products have price
     } catch (error) {
       console.error("Erro ao carregar dados para orçamentos:", error);
       toast({ title: "Erro ao Carregar Dados", description: "Não foi possível buscar os orçamentos ou produtos.", variant: "destructive" });
@@ -80,7 +80,7 @@ export default function OrcamentosPage() {
   }, [orcamentos, searchTerm]);
 
   const handleFormSuccess = (orcamento: Orcamento) => {
-    loadData(); // Recarrega os orçamentos
+    loadData(); 
     setIsFormOpen(false);
     setEditingOrcamento(null);
   };
@@ -117,10 +117,10 @@ export default function OrcamentosPage() {
 
   const getStatusBadgeVariant = (status: OrcamentoStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-      case 'Pendente': return 'default'; // Amarelo visualmente, mas shadcn default pode ser azul/primary
-      case 'Aprovado': return 'secondary'; // Verde visualmente
+      case 'Pendente': return 'default'; 
+      case 'Aprovado': return 'secondary'; 
       case 'Rejeitado': return 'destructive';
-      case 'Concluído': return 'outline'; // Azul claro/cinza visualmente
+      case 'Concluído': return 'outline'; 
       default: return 'default';
     }
   };
@@ -143,13 +143,18 @@ export default function OrcamentosPage() {
             if (!isOpen) setEditingOrcamento(null);
         }}>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={handleOpenNewDialog}>
+            <Button size="sm" onClick={handleOpenNewDialog} disabled={products.length === 0}>
               <FilePlus2 className="mr-2 h-4 w-4" />
               Novo Orçamento
             </Button>
           </DialogTrigger>
-          {isFormOpen && ( // Renderiza o formulário condicionalmente para garantir que `products` esteja carregado
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 overflow-y-auto">
+          {products.length === 0 && !isLoading && (
+            <p className="text-sm text-destructive text-center py-2">
+              Não há produtos cadastrados com preço para criar orçamentos. Cadastre produtos primeiro.
+            </p>
+          )}
+          {isFormOpen && products.length > 0 && ( 
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col"> {/* Flex col para DialogContent */}
                 <OrcamentoForm
                     orcamento={editingOrcamento}
                     products={products}
@@ -171,7 +176,7 @@ export default function OrcamentosPage() {
               <Input 
                 type="search"
                 placeholder="Buscar por nome, cliente, ID..."
-                className="pl-8 h-9"
+                className="pl-8 h-9 text-xs"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -190,26 +195,26 @@ export default function OrcamentosPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome Orçamento</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Valor Total</TableHead>
-                    <TableHead className="text-center w-[100px]">Ações</TableHead>
+                    <TableHead className="text-xs">Nome Orçamento</TableHead>
+                    <TableHead className="text-xs">Cliente</TableHead>
+                    <TableHead className="text-xs">Data</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-right text-xs">Valor Total</TableHead>
+                    <TableHead className="text-center w-[100px] text-xs">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredOrcamentos.map((orc) => (
                     <TableRow key={orc.id}>
-                      <TableCell className="font-medium">{orc.nomeOrcamento}</TableCell>
-                      <TableCell>{orc.clienteNome}</TableCell>
-                      <TableCell>{formatDate(orc.dataCriacao)}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(orc.status)} className={cn(getStatusBadgeColorClass(orc.status))}>
+                      <TableCell className="font-medium text-xs">{orc.nomeOrcamento}</TableCell>
+                      <TableCell className="text-xs">{orc.clienteNome}</TableCell>
+                      <TableCell className="text-xs">{formatDate(orc.dataCriacao)}</TableCell>
+                      <TableCell className="text-xs">
+                        <Badge variant={getStatusBadgeVariant(orc.status)} className={cn(getStatusBadgeColorClass(orc.status), 'text-xs')}>
                             {orc.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-primary">{formatCurrency(orc.valorTotalCalculado)}</TableCell>
+                      <TableCell className="text-right font-semibold text-primary text-xs">{formatCurrency(orc.valorTotalCalculado)}</TableCell>
                       <TableCell className="text-center">
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-yellow-500 hover:bg-yellow-100" onClick={() => handleOpenEditDialog(orc)}>
                           <Edit className="h-4 w-4" />
@@ -242,8 +247,13 @@ export default function OrcamentosPage() {
           ) : (
             <div className="text-center py-10 text-muted-foreground">
               <Search className="mx-auto h-12 w-12 opacity-50 mb-3" />
-              <p>Nenhum orçamento encontrado.</p>
+              <p className="text-sm">Nenhum orçamento encontrado.</p>
               {searchTerm && <p className="text-xs mt-1">Tente refinar sua busca ou limpar o filtro.</p>}
+              {products.length === 0 && !isLoading &&
+                 <p className="text-sm mt-2 text-destructive">
+                    Atenção: Não há produtos com preço definido cadastrados para criar orçamentos.
+                </p>
+              }
             </div>
           )}
         </CardContent>
@@ -251,3 +261,6 @@ export default function OrcamentosPage() {
     </div>
   );
 }
+
+</content>
+  
