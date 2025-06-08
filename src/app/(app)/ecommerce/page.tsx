@@ -201,7 +201,7 @@ export default function EcommercePage() {
         setIsCartSheetOpen(false);
         setIsSolicitanteInfoDialogOpen(false);
         solicitanteForm.reset();
-        router.push('/orcamentos'); 
+        // router.push('/orcamentos'); // REMOVIDO: Mantém o usuário na página de e-commerce
       } else {
         toast({
           title: "Erro ao Solicitar Orçamento",
@@ -320,7 +320,7 @@ export default function EcommercePage() {
                         <Button variant="outline" className="w-full sm:w-auto" disabled={isSubmittingOrcamento}>Continuar Navegando</Button>
                         </SheetClose>
                         {cartGrouped.length > 0 && (
-                        <Button onClick={handleOpenSolicitanteInfoDialog} className="w-full sm:w-auto" disabled={isSubmittingOrcamento}>
+                        <Button onClick={handleOpenSolicitanteInfoDialog} className="w-full sm:w-auto" disabled={isSubmittingOrcamento || cart.length === 0}>
                            {isSubmittingOrcamento ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
                            {isSubmittingOrcamento ? "Enviando..." : `Solicitar Orçamento (${cart.length})`}
                         </Button>
