@@ -40,14 +40,12 @@ export function SummaryCard({
   }
 
   if (typeof IconComponent !== 'function') {
-    if (IconInput && typeof IconInput === 'object' && Object.keys(IconInput).length === 0 && IconInput.constructor === Object) {
-      // Specific log for empty object case
-      console.error(
-        'Invalid icon provided to SummaryCard: Received an empty object {}. Icon prop value was:', 
-        IconInput
-      );
-    } else {
-      // General log for other invalid cases
+    // Check if it's the specific empty object case.
+    const isEmptyObject = IconInput && typeof IconInput === 'object' && Object.keys(IconInput).length === 0 && IconInput.constructor === Object;
+
+    if (!isEmptyObject) {
+      // Log an error for other invalid icon types (e.g., string, number, non-empty object without a default export)
+      // but not for the IconInput === {} case, as we handle it with a fallback.
       console.error(
         'Invalid icon provided to SummaryCard. Prop value was:', 
         IconInput, 
