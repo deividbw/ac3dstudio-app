@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { EcommerceContactFormValues } from "@/lib/schemas";
@@ -17,10 +18,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Send } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
+import { submitEcommerceContactForm } from "@/lib/actions/ecommerce.actions";
 
 export function EcommerceContactForm() {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<EcommerceContactFormValues>({
     resolver: zodResolver(EcommerceContactSchema),
     defaultValues: {
@@ -33,14 +37,33 @@ export function EcommerceContactForm() {
   });
 
   async function onSubmit(values: EcommerceContactFormValues) {
-    // Simulação de envio
-    console.log("Dados do formulário de contato:", values);
-    toast({
-      title: "Mensagem Enviada!",
-      description: "Recebemos sua mensagem e entraremos em contato em breve.",
-      variant: "success",
-    });
-    form.reset(); // Limpa o formulário após o envio
+    setIsSubmitting(true);
+    try {
+      const result = await submitEcommerceContactForm(values);
+      if (result.success) {
+        toast({
+          title: "Mensagem Enviada!",
+          description: result.message,
+          variant: "success",
+        });
+        form.reset();
+      } else {
+        toast({
+          title: "Erro ao Enviar",
+          description: result.message || "Não foi possível enviar sua mensagem.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Erro no formulário de contato onSubmit:", error);
+      toast({
+        title: "Erro Inesperado",
+        description: "Ocorreu um erro inesperado ao processar o formulário.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -54,7 +77,7 @@ export function EcommerceContactForm() {
               <FormItem>
                 <FormLabel>Nome*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Seu nome" {...field} />
+                  <Input placeholder="Seu nome" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -67,7 +90,7 @@ export function EcommerceContactForm() {
               <FormItem>
                 <FormLabel>Sobrenome*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Seu sobrenome" {...field} />
+                  <Input placeholder="Seu sobrenome" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -81,7 +104,7 @@ export function EcommerceContactForm() {
             <FormItem>
               <FormLabel>Email*</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="seuemail@exemplo.com" {...field} />
+                <Input type="email" placeholder="seuemail@exemplo.com" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -94,7 +117,7 @@ export function EcommerceContactForm() {
             <FormItem>
               <FormLabel>Telefone (WhatsApp)*</FormLabel>
               <FormControl>
-                <Input type="tel" placeholder="(00) 90000-0000" {...field} />
+                <Input type="tel" placeholder="(00) 90000-0000" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -111,15 +134,20 @@ export function EcommerceContactForm() {
                   placeholder="Descreva o que você precisa ou sua dúvida..."
                   className="min-h-[120px]"
                   {...field}
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full md:w-auto">
-          <Send className="mr-2 h-4 w-4" />
-          Enviar Mensagem
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-4 w-4" />
+          )}
+          {isSubmitting ? "Enviando..." : "Enviar Mensagem"}
         </Button>
       </form>
     </Form>

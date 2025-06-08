@@ -2,14 +2,17 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import { getProducts } from '@/lib/actions/product.actions';
-import type { Product } from '@/lib/types';
+import { createOrcamento } from '@/lib/actions/orcamento.actions';
+import type { Product, OrcamentoStatus } from '@/lib/types';
 import { ProductDisplayCard } from './components/ProductDisplayCard';
 import { EcommerceContactForm } from './components/EcommerceContactForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ShoppingBag, Mail, Filter, ShoppingCart, X, MessageSquare } from 'lucide-react';
+import { Search, ShoppingBag, Mail, PackageSearch, ShoppingCart, X, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -30,8 +33,12 @@ export default function EcommercePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const router = useRouter();
+
   const [cart, setCart] = useState<Product[]>([]);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+  const [isSubmittingOrcamento, setIsSubmittingOrcamento] = useState(false);
+
 
   useEffect(() => {
     async function loadProducts() {
@@ -57,23 +64,30 @@ export default function EcommercePage() {
   }, [allProducts, searchTerm]);
 
   const handleAddToCart = (product: Product) => {
-    if (!cart.find(item => item.id === product.id)) {
-      setCart(prevCart => [...prevCart, product]);
-      toast({
-        title: `${product.nome} adicionado!`,
-        description: "Continue navegando ou finalize seu pedido de orçamento.",
-        variant: "success",
-      });
-    } else {
-      toast({
-        title: `${product.nome} já está no carrinho.`,
-        variant: "default",
-      });
-    }
+    // Permite adicionar o mesmo produto múltiplas vezes, cada um como uma unidade.
+    // A lógica de "isAddedToCart" no ProductDisplayCard ainda indicará se *pelo menos uma* unidade está lá.
+    setCart(prevCart => [...prevCart, product]);
+    toast({
+      title: `${product.nome} adicionado!`,
+      description: "Continue navegando ou finalize seu pedido de orçamento.",
+      variant: "success",
+    });
   };
 
-  const handleRemoveFromCart = (productId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  const handleRemoveFromCart = (productId: string, removeAll: boolean = false) => {
+    setCart(prevCart => {
+      if (removeAll) {
+        return prevCart.filter(item => item.id !== productId);
+      } else {
+        const itemIndex = prevCart.findIndex(item => item.id === productId);
+        if (itemIndex > -1) {
+          const newCart = [...prevCart];
+          newCart.splice(itemIndex, 1);
+          return newCart;
+        }
+        return prevCart;
+      }
+    });
     toast({
       title: "Produto removido",
       description: "O item foi removido do seu carrinho de orçamento.",
@@ -81,17 +95,66 @@ export default function EcommercePage() {
     });
   };
   
-  const handleProceedToOrcamento = () => {
-    // Aqui você pode redirecionar para a página de criação de orçamento,
-    // passando os IDs dos produtos do carrinho como query params, por exemplo.
-    // Ou salvar o carrinho no localStorage e ler na página de orçamento.
-    console.log("Finalizar pedido de orçamento com os itens:", cart);
-    toast({
-      title: "Solicitação de Orçamento",
-      description: "Funcionalidade de finalização de orçamento ainda não implementada.",
-      variant: "default"
-    });
-    setIsCartSheetOpen(false); // Fecha o carrinho
+  const cartGrouped = useMemo(() => {
+    return cart.reduce((acc, product) => {
+      const existingItem = acc.find(item => item.id === product.id);
+      if (existingItem) {
+        existingItem.quantity += 1;
+      } else {
+        acc.push({ ...product, quantity: 1 });
+      }
+      return acc;
+    }, [] as Array<Product & { quantity: number }>);
+  }, [cart]);
+
+
+  const handleProceedToOrcamento = async () => {
+    if (cart.length === 0) {
+      toast({ title: "Carrinho Vazio", description: "Adicione produtos ao carrinho primeiro.", variant: "default" });
+      return;
+    }
+    setIsSubmittingOrcamento(true);
+
+    const orcamentoItensParaAction = cartGrouped.map(item => ({
+      produtoId: item.id,
+      quantidade: item.quantity,
+    }));
+
+    const orcamentoData = {
+      nomeOrcamento: `Orçamento E-commerce - ${new Date().toLocaleDateString('pt-BR')}`,
+      clienteNome: "Cliente E-commerce", // Placeholder
+      status: "Pendente" as OrcamentoStatus,
+      itens: orcamentoItensParaAction,
+    };
+
+    try {
+      const result = await createOrcamento(orcamentoData);
+      if (result.success && result.orcamento) {
+        toast({
+          title: "Orçamento Solicitado!",
+          description: "Seu pedido de orçamento foi enviado. Entraremos em contato em breve.",
+          variant: "success",
+        });
+        setCart([]);
+        setIsCartSheetOpen(false);
+        router.push('/orcamentos'); // Redireciona para a página de orçamentos
+      } else {
+        toast({
+          title: "Erro ao Solicitar Orçamento",
+          description: result.error || "Não foi possível processar seu pedido de orçamento.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao criar orçamento do e-commerce:", error);
+      toast({
+        title: "Erro Inesperado",
+        description: "Ocorreu um erro ao tentar criar seu orçamento.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingOrcamento(false);
+    }
   };
 
   const formatCurrency = (value: number | undefined) => {
@@ -100,8 +163,8 @@ export default function EcommercePage() {
   };
 
   const cartTotal = useMemo(() => {
-    return cart.reduce((total, item) => total + (item.custoDetalhado?.precoVendaCalculado || 0), 0);
-  }, [cart]);
+    return cartGrouped.reduce((total, item) => total + ((item.custoDetalhado?.precoVendaCalculado || 0) * item.quantity), 0);
+  }, [cartGrouped]);
 
 
   return (
@@ -121,10 +184,6 @@ export default function EcommercePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            {/* Botão de Filtros (funcionalidade a ser implementada) */}
-            {/* <Button variant="outline" className="h-10 w-full sm:w-auto">
-              <Filter className="mr-2 h-4 w-4" /> Filtros
-            </Button> */}
             <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
                 <SheetTrigger asChild>
                     <Button variant="default" className="h-10 w-full sm:w-auto relative">
@@ -144,7 +203,7 @@ export default function EcommercePage() {
                         Revise os itens antes de solicitar seu orçamento.
                         </SheetDescription>
                     </SheetHeader>
-                    {cart.length === 0 ? (
+                    {cartGrouped.length === 0 ? (
                         <div className="flex-grow flex flex-col items-center justify-center text-center p-6">
                             <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
                             <p className="text-lg font-medium text-muted-foreground">Seu carrinho está vazio.</p>
@@ -154,7 +213,7 @@ export default function EcommercePage() {
                     <>
                         <ScrollArea className="flex-grow p-1 pr-2">
                             <div className="px-5 py-2 space-y-3">
-                            {cart.map(item => (
+                            {cartGrouped.map(item => (
                                 <div key={item.id} className="flex items-center gap-3 p-2 border rounded-md bg-card hover:bg-muted/50">
                                 <Image
                                     src={item.imageUrl || "https://placehold.co/60x60.png"}
@@ -165,10 +224,10 @@ export default function EcommercePage() {
                                     className="rounded-md object-cover border aspect-square"
                                 />
                                 <div className="flex-grow">
-                                    <p className="text-sm font-medium line-clamp-1">{item.nome}</p>
-                                    <p className="text-xs text-primary font-semibold">{formatCurrency(item.custoDetalhado?.precoVendaCalculado)}</p>
+                                    <p className="text-sm font-medium line-clamp-1">{item.nome} (x{item.quantity})</p>
+                                    <p className="text-xs text-primary font-semibold">{formatCurrency(item.custoDetalhado?.precoVendaCalculado)} cada</p>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveFromCart(item.id)} title="Remover item">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveFromCart(item.id, true)} title="Remover todas as unidades deste item">
                                     <X className="h-4 w-4" />
                                 </Button>
                                 </div>
@@ -184,11 +243,12 @@ export default function EcommercePage() {
                     )}
                     <SheetFooter className="p-6 border-t mt-auto">
                         <SheetClose asChild>
-                        <Button variant="outline" className="w-full sm:w-auto">Continuar Navegando</Button>
+                        <Button variant="outline" className="w-full sm:w-auto" disabled={isSubmittingOrcamento}>Continuar Navegando</Button>
                         </SheetClose>
-                        {cart.length > 0 && (
-                        <Button onClick={handleProceedToOrcamento} className="w-full sm:w-auto">
-                            Solicitar Orçamento ({cart.length})
+                        {cartGrouped.length > 0 && (
+                        <Button onClick={handleProceedToOrcamento} className="w-full sm:w-auto" disabled={isSubmittingOrcamento}>
+                           {isSubmittingOrcamento ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                           {isSubmittingOrcamento ? "Solicitando..." : `Solicitar Orçamento (${cart.length})`}
                         </Button>
                         )}
                     </SheetFooter>
