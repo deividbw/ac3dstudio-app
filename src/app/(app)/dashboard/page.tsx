@@ -27,7 +27,7 @@ const featureCardIconColors = {
   agenda: "bg-accent",
   financeiro: "bg-green-500",
   clientes: "bg-orange-500",
-  pecasEstoque: "bg-blue-500",
+  ecommerce: "bg-blue-500", // Changed from pecasEstoque
   servicos: "bg-indigo-500",
 };
 
@@ -79,7 +79,11 @@ export default function DashboardPage() {
         <FeatureCard icon={Icons.CalendarDays} title="Agenda" iconBgColor={featureCardIconColors.agenda} />
         <FeatureCard icon={Icons.DollarSign} title="Financeiro" iconBgColor={featureCardIconColors.financeiro} />
         <FeatureCard icon={Icons.Users} title="Clientes" iconBgColor={featureCardIconColors.clientes} />
-        <FeatureCard icon={Icons.PackageSearch} title="Peças & estoque" iconBgColor={featureCardIconColors.pecasEstoque} />
+        <FeatureCard 
+          icon={Icons.ShoppingCart} 
+          title="E-commerce" 
+          iconBgColor={featureCardIconColors.ecommerce} 
+        />
         <FeatureCard
           icon={Icons.Settings2}
           title="Serviços"

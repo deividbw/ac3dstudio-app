@@ -5,7 +5,7 @@ import {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings as SettingsIcon // Renamed import
+  WalletCards, CalendarX2, TrendingDown, Settings as SettingsIcon, ShoppingCart // Added ShoppingCart
 } from 'lucide-react';
 
 // Interface para itens de navegação, reutilizada do AppSidebar
@@ -88,7 +88,7 @@ export const Icons = {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings: SettingsIcon
+  WalletCards, CalendarX2, TrendingDown, Settings: SettingsIcon, ShoppingCart // Added ShoppingCart
 };
 
 export interface SummaryCardConfig {
