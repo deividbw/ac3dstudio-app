@@ -12,7 +12,7 @@ import { ProductDisplayCard } from './components/ProductDisplayCard';
 import { EcommerceContactForm } from './components/EcommerceContactForm';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ShoppingBag, Mail, PackageSearch, ShoppingCart, X, Loader2 } from 'lucide-react';
+import { Search, ShoppingBag, Mail, PackageSearch, ShoppingCart, X, Loader2, Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -64,8 +64,6 @@ export default function EcommercePage() {
   }, [allProducts, searchTerm]);
 
   const handleAddToCart = (product: Product) => {
-    // Permite adicionar o mesmo produto múltiplas vezes, cada um como uma unidade.
-    // A lógica de "isAddedToCart" no ProductDisplayCard ainda indicará se *pelo menos uma* unidade está lá.
     setCart(prevCart => [...prevCart, product]);
     toast({
       title: `${product.nome} adicionado!`,
@@ -74,25 +72,43 @@ export default function EcommercePage() {
     });
   };
 
-  const handleRemoveFromCart = (productId: string, removeAll: boolean = false) => {
-    setCart(prevCart => {
-      if (removeAll) {
-        return prevCart.filter(item => item.id !== productId);
-      } else {
-        const itemIndex = prevCart.findIndex(item => item.id === productId);
-        if (itemIndex > -1) {
-          const newCart = [...prevCart];
-          newCart.splice(itemIndex, 1);
-          return newCart;
-        }
-        return prevCart;
-      }
-    });
+  const handleRemoveFromCart = (productId: string) => { // Simplified to always remove all units
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+    const removedProduct = allProducts.find(p => p.id === productId);
     toast({
-      title: "Produto removido",
-      description: "O item foi removido do seu carrinho de orçamento.",
+      title: `${removedProduct?.nome || 'Produto'} removido`,
+      description: "Todas as unidades deste item foram removidas do seu carrinho.",
       variant: "default",
     });
+  };
+
+  const handleUpdateCartItemQuantity = (productId: string, newQuantity: number) => {
+    const productDetails = allProducts.find(p => p.id === productId);
+    if (!productDetails) return;
+
+    const nonNegativeQuantity = Math.max(0, newQuantity);
+
+    setCart(prevCart => {
+      const otherItems = prevCart.filter(item => item.id !== productId);
+      const newItemsForProduct = Array(nonNegativeQuantity).fill(productDetails);
+      return [...otherItems, ...newItemsForProduct];
+    });
+
+    if (nonNegativeQuantity > 0) {
+        toast({
+            title: "Quantidade Atualizada",
+            description: `"${productDetails.nome}" agora tem ${nonNegativeQuantity} unidade(s).`,
+            variant: "default",
+            duration: 2000,
+        });
+    } else {
+         toast({
+            title: "Item Removido",
+            description: `"${productDetails.nome}" foi removido do carrinho.`,
+            variant: "default",
+            duration: 2000,
+        });
+    }
   };
   
   const cartGrouped = useMemo(() => {
@@ -109,7 +125,7 @@ export default function EcommercePage() {
 
 
   const handleProceedToOrcamento = async () => {
-    if (cart.length === 0) {
+    if (cartGrouped.length === 0) { // Check cartGrouped as it reflects current quantities
       toast({ title: "Carrinho Vazio", description: "Adicione produtos ao carrinho primeiro.", variant: "default" });
       return;
     }
@@ -122,7 +138,7 @@ export default function EcommercePage() {
 
     const orcamentoData = {
       nomeOrcamento: `Orçamento E-commerce - ${new Date().toLocaleDateString('pt-BR')}`,
-      clienteNome: "Cliente E-commerce", // Placeholder
+      clienteNome: "Cliente E-commerce", 
       status: "Pendente" as OrcamentoStatus,
       itens: orcamentoItensParaAction,
     };
@@ -137,7 +153,7 @@ export default function EcommercePage() {
         });
         setCart([]);
         setIsCartSheetOpen(false);
-        router.push('/orcamentos'); // Redireciona para a página de orçamentos
+        router.push('/orcamentos'); 
       } else {
         toast({
           title: "Erro ao Solicitar Orçamento",
@@ -214,20 +230,29 @@ export default function EcommercePage() {
                         <ScrollArea className="flex-grow p-1 pr-2">
                             <div className="px-5 py-2 space-y-3">
                             {cartGrouped.map(item => (
-                                <div key={item.id} className="flex items-center gap-3 p-2 border rounded-md bg-card hover:bg-muted/50">
+                                <div key={item.id} className="flex items-start gap-3 p-2.5 border rounded-md bg-card hover:bg-muted/50">
                                 <Image
                                     src={item.imageUrl || "https://placehold.co/60x60.png"}
                                     alt={item.nome}
                                     width={60}
                                     height={60}
                                     data-ai-hint="product 3dprint"
-                                    className="rounded-md object-cover border aspect-square"
+                                    className="rounded-md object-cover border aspect-square flex-shrink-0"
                                 />
-                                <div className="flex-grow">
-                                    <p className="text-sm font-medium line-clamp-1">{item.nome} (x{item.quantity})</p>
+                                <div className="flex-grow space-y-1">
+                                    <p className="text-sm font-medium leading-tight line-clamp-2">{item.nome}</p>
                                     <p className="text-xs text-primary font-semibold">{formatCurrency(item.custoDetalhado?.precoVendaCalculado)} cada</p>
+                                    <div className="flex items-center gap-1.5 pt-1">
+                                        <Button variant="outline" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-muted/80" onClick={() => handleUpdateCartItemQuantity(item.id, item.quantity - 1)} disabled={isSubmittingOrcamento}>
+                                            <Minus className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
+                                        <Button variant="outline" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-muted/80" onClick={() => handleUpdateCartItemQuantity(item.id, item.quantity + 1)} disabled={isSubmittingOrcamento}>
+                                            <Plus className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveFromCart(item.id, true)} title="Remover todas as unidades deste item">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10 flex-shrink-0" onClick={() => handleRemoveFromCart(item.id)} title="Remover todas as unidades deste item" disabled={isSubmittingOrcamento}>
                                     <X className="h-4 w-4" />
                                 </Button>
                                 </div>
@@ -311,3 +336,4 @@ export default function EcommercePage() {
     </div>
   );
 }
+
