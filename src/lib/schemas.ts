@@ -83,5 +83,12 @@ export const EcommerceContactSchema = z.object({
   telefone: z.string().min(10, { message: "Telefone deve ter no mínimo 10 dígitos (com DDD)." }).regex(/^\d+$/, { message: "Telefone deve conter apenas números." }),
   mensagem: z.string().min(10, { message: "Mensagem deve ter no mínimo 10 caracteres." }).max(1000, { message: "Mensagem deve ter no máximo 1000 caracteres." }),
 });
-
 export type EcommerceContactFormValues = z.infer<typeof EcommerceContactSchema>;
+
+// Esquema para os dados do solicitante do orçamento via E-commerce
+export const OrcamentoSolicitanteSchema = z.object({
+  nomeCompleto: z.string().min(3, { message: "Nome completo é obrigatório (mínimo 3 caracteres)." }),
+  email: z.string().email({ message: "Por favor, insira um email válido." }),
+  telefone: z.string().min(10, { message: "Telefone deve ter no mínimo 10 dígitos (com DDD)." }).regex(/^(\(?\d{2}\)?\s?)?(\d{4,5}-?\d{4})$/, { message: "Formato de telefone inválido." }),
+});
+export type OrcamentoSolicitanteValues = z.infer<typeof OrcamentoSolicitanteSchema>;

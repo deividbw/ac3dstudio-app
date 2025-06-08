@@ -4,15 +4,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type * as z from "zod";
+
 import { PageHeader } from '@/components/PageHeader';
 import { getProducts } from '@/lib/actions/product.actions';
 import { createOrcamento } from '@/lib/actions/orcamento.actions';
 import type { Product, OrcamentoStatus } from '@/lib/types';
+import { OrcamentoSolicitanteSchema, type OrcamentoSolicitanteValues } from '@/lib/schemas';
 import { ProductDisplayCard } from './components/ProductDisplayCard';
 import { EcommerceContactForm } from './components/EcommerceContactForm';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Search, ShoppingBag, Mail, PackageSearch, ShoppingCart, X, Loader2, Plus, Minus } from 'lucide-react';
+import { Search, ShoppingBag, Mail, PackageSearch, ShoppingCart, X, Loader2, Plus, Minus, UserCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +33,23 @@ import {
   SheetClose,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export default function EcommercePage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -38,6 +61,17 @@ export default function EcommercePage() {
   const [cart, setCart] = useState<Product[]>([]);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   const [isSubmittingOrcamento, setIsSubmittingOrcamento] = useState(false);
+
+  const [isSolicitanteInfoDialogOpen, setIsSolicitanteInfoDialogOpen] = useState(false);
+
+  const solicitanteForm = useForm<OrcamentoSolicitanteValues>({
+    resolver: zodResolver(OrcamentoSolicitanteSchema),
+    defaultValues: {
+      nomeCompleto: "",
+      email: "",
+      telefone: "",
+    },
+  });
 
 
   useEffect(() => {
@@ -72,7 +106,7 @@ export default function EcommercePage() {
     });
   };
 
-  const handleRemoveFromCart = (productId: string) => { // Simplified to always remove all units
+  const handleRemoveFromCart = (productId: string) => {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
     const removedProduct = allProducts.find(p => p.id === productId);
     toast({
@@ -124,11 +158,15 @@ export default function EcommercePage() {
   }, [cart]);
 
 
-  const handleProceedToOrcamento = async () => {
-    if (cartGrouped.length === 0) { // Check cartGrouped as it reflects current quantities
+  const handleOpenSolicitanteInfoDialog = () => {
+    if (cartGrouped.length === 0) {
       toast({ title: "Carrinho Vazio", description: "Adicione produtos ao carrinho primeiro.", variant: "default" });
       return;
     }
+    setIsSolicitanteInfoDialogOpen(true);
+  };
+
+  async function onConfirmAndSubmitOrcamento(solicitanteData: OrcamentoSolicitanteValues) {
     setIsSubmittingOrcamento(true);
 
     const orcamentoItensParaAction = cartGrouped.map(item => ({
@@ -136,11 +174,19 @@ export default function EcommercePage() {
       quantidade: item.quantity,
     }));
 
+    const observacoes = [
+      `Solicitação via E-commerce.`,
+      `Contato do Solicitante:`,
+      `Email: ${solicitanteData.email}`,
+      `Telefone: ${solicitanteData.telefone}`,
+    ].join('\n');
+
     const orcamentoData = {
-      nomeOrcamento: `Orçamento E-commerce - ${new Date().toLocaleDateString('pt-BR')}`,
-      clienteNome: "Cliente E-commerce", 
+      nomeOrcamento: `Orçamento E-commerce - ${solicitanteData.nomeCompleto.split(' ')[0]} - ${new Date().toLocaleDateString('pt-BR')}`,
+      clienteNome: solicitanteData.nomeCompleto, 
       status: "Pendente" as OrcamentoStatus,
       itens: orcamentoItensParaAction,
+      observacao: observacoes,
     };
 
     try {
@@ -153,6 +199,8 @@ export default function EcommercePage() {
         });
         setCart([]);
         setIsCartSheetOpen(false);
+        setIsSolicitanteInfoDialogOpen(false);
+        solicitanteForm.reset();
         router.push('/orcamentos'); 
       } else {
         toast({
@@ -171,7 +219,8 @@ export default function EcommercePage() {
     } finally {
       setIsSubmittingOrcamento(false);
     }
-  };
+  }
+
 
   const formatCurrency = (value: number | undefined) => {
     if (value === undefined || value === null) return 'N/A';
@@ -271,9 +320,9 @@ export default function EcommercePage() {
                         <Button variant="outline" className="w-full sm:w-auto" disabled={isSubmittingOrcamento}>Continuar Navegando</Button>
                         </SheetClose>
                         {cartGrouped.length > 0 && (
-                        <Button onClick={handleProceedToOrcamento} className="w-full sm:w-auto" disabled={isSubmittingOrcamento}>
+                        <Button onClick={handleOpenSolicitanteInfoDialog} className="w-full sm:w-auto" disabled={isSubmittingOrcamento}>
                            {isSubmittingOrcamento ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-                           {isSubmittingOrcamento ? "Solicitando..." : `Solicitar Orçamento (${cart.length})`}
+                           {isSubmittingOrcamento ? "Enviando..." : `Solicitar Orçamento (${cart.length})`}
                         </Button>
                         )}
                     </SheetFooter>
@@ -318,6 +367,7 @@ export default function EcommercePage() {
           <EcommerceContactForm />
         </div>
       </div>
+
        <div className="fixed bottom-6 right-6 z-50">
         <Button
           size="lg"
@@ -333,6 +383,72 @@ export default function EcommercePage() {
           )}
         </Button>
       </div>
+
+      <Dialog open={isSolicitanteInfoDialogOpen} onOpenChange={setIsSolicitanteInfoDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+                <UserCircle className="mr-2 h-6 w-6 text-primary" />
+                Informações para Contato
+            </DialogTitle>
+            <DialogDescription>
+              Precisamos de alguns dados para entrarmos em contato sobre seu orçamento.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...solicitanteForm}>
+            <form onSubmit={solicitanteForm.handleSubmit(onConfirmAndSubmitOrcamento)} className="space-y-4 pt-2">
+              <FormField
+                control={solicitanteForm.control}
+                name="nomeCompleto"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Completo*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Seu nome completo" {...field} disabled={isSubmittingOrcamento} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={solicitanteForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email*</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="seuemail@exemplo.com" {...field} disabled={isSubmittingOrcamento} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={solicitanteForm.control}
+                name="telefone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone (WhatsApp)*</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="(00) 90000-0000" {...field} disabled={isSubmittingOrcamento} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter className="pt-4">
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" disabled={isSubmittingOrcamento}>Cancelar</Button>
+                </DialogClose>
+                <Button type="submit" disabled={isSubmittingOrcamento}>
+                  {isSubmittingOrcamento ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar e Enviar Orçamento"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
