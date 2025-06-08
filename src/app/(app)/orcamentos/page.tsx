@@ -65,7 +65,7 @@ export default function OrcamentosPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid'); 
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<OrcamentoStatus | "">(""); // State for status filter
+  const [filterStatus, setFilterStatus] = useState<OrcamentoStatus | "all">("all"); // State for status filter, initialized to "all"
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
 
   const { toast } = useToast();
@@ -96,7 +96,7 @@ export default function OrcamentosPage() {
       (orc.nomeOrcamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
       orc.clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       orc.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (filterStatus === "" || orc.status === filterStatus) // Apply status filter
+      (filterStatus === "all" || orc.status === filterStatus) // Apply status filter, check for "all"
     );
   }, [orcamentos, searchTerm, filterStatus]); // Add filterStatus to dependencies
 
@@ -231,10 +231,10 @@ export default function OrcamentosPage() {
             </div>
             <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button variant={filterStatus !== "" ? "secondary" : "outline"} size="sm" className="h-9">
+                <Button variant={filterStatus !== "all" ? "secondary" : "outline"} size="sm" className="h-9">
                   <Filter className="mr-2 h-4 w-4" />
                   Filtros
-                  {filterStatus !== "" && <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary" />}
+                  {filterStatus !== "all" && <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary" />}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-60 p-3 space-y-3">
@@ -242,13 +242,13 @@ export default function OrcamentosPage() {
                   <Label htmlFor="filterStatus" className="text-xs font-medium">Status do Orçamento</Label>
                   <Select
                     value={filterStatus}
-                    onValueChange={(value) => setFilterStatus(value as OrcamentoStatus | "")}
+                    onValueChange={(value) => setFilterStatus(value as OrcamentoStatus | "all")}
                   >
                     <SelectTrigger id="filterStatus" className="mt-1 h-8 text-xs">
                       <SelectValue placeholder="Selecione um status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="" className="text-xs">Todos os Status</SelectItem>
+                      <SelectItem value="all" className="text-xs">Todos os Status</SelectItem>
                       {OrcamentoStatusOptions.map(status => (
                         <SelectItem key={status} value={status} className="text-xs">{status}</SelectItem>
                       ))}
@@ -260,9 +260,10 @@ export default function OrcamentosPage() {
                   size="sm"
                   className="w-full h-8 text-xs text-destructive hover:text-destructive"
                   onClick={() => {
-                    setFilterStatus("");
+                    setFilterStatus("all");
                     setIsFilterPopoverOpen(false); // Close popover after clearing
                   }}
+                  disabled={filterStatus === "all"}
                 >
                   Limpar Filtro
                 </Button>
@@ -345,7 +346,7 @@ export default function OrcamentosPage() {
               <Search className="mx-auto h-12 w-12 opacity-50 mb-3" />
               <p className="text-sm">Nenhum orçamento encontrado.</p>
               {searchTerm && <p className="text-xs mt-1">Tente refinar sua busca ou limpar o filtro.</p>}
-               {filterStatus && <p className="text-xs mt-1">Tente alterar o filtro de status aplicado.</p>}
+               {filterStatus !== "all" && <p className="text-xs mt-1">Tente alterar o filtro de status aplicado.</p>}
               {products.length === 0 && !isLoading &&
                  <p className="text-sm mt-2 text-destructive">
                     Atenção: Não há produtos com preço definido cadastrados para criar orçamentos.
