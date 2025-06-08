@@ -74,3 +74,14 @@ export const OrcamentoSchema = z.object({
   itens: z.array(OrcamentoItemSchema).min(1, { message: "Orçamento deve ter pelo menos um item" }),
   valorTotalCalculado: z.coerce.number().nonnegative().optional(), // Será preenchido na action
 });
+
+// Esquema para o formulário de contato do E-commerce
+export const EcommerceContactSchema = z.object({
+  nome: z.string().min(2, { message: "Nome é obrigatório e deve ter no mínimo 2 caracteres." }),
+  sobrenome: z.string().min(2, { message: "Sobrenome é obrigatório e deve ter no mínimo 2 caracteres." }),
+  email: z.string().email({ message: "Por favor, insira um email válido." }),
+  telefone: z.string().min(10, { message: "Telefone deve ter no mínimo 10 dígitos (com DDD)." }).regex(/^\d+$/, { message: "Telefone deve conter apenas números." }),
+  mensagem: z.string().min(10, { message: "Mensagem deve ter no mínimo 10 caracteres." }).max(1000, { message: "Mensagem deve ter no máximo 1000 caracteres." }),
+});
+
+export type EcommerceContactFormValues = z.infer<typeof EcommerceContactSchema>;
