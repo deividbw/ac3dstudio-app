@@ -144,7 +144,7 @@ export default function EcommercePage() {
         });
     }
   };
-  
+
   const cartGrouped = useMemo(() => {
     return cart.reduce((acc, product) => {
       const existingItem = acc.find(item => item.id === product.id);
@@ -183,14 +183,17 @@ export default function EcommercePage() {
 
     const orcamentoData = {
       nomeOrcamento: `Orçamento E-commerce - ${solicitanteData.nomeCompleto.split(' ')[0]} - ${new Date().toLocaleDateString('pt-BR')}`,
-      clienteNome: solicitanteData.nomeCompleto, 
+      clienteNome: solicitanteData.nomeCompleto,
       status: "Pendente" as OrcamentoStatus,
       itens: orcamentoItensParaAction,
       observacao: observacoes,
     };
 
     try {
+      console.log("EcommercePage: Enviando dados para createOrcamento:", JSON.stringify(orcamentoData, null, 2));
       const result = await createOrcamento(orcamentoData);
+      console.log("EcommercePage: Resultado de createOrcamento:", JSON.stringify(result, null, 2));
+
       if (result.success && result.orcamento) {
         toast({
           title: "Orçamento Solicitado!",
@@ -201,7 +204,7 @@ export default function EcommercePage() {
         setIsCartSheetOpen(false);
         setIsSolicitanteInfoDialogOpen(false);
         solicitanteForm.reset();
-        // router.push('/orcamentos'); // REMOVIDO: Mantém o usuário na página de e-commerce
+        // router.push('/orcamentos'); // Mantém o usuário na página de e-commerce
       } else {
         toast({
           title: "Erro ao Solicitar Orçamento",
@@ -337,9 +340,9 @@ export default function EcommercePage() {
       ) : filteredProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
           {filteredProducts.map(product => (
-            <ProductDisplayCard 
-                key={product.id} 
-                product={product} 
+            <ProductDisplayCard
+                key={product.id}
+                product={product}
                 onAddToCart={handleAddToCart}
                 isAddedToCart={!!cart.find(item => item.id === product.id)}
             />
@@ -452,4 +455,3 @@ export default function EcommercePage() {
     </div>
   );
 }
-

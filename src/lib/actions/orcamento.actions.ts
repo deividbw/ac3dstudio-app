@@ -47,19 +47,38 @@ export async function getOrcamentoById(id: string): Promise<Orcamento | undefine
 }
 
 export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao' | 'valorTotalCalculado' | 'itens'> & { itens: Omit<OrcamentoItem, 'id' | 'produtoNome' | 'valorTotalItem'>[] } ): Promise<{ success: boolean, orcamento?: Orcamento, error?: string }> {
-  
+  console.log("createOrcamento: Recebido data:", JSON.stringify(data, null, 2));
+
   const produtosImportados = await import('@/lib/actions/product.actions');
   const allProducts = await produtosImportados.getProducts();
+  console.log("createOrcamento: Total de produtos carregados:", allProducts.length);
+
+  if (!allProducts || allProducts.length === 0) {
+    console.error("createOrcamento: Nenhum produto encontrado no sistema.");
+    return { success: false, error: "Nenhum produto disponível no sistema para criar orçamento." };
+  }
 
   const processedItems: OrcamentoItem[] = [];
   const itemProcessingErrors: string[] = [];
 
   for (const item of data.itens) {
     const productDetails = allProducts.find(p => p.id === item.produtoId);
-    if (!productDetails || !productDetails.custoDetalhado?.precoVendaCalculado || productDetails.custoDetalhado.precoVendaCalculado <= 0) {
-      itemProcessingErrors.push(`Produto "${productDetails?.nome || `ID ${item.produtoId}`}" não encontrado ou sem preço de venda definido.`);
-      continue; 
+    console.log(`createOrcamento: Processando item com produtoId: ${item.produtoId}`);
+
+    if (!productDetails) {
+      const errorMsg = `Produto com ID ${item.produtoId} não encontrado.`;
+      console.error(`createOrcamento: ${errorMsg}`);
+      itemProcessingErrors.push(errorMsg);
+      continue;
     }
+
+    if (!productDetails.custoDetalhado?.precoVendaCalculado || productDetails.custoDetalhado.precoVendaCalculado <= 0) {
+      const errorMsg = `Produto "${productDetails.nome}" (ID: ${item.produtoId}) não possui um preço de venda válido para cálculo. Preço fornecido: ${productDetails.custoDetalhado?.precoVendaCalculado}`;
+      console.error(`createOrcamento: ${errorMsg}`);
+      itemProcessingErrors.push(errorMsg);
+      continue;
+    }
+
     processedItems.push({
         id: uuidv4(),
         produtoId: item.produtoId,
@@ -68,54 +87,58 @@ export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao'
         valorUnitario: productDetails.custoDetalhado.precoVendaCalculado,
         valorTotalItem: item.quantidade * productDetails.custoDetalhado.precoVendaCalculado,
     });
+    console.log(`createOrcamento: Item processado: ${productDetails.nome}, Qtd: ${item.quantidade}, ValorUnit: ${productDetails.custoDetalhado.precoVendaCalculado}`);
   }
 
   if (itemProcessingErrors.length > 0 && processedItems.length === 0) {
-    // Se todos os itens tiveram erro
-    return { success: false, error: `Erro ao processar itens do orçamento: ${itemProcessingErrors.join('; ')}` };
-  }
-  
-  if (processedItems.length === 0 && data.itens.length > 0) {
-     // Se havia itens na entrada, mas nenhum foi processado com sucesso (poderia acontecer se todos tivessem erro)
-    return { success: false, error: "Nenhum item válido pôde ser adicionado ao orçamento. Verifique os produtos selecionados." };
+    const fullError = `Erro ao processar itens do orçamento: ${itemProcessingErrors.join('; ')}`;
+    console.error(`createOrcamento: ${fullError}`);
+    return { success: false, error: fullError };
   }
 
    if (processedItems.length === 0) {
-    // Se não havia itens na entrada ou nenhum item válido foi processado.
-    return { success: false, error: "O orçamento deve conter pelo menos um item válido." };
+    const errorMsg = "O orçamento deve conter pelo menos um item válido. Nenhum item pôde ser processado.";
+    console.error(`createOrcamento: ${errorMsg}`);
+    return { success: false, error: errorMsg };
   }
 
-
   const valorTotalCalculado = processedItems.reduce((sum, item) => sum + item.valorTotalItem, 0);
-  
+  console.log("createOrcamento: Valor total calculado:", valorTotalCalculado);
+
   const orcamentoToValidate = {
     ...data,
     itens: processedItems,
-    valorTotalCalculado,
-    dataCriacao: new Date().toISOString(),
+    valorTotalCalculado, // Adicionado aqui
+    dataCriacao: new Date().toISOString(), // Adicionado aqui
   };
+  console.log("createOrcamento: Orcamento para validar:", JSON.stringify(orcamentoToValidate, null, 2));
+
 
   const validation = OrcamentoSchema.safeParse(orcamentoToValidate);
   if (!validation.success) {
-    console.error("Erro de validação ao criar orçamento:", validation.error.flatten().fieldErrors);
-    return { success: false, error: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') };
+    const validationErrors = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+    console.error("createOrcamento: Erro de validação Zod:", validationErrors, validation.error.flatten().fieldErrors);
+    return { success: false, error: `Erro de validação: ${validationErrors}` };
   }
-  
+  console.log("createOrcamento: Validação Zod bem-sucedida.");
+
   const newOrcamento: Orcamento = {
-    ...validation.data,
-    id: `orc_${String(Date.now())}`,
+    ...validation.data, 
+    id: `orc_${String(Date.now())}_${Math.random().toString(36).substring(2, 7)}`,
   };
+  console.log("createOrcamento: Novo orçamento pronto para adicionar:", JSON.stringify(newOrcamento, null, 2));
 
   mockOrcamentos.push(newOrcamento);
-  
-  // Se houve erros parciais mas alguns itens foram processados, podemos retornar sucesso com um aviso.
-  // Por simplicidade aqui, se itemProcessingErrors tem algo mas processedItems também tem, consideramos sucesso parcial.
-  // Para um retorno mais granular, poderia adicionar uma propriedade 'warnings' ao objeto de retorno.
+  console.log("createOrcamento: Orçamento adicionado ao mock. Total de orçamentos agora:", mockOrcamentos.length);
+
+
   if (itemProcessingErrors.length > 0) {
-      return { 
-          success: true, 
-          orcamento: JSON.parse(JSON.stringify(newOrcamento)), 
-          error: `Orçamento criado, mas com avisos: ${itemProcessingErrors.join('; ')}` // Usando 'error' para aviso aqui
+      const warningMsg = `Orçamento criado, mas com avisos: ${itemProcessingErrors.join('; ')}`;
+      console.warn(`createOrcamento: ${warningMsg}`);
+      return {
+          success: true,
+          orcamento: JSON.parse(JSON.stringify(newOrcamento)),
+          error: warningMsg
         };
   }
 
@@ -130,9 +153,9 @@ export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 
 
   const produtosImportados = await import('@/lib/actions/product.actions');
   const allProducts = await produtosImportados.getProducts();
-  
+
   const existingOrcamento = mockOrcamentos[existingOrcamentoIndex];
-  
+
   let processedItems: OrcamentoItem[];
   const itemProcessingErrors: string[] = [];
 
@@ -159,8 +182,6 @@ export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 
             valorTotalItem: item.quantidade! * productDetails.custoDetalhado.precoVendaCalculado,
         });
     }
-    // Se todos os itens fornecidos para atualização tiveram erro, mas havia itens antes, manter os antigos?
-    // Ou retornar erro? Por ora, se processedItems ficar vazio e data.itens tinha algo, será um erro.
     if (data.itens.length > 0 && processedItems.length === 0 && itemProcessingErrors.length > 0) {
         return { success: false, error: `Erro ao atualizar itens: ${itemProcessingErrors.join('; ')}` };
     }
@@ -168,9 +189,9 @@ export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 
         return { success: false, error: "Nenhum item válido pôde ser atualizado no orçamento." };
     }
   } else {
-    processedItems = existingOrcamento.itens; 
+    processedItems = existingOrcamento.itens;
   }
-  
+
    if (processedItems.length === 0) {
     return { success: false, error: "O orçamento deve conter pelo menos um item válido para ser atualizado." };
   }
@@ -193,8 +214,8 @@ export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 
   mockOrcamentos[existingOrcamentoIndex] = finalData;
 
   if (itemProcessingErrors.length > 0) {
-      return { 
-          success: true, 
+      return {
+          success: true,
           orcamento: JSON.parse(JSON.stringify(finalData)),
           error: `Orçamento atualizado, mas com avisos: ${itemProcessingErrors.join('; ')}`
       };
