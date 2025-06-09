@@ -7,7 +7,7 @@
 // For now, I'll make it a simple redirect to the new location.
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 export default function ProductsPageRedirect() {
@@ -22,13 +22,26 @@ export default function ProductsPageRedirect() {
   }, [router, searchParams]);
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="flex flex-col items-center space-y-2">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground">Redirecionando para o gerenciamento de produtos...</p>
-      </div>
-    </div>
+    // O conteúdo que usa useSearchParams precisa ser envolto em Suspense
+    // Para lidar com a renderização do lado do servidor vs. lado do cliente
+    <ProductsPageContent />
   );
 }
 
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+function ProductsPageContent() {
+  const searchParams = useSearchParams();
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="flex flex-col items-center space-y-2">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Redirecionando para o gerenciamento de produtos...</p>
+        </div>
+      </div>
+    </Suspense>
+  );
+}
     
