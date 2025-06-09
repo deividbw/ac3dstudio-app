@@ -41,7 +41,7 @@ export function SummaryCard({
 
   if (typeof IconComponent !== 'function') {
     // Check if it's the specific empty object case.
-    // Removed .constructor === Object for a more lenient check on problematic empty objects.
+    // Simplified the isEmptyObject check to be more lenient for empty objects from problematic imports.
     const isEmptyObject = IconInput && typeof IconInput === 'object' && Object.keys(IconInput).length === 0; 
 
     if (!isEmptyObject) {
