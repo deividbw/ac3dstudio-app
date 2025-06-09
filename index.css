@@ -1,0 +1,15 @@
+/* Estilos básicos para index.html se fosse usado diretamente */
+body {
+    font-family: 'PT Sans', sans-serif; /* Da PRD */
+    margin: 0;
+    padding: 20px;
+    background-color: #F5F5F5; /* Cinza claro da PRD */
+    color: #333; /* Cor de texto padrão */
+}
+
+h1 {
+    color: #77B5FE; /* Azul suave da PRD */
+}
+
+/* Nota: Em uma aplicação Next.js, estilos globais estão tipicamente em src/app/globals.css */
+/* e estilos específicos de componentes podem usar CSS Modules ou Tailwind CSS. */
