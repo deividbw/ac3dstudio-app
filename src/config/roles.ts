@@ -4,7 +4,7 @@ import type { RolesConfig, UserRole, Permission } from '@/lib/types';
 export const USER_ROLES_AVAILABLE: UserRole[] = ['admin', 'vendedor', 'cliente'];
 
 // Lista de todas as permissões possíveis para facilitar a atribuição
-const ALL_PERMISSIONS: Permission[] = [
+export const ALL_PERMISSIONS: Permission[] = [
   'view_dashboard',
   'manage_orcamentos',
   'view_ecommerce',

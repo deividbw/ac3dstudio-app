@@ -8,7 +8,7 @@ import { Icons } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap, ListPlus, Filter, ArrowUp, ArrowDown, ChevronsUpDown, UsersRound, ShieldCheck } from 'lucide-react';
+import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap, ListPlus, Filter, ArrowUp, ArrowDown, ChevronsUpDown, UsersRound, ShieldCheck, Save } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -30,15 +30,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField, UserRole, Permission } from '@/lib/types';
+import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField, UserRole, Permission, RolesConfig } from '@/lib/types';
 import { getPrinters } from '@/lib/actions/printer.actions';
 import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
 import { getPowerOverrides, savePowerOverride, getKwhValue, saveKwhValue as saveGlobalKwhValue } from '@/lib/actions/powerOverride.actions';
-import { useAuth } from '@/hooks/useAuth'; // Importar o hook de autenticação
-import { ROLES_CONFIG, PERMISSION_DESCRIPTIONS } from '@/config/roles'; // Importar configurações de perfil
+import { useAuth } from '@/hooks/useAuth';
+import { ROLES_CONFIG as staticRolesConfig, PERMISSION_DESCRIPTIONS, ALL_PERMISSIONS } from '@/config/roles';
 import { Badge } from '@/components/ui/badge';
 
 export default function ConfiguracoesPage() {
@@ -48,7 +49,7 @@ export default function ConfiguracoesPage() {
 
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
-  const [brandsData, setBrandsData] = useState<Brand[]>([]); // Renomeado para evitar conflito
+  const [brandsData, setBrandsData] = useState<Brand[]>([]);
 
   const [selectedPrinterId, setSelectedPrinterId] = useState<string>("");
   const [selectedFilamentTypeId, setSelectedFilamentTypeId] = useState<string>("");
@@ -57,6 +58,14 @@ export default function ConfiguracoesPage() {
 
   const [filterConfiguredPrinterName, setFilterConfiguredPrinterName] = useState("");
   const [sortConfigOverrides, setSortConfigOverrides] = useState<{ key: SortableOverrideField; direction: 'ascending' | 'descending' }>({ key: 'printerName', direction: 'ascending' });
+
+  // Estado para gerenciar as configurações de perfis editáveis
+  const [editableRolesConfig, setEditableRolesConfig] = useState<RolesConfig>(() => JSON.parse(JSON.stringify(staticRolesConfig)));
+
+  useEffect(() => {
+    // Sincroniza o estado editável se o estático mudar (improvável neste contexto, mas boa prática)
+    setEditableRolesConfig(JSON.parse(JSON.stringify(staticRolesConfig)));
+  }, []);
 
 
   const loadConfigData = useCallback(async () => {
@@ -70,7 +79,7 @@ export default function ConfiguracoesPage() {
       ]);
       setPrinters(printersDataRes);
       setFilamentTypes(filamentTypesDataRes);
-      setBrandsData(brandsRes); // Atualizado
+      setBrandsData(brandsRes);
       setConfiguredOverrides(powerOverridesDataRes);
       setKwhValue(currentKwhValueRes.toString());
     } catch (error) {
@@ -89,7 +98,7 @@ export default function ConfiguracoesPage() {
 
   const getBrandNameById = useCallback((brandId?: string) => {
     if (!brandId) return "";
-    const brand = brandsData.find(b => b.id === brandId); // Atualizado
+    const brand = brandsData.find(b => b.id === brandId);
     return brand ? brand.nome : "Marca Desconhecida";
   }, [brandsData]);
 
@@ -223,8 +232,36 @@ export default function ConfiguracoesPage() {
     return items;
   }, [configuredOverrides, filterConfiguredPrinterName, sortConfigOverrides]);
 
+  const handlePermissionChange = (roleKey: UserRole, permission: Permission, checked: boolean) => {
+    setEditableRolesConfig(prevConfig => {
+      const newConfig = JSON.parse(JSON.stringify(prevConfig)); // Deep copy
+      const currentPermissions = new Set(newConfig[roleKey].permissions);
+      if (checked) {
+        currentPermissions.add(permission);
+      } else {
+        currentPermissions.delete(permission);
+      }
+      newConfig[roleKey].permissions = Array.from(currentPermissions);
+      return newConfig;
+    });
+  };
+
+  const handleSavePermissions = () => {
+    // Em um app real, aqui você faria uma chamada API para salvar editableRolesConfig no backend.
+    // Por enquanto, apenas exibimos um toast.
+    console.log("Configurações de permissões (simulado para salvar):", editableRolesConfig);
+    toast({
+      title: "Permissões Salvas (Simulado)",
+      description: "Em um sistema real, estas alterações seriam persistidas no backend.",
+      variant: "success",
+    });
+    // O hook useAuth continuará usando staticRolesConfig até que seja modificado para buscar
+    // as permissões de um backend ou de um estado global atualizado por esta ação.
+  };
+
   const canManageSystemConfigs = hasPermission('manage_configuracoes_sistema');
   const canManagePermissions = hasPermission('manage_permissoes_usuarios');
+
 
   return (
     <div className="space-y-6">
@@ -409,7 +446,7 @@ export default function ConfiguracoesPage() {
             </AccordionTrigger>
             <AccordionContent className="px-6 pb-6">
               <CardDescription className="mb-4">
-                Visualize os perfis de usuário e suas permissões. Troque o perfil simulado para testar o acesso.
+                Gerencie os perfis de usuário e suas permissões. Troque o perfil simulado para testar o acesso.
               </CardDescription>
               
               <Card className="mb-6">
@@ -429,14 +466,14 @@ export default function ConfiguracoesPage() {
                     </SelectContent>
                   </Select>
                    <p className="text-xs text-muted-foreground mt-1">
-                    Perfil atual simulado: <span className="font-semibold text-primary">{ROLES_CONFIG[currentUserRole].name}</span>.
+                    Perfil atual simulado: <span className="font-semibold text-primary">{staticRolesConfig[currentUserRole].name}</span>.
                     A interface será atualizada de acordo com as permissões deste perfil.
                   </p>
                 </CardContent>
               </Card>
 
               <div className="space-y-4">
-                {Object.entries(ROLES_CONFIG).map(([roleKey, roleConfig]) => (
+                {Object.entries(editableRolesConfig).map(([roleKey, roleConfig]) => (
                   <Card key={roleKey}>
                     <CardHeader>
                       <CardTitle className="text-md flex items-center">
@@ -447,21 +484,35 @@ export default function ConfiguracoesPage() {
                     </CardHeader>
                     <CardContent>
                       <h5 className="text-sm font-medium mb-2">Permissões:</h5>
-                      {roleConfig.permissions.length > 0 ? (
-                        <ul className="list-disc list-inside space-y-1 text-xs">
-                          {roleConfig.permissions.map(permission => (
-                            <li key={permission}>{PERMISSION_DESCRIPTIONS[permission] || permission}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Nenhuma permissão específica para este perfil.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                        {ALL_PERMISSIONS.map(permission => (
+                          <div key={permission} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${roleKey}-${permission}`}
+                              checked={roleConfig.permissions.includes(permission)}
+                              onCheckedChange={(checked) => handlePermissionChange(roleKey as UserRole, permission, !!checked)}
+                            />
+                            <Label htmlFor={`${roleKey}-${permission}`} className="font-normal text-xs cursor-pointer">
+                              {PERMISSION_DESCRIPTIONS[permission] || permission}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                       {roleConfig.permissions.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-2">Nenhuma permissão específica para este perfil.</p>
                       )}
                     </CardContent>
                   </Card>
                 ))}
+                <div className="flex justify-end mt-4">
+                    <Button onClick={handleSavePermissions} size="sm">
+                        <Save className="mr-2 h-4 w-4" />
+                        Salvar Alterações (Simulado)
+                    </Button>
+                </div>
               </div>
                <CardFooter className="mt-4 text-xs text-muted-foreground">
-                Nota: O gerenciamento efetivo de usuários e atribuição de perfis será implementado em uma etapa futura, integrando com um sistema de autenticação.
+                Nota: O gerenciamento efetivo de usuários e atribuição de perfis será implementado em uma etapa futura, integrando com um sistema de autenticação e backend.
               </CardFooter>
             </AccordionContent>
           </AccordionItem>
