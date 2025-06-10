@@ -20,13 +20,13 @@ export interface Printer {
   taxaDepreciacaoHora: number; // R$/hora - Custo por hora da impressora (depreciação)
   custoEnergiaKwh: number; // R$/kWh - Custo da energia (padrão do sistema ou específico da impressora se implementado)
   vidaUtilAnos: number;
-  horasTrabalhoDia: number; 
+  horasTrabalhoDia: number;
 }
 
 export interface ProductCostBreakdown {
   custoMaterialCalculado: number;
-  custoImpressaoCalculado: number; 
-  custoTotalProducaoCalculado: number; 
+  custoImpressaoCalculado: number;
+  custoTotalProducaoCalculado: number;
   lucroCalculado: number;
   precoVendaCalculado: number;
 }
@@ -35,15 +35,15 @@ export interface Product {
   id:string;
   nome: string;
   descricao?: string;
-  filamentoId: string; 
-  impressoraId: string; 
-  tempoImpressaoHoras: number; 
-  pesoGramas: number; 
+  filamentoId: string;
+  impressoraId: string;
+  tempoImpressaoHoras: number;
+  pesoGramas: number;
   imageUrl?: string;
-  custoModelagem: number; 
-  custosExtras: number;    
-  margemLucroPercentual: number; 
-  custoDetalhado?: ProductCostBreakdown; 
+  custoModelagem: number;
+  custosExtras: number;
+  margemLucroPercentual: number;
+  custoDetalhado?: ProductCostBreakdown;
 }
 
 export interface Brand {
@@ -53,15 +53,15 @@ export interface Brand {
 
 export interface FilamentType {
   id: string;
-  nome: string; 
+  nome: string;
 }
 
 export interface PowerOverride {
-  id: string; 
+  id: string;
   printerId: string;
-  printerName: string; 
+  printerName: string;
   filamentTypeId: string;
-  filamentTypeName: string; 
+  filamentTypeName: string;
   powerWatts: number;
 }
 
@@ -90,3 +90,28 @@ export interface OrcamentoItem {
   valorUnitario: number; // Preço do produto no momento da adição ao orçamento
   valorTotalItem: number;
 }
+
+// --- Novas definições para Perfis e Permissões ---
+export type UserRole = 'admin' | 'vendedor' | 'cliente';
+
+export type Permission =
+  | 'view_dashboard'
+  | 'manage_orcamentos'
+  | 'view_ecommerce'
+  | 'manage_cadastros_filamentos' // Permissão geral para o módulo de cadastros
+  | 'manage_cadastros_tipos_filamentos'
+  | 'manage_cadastros_impressoras'
+  | 'manage_cadastros_marcas'
+  | 'manage_cadastros_produtos'
+  | 'view_estoque' // Permissão para ver o módulo de estoque
+  | 'manage_configuracoes_sistema'
+  | 'manage_permissoes_usuarios'; // Para futura tela de gerenciamento de permissões
+
+export interface RoleConfig {
+  name: string;
+  description: string;
+  permissions: Permission[];
+}
+
+export type RolesConfig = Record<UserRole, RoleConfig>;
+// --- Fim das novas definições ---

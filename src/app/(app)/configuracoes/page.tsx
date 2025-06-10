@@ -3,12 +3,12 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Icons } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap, ListPlus, Filter, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
+import { DollarSign, Cog, Sparkles, Smartphone, Tablet, Laptop, Zap, ListPlus, Filter, ArrowUp, ArrowDown, ChevronsUpDown, UsersRound, ShieldCheck } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -32,19 +32,23 @@ import {
 } from "@/components/ui/table";
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField } from '@/lib/types';
+import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField, UserRole, Permission } from '@/lib/types';
 import { getPrinters } from '@/lib/actions/printer.actions';
 import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
 import { getPowerOverrides, savePowerOverride, getKwhValue, saveKwhValue as saveGlobalKwhValue } from '@/lib/actions/powerOverride.actions';
+import { useAuth } from '@/hooks/useAuth'; // Importar o hook de autenticação
+import { ROLES_CONFIG, PERMISSION_DESCRIPTIONS } from '@/config/roles'; // Importar configurações de perfil
+import { Badge } from '@/components/ui/badge';
 
 export default function ConfiguracoesPage() {
-  const [kwhValue, setKwhValue] = useState("0.75"); 
+  const [kwhValue, setKwhValue] = useState("0.75");
   const { toast } = useToast();
+  const { currentUserRole, setUserRole, availableRoles, hasPermission, isLoadingRole } = useAuth();
 
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [brandsData, setBrandsData] = useState<Brand[]>([]); // Renomeado para evitar conflito
 
   const [selectedPrinterId, setSelectedPrinterId] = useState<string>("");
   const [selectedFilamentTypeId, setSelectedFilamentTypeId] = useState<string>("");
@@ -57,19 +61,18 @@ export default function ConfiguracoesPage() {
 
   const loadConfigData = useCallback(async () => {
     try {
-      const [printersData, filamentTypesData, brandsData, powerOverridesData, currentKwhValue] = await Promise.all([
+      const [printersDataRes, filamentTypesDataRes, brandsRes, powerOverridesDataRes, currentKwhValueRes] = await Promise.all([
         getPrinters(),
         getFilamentTypes(),
         getBrands(),
         getPowerOverrides(),
         getKwhValue(),
       ]);
-      console.log('ConfiguracoesPage: Fetched printersData:', printersData); // Log adicionado
-      setPrinters(printersData);
-      setFilamentTypes(filamentTypesData);
-      setBrands(brandsData);
-      setConfiguredOverrides(powerOverridesData);
-      setKwhValue(currentKwhValue.toString());
+      setPrinters(printersDataRes);
+      setFilamentTypes(filamentTypesDataRes);
+      setBrandsData(brandsRes); // Atualizado
+      setConfiguredOverrides(powerOverridesDataRes);
+      setKwhValue(currentKwhValueRes.toString());
     } catch (error) {
       console.error("Failed to load data:", error);
       toast({
@@ -86,10 +89,10 @@ export default function ConfiguracoesPage() {
 
   const getBrandNameById = useCallback((brandId?: string) => {
     if (!brandId) return "";
-    const brand = brands.find(b => b.id === brandId);
+    const brand = brandsData.find(b => b.id === brandId); // Atualizado
     return brand ? brand.nome : "Marca Desconhecida";
-  }, [brands]);
-  
+  }, [brandsData]);
+
   const getPrinterDisplayName = useCallback((printer: Printer) => {
     const brandName = getBrandNameById(printer.marcaId);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
@@ -154,7 +157,7 @@ export default function ConfiguracoesPage() {
       });
       return;
     }
-    
+
     const overrideId = `${selectedPrinterId}_${selectedFilamentTypeId}`;
     const newOverride: PowerOverride = {
       id: overrideId,
@@ -172,10 +175,8 @@ export default function ConfiguracoesPage() {
         description: `Potência de ${power}W para ${getPrinterDisplayName(printer)} com ${filamentType.nome} salva.`,
         variant: "success",
       });
-      // Reload overrides to reflect the change
       const updatedOverrides = await getPowerOverrides();
       setConfiguredOverrides(updatedOverrides);
-      // Clear form fields
       setSelectedPrinterId("");
       setSelectedFilamentTypeId("");
       setSpecificPowerWatts("");
@@ -222,183 +223,251 @@ export default function ConfiguracoesPage() {
     return items;
   }, [configuredOverrides, filterConfiguredPrinterName, sortConfigOverrides]);
 
+  const canManageSystemConfigs = hasPermission('manage_configuracoes_sistema');
+  const canManagePermissions = hasPermission('manage_permissoes_usuarios');
 
   return (
     <div className="space-y-6">
       <PageHeader title="Configurações do Sistema" />
 
       <Accordion type="single" collapsible className="w-full space-y-4" defaultValue="item-1">
-        <AccordionItem value="item-1" className="border rounded-lg bg-card shadow-sm">
-          <AccordionTrigger className="px-6 py-4 hover:no-underline">
-            <div className="flex items-center text-lg font-semibold">
-              <DollarSign className="mr-3 h-6 w-6 text-primary" />
-              Parâmetros de Custo
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6">
-            <CardDescription className="mb-4">
-              Ajustes relacionados a custos de produção e energia.
-            </CardDescription>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="kwhValue" className="text-sm font-medium">Valor Padrão do kWh (R$)</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input
-                    id="kwhValue"
-                    type="number"
-                    step="0.01"
-                    value={kwhValue}
-                    onChange={(e) => setKwhValue(e.target.value)}
-                    placeholder="Ex: 0.75"
-                    className="max-w-xs"
-                  />
-                  <Button onClick={handleSaveKwh} size="sm">Salvar kWh</Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Este valor será usado como padrão para novas impressoras e nos cálculos de custo de energia.
-                </p>
+        {canManageSystemConfigs && (
+          <AccordionItem value="item-1" className="border rounded-lg bg-card shadow-sm">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center text-lg font-semibold">
+                <DollarSign className="mr-3 h-6 w-6 text-primary" />
+                Parâmetros de Custo
               </div>
-
-              <Separator className="my-6" />
-
-              <div>
-                <h4 className="font-medium text-md mb-2 flex items-center">
-                  <Zap className="mr-2 h-5 w-5 text-primary/80" />
-                  Potência Consumida por Tipo de Filamento e Impressora
-                </h4>
-                <CardDescription className="mb-3 text-xs">
-                  Informe a potência média específica em Watts que uma impressora consome ao utilizar um determinado tipo de filamento.
-                  Este valor, se configurado, sobreporá a potência nominal da impressora para cálculos de custo de energia mais precisos.
-                </CardDescription>
-                <div className="space-y-3 p-4 border rounded-md bg-muted/10">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                    <div>
-                      <Label htmlFor="selectPrinterPower" className="text-sm">Impressora*</Label>
-                      <Select value={selectedPrinterId} onValueChange={setSelectedPrinterId}>
-                        <SelectTrigger id="selectPrinterPower" className="mt-1">
-                          <SelectValue placeholder="Selecione uma impressora" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {printers.sort((a,b) => getPrinterDisplayName(a).localeCompare(getPrinterDisplayName(b))).map(p => (
-                            <SelectItem key={p.id} value={p.id}>{getPrinterDisplayName(p)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="selectFilamentTypePower" className="text-sm">Tipo de Filamento*</Label>
-                      <Select value={selectedFilamentTypeId} onValueChange={setSelectedFilamentTypeId}>
-                        <SelectTrigger id="selectFilamentTypePower" className="mt-1">
-                          <SelectValue placeholder="Selecione um tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filamentTypes.sort((a,b) => a.nome.localeCompare(b.nome)).map(ft => (
-                            <SelectItem key={ft.id} value={ft.id}>{ft.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="specificPowerWatts" className="text-sm">Potência Específica (Watts)*</Label>
-                      <Input
-                        id="specificPowerWatts"
-                        type="number"
-                        step="1"
-                        min="0"
-                        value={specificPowerWatts}
-                        onChange={(e) => setSpecificPowerWatts(e.target.value)}
-                        placeholder="Ex: 55"
-                        className="mt-1"
-                      />
-                    </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <CardDescription className="mb-4">
+                Ajustes relacionados a custos de produção e energia.
+              </CardDescription>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="kwhValue" className="text-sm font-medium">Valor Padrão do kWh (R$)</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      id="kwhValue"
+                      type="number"
+                      step="0.01"
+                      value={kwhValue}
+                      onChange={(e) => setKwhValue(e.target.value)}
+                      placeholder="Ex: 0.75"
+                      className="max-w-xs"
+                    />
+                    <Button onClick={handleSaveKwh} size="sm">Salvar kWh</Button>
                   </div>
-                  <div className="pt-2">
-                    <Button onClick={handleSaveSpecificPowerConsumption} size="sm">
-                      <ListPlus className="mr-2 h-4 w-4" />
-                      Salvar Configuração Específica
-                    </Button>
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Este valor será usado como padrão para novas impressoras e nos cálculos de custo de energia.
+                  </p>
                 </div>
-                {configuredOverrides.length > 0 && (
-                  <div className="mt-4">
-                    <h5 className="text-sm font-medium mb-2">Configurações Salvas:</h5>
-                     <div className="flex items-center gap-2 mb-2">
-                        <Filter className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                            type="text"
-                            placeholder="Filtrar por nome da impressora..."
-                            value={filterConfiguredPrinterName}
-                            onChange={(e) => setFilterConfiguredPrinterName(e.target.value)}
-                            className="h-8 max-w-xs text-xs"
-                        />
-                    </div>
-                    <Card className="max-h-60 overflow-y-auto">
-                      <CardContent className="p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead 
-                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
-                                onClick={() => handleSortOverrides('printerName')}
-                                role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('printerName'); }} aria-label="Sort by Impressora"
-                              >
-                                <div className="flex items-center">Impressora <span className="ml-1">{renderSortIcon('printerName')}</span></div>
-                              </TableHead>
-                              <TableHead 
-                                className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
-                                onClick={() => handleSortOverrides('filamentTypeName')}
-                                role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('filamentTypeName'); }} aria-label="Sort by Filamento"
-                              >
-                               <div className="flex items-center">Filamento <span className="ml-1">{renderSortIcon('filamentTypeName')}</span></div>
-                              </TableHead>
-                              <TableHead 
-                                className="px-3 py-2 text-xs text-right cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
-                                onClick={() => handleSortOverrides('powerWatts')}
-                                role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('powerWatts'); }} aria-label="Sort by Potência"
-                              >
-                                <div className="flex items-center justify-end">Potência (W) <span className="ml-1">{renderSortIcon('powerWatts')}</span></div>
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {sortedAndFilteredOverrides.map(ov => (
-                              <TableRow key={ov.id}>
-                                <TableCell className="px-3 py-1.5 text-xs">{ov.printerName}</TableCell>
-                                <TableCell className="px-3 py-1.5 text-xs">{ov.filamentTypeName}</TableCell>
-                                <TableCell className="px-3 py-1.5 text-xs text-right">{ov.powerWatts}</TableCell>
-                              </TableRow>
+                <Separator className="my-6" />
+                <div>
+                  <h4 className="font-medium text-md mb-2 flex items-center">
+                    <Zap className="mr-2 h-5 w-5 text-primary/80" />
+                    Potência Consumida por Tipo de Filamento e Impressora
+                  </h4>
+                  <CardDescription className="mb-3 text-xs">
+                    Informe a potência média específica em Watts que uma impressora consome ao utilizar um determinado tipo de filamento.
+                    Este valor, se configurado, sobreporá a potência nominal da impressora para cálculos de custo de energia mais precisos.
+                  </CardDescription>
+                  <div className="space-y-3 p-4 border rounded-md bg-muted/10">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                      <div>
+                        <Label htmlFor="selectPrinterPower" className="text-sm">Impressora*</Label>
+                        <Select value={selectedPrinterId} onValueChange={setSelectedPrinterId}>
+                          <SelectTrigger id="selectPrinterPower" className="mt-1">
+                            <SelectValue placeholder="Selecione uma impressora" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {printers.sort((a,b) => getPrinterDisplayName(a).localeCompare(getPrinterDisplayName(b))).map(p => (
+                              <SelectItem key={p.id} value={p.id}>{getPrinterDisplayName(p)}</SelectItem>
                             ))}
-                            {sortedAndFilteredOverrides.length === 0 && configuredOverrides.length > 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="px-3 py-1.5 text-xs text-center text-muted-foreground">
-                                        Nenhuma configuração encontrada com o filtro aplicado.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="selectFilamentTypePower" className="text-sm">Tipo de Filamento*</Label>
+                        <Select value={selectedFilamentTypeId} onValueChange={setSelectedFilamentTypeId}>
+                          <SelectTrigger id="selectFilamentTypePower" className="mt-1">
+                            <SelectValue placeholder="Selecione um tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {filamentTypes.sort((a,b) => a.nome.localeCompare(b.nome)).map(ft => (
+                              <SelectItem key={ft.id} value={ft.id}>{ft.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="specificPowerWatts" className="text-sm">Potência Específica (Watts)*</Label>
+                        <Input
+                          id="specificPowerWatts"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={specificPowerWatts}
+                          onChange={(e) => setSpecificPowerWatts(e.target.value)}
+                          placeholder="Ex: 55"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="pt-2">
+                      <Button onClick={handleSaveSpecificPowerConsumption} size="sm">
+                        <ListPlus className="mr-2 h-4 w-4" />
+                        Salvar Configuração Específica
+                      </Button>
+                    </div>
                   </div>
-                )}
+                  {configuredOverrides.length > 0 && (
+                    <div className="mt-4">
+                      <h5 className="text-sm font-medium mb-2">Configurações Salvas:</h5>
+                       <div className="flex items-center gap-2 mb-2">
+                          <Filter className="h-4 w-4 text-muted-foreground" />
+                          <Input
+                              type="text"
+                              placeholder="Filtrar por nome da impressora..."
+                              value={filterConfiguredPrinterName}
+                              onChange={(e) => setFilterConfiguredPrinterName(e.target.value)}
+                              className="h-8 max-w-xs text-xs"
+                          />
+                      </div>
+                      <Card className="max-h-60 overflow-y-auto">
+                        <CardContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead
+                                  className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
+                                  onClick={() => handleSortOverrides('printerName')}
+                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('printerName'); }} aria-label="Sort by Impressora"
+                                >
+                                  <div className="flex items-center">Impressora <span className="ml-1">{renderSortIcon('printerName')}</span></div>
+                                </TableHead>
+                                <TableHead
+                                  className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
+                                  onClick={() => handleSortOverrides('filamentTypeName')}
+                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('filamentTypeName'); }} aria-label="Sort by Filamento"
+                                >
+                                 <div className="flex items-center">Filamento <span className="ml-1">{renderSortIcon('filamentTypeName')}</span></div>
+                                </TableHead>
+                                <TableHead
+                                  className="px-3 py-2 text-xs text-right cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
+                                  onClick={() => handleSortOverrides('powerWatts')}
+                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('powerWatts'); }} aria-label="Sort by Potência"
+                                >
+                                  <div className="flex items-center justify-end">Potência (W) <span className="ml-1">{renderSortIcon('powerWatts')}</span></div>
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {sortedAndFilteredOverrides.map(ov => (
+                                <TableRow key={ov.id}>
+                                  <TableCell className="px-3 py-1.5 text-xs">{ov.printerName}</TableCell>
+                                  <TableCell className="px-3 py-1.5 text-xs">{ov.filamentTypeName}</TableCell>
+                                  <TableCell className="px-3 py-1.5 text-xs text-right">{ov.powerWatts}</TableCell>
+                                </TableRow>
+                              ))}
+                              {sortedAndFilteredOverrides.length === 0 && configuredOverrides.length > 0 && (
+                                  <TableRow>
+                                      <TableCell colSpan={3} className="px-3 py-1.5 text-xs text-center text-muted-foreground">
+                                          Nenhuma configuração encontrada com o filtro aplicado.
+                                      </TableCell>
+                                  </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </div>
+                <Separator className="my-6" />
+                <div>
+                  <h4 className="font-medium text-md mb-2 flex items-center">
+                    <Sparkles className="mr-2 h-5 w-5 text-primary/80" />
+                    Percentuais por Tipo de Filamento (Lucro/Desperdício)
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    (Em desenvolvimento) Defina margens de lucro padrão ou taxas de desperdício por tipo de filamento.
+                  </p>
+                </div>
               </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
 
-              <Separator className="my-6" />
+        {canManagePermissions && (
+          <AccordionItem value="item-permissions" className="border rounded-lg bg-card shadow-sm">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center text-lg font-semibold">
+                <UsersRound className="mr-3 h-6 w-6 text-primary" />
+                Perfis de Usuário e Permissões
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <CardDescription className="mb-4">
+                Visualize os perfis de usuário e suas permissões. Troque o perfil simulado para testar o acesso.
+              </CardDescription>
               
-              <div>
-                <h4 className="font-medium text-md mb-2 flex items-center">
-                  <Sparkles className="mr-2 h-5 w-5 text-primary/80" />
-                  Percentuais por Tipo de Filamento (Lucro/Desperdício)
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  (Em desenvolvimento) Defina margens de lucro padrão ou taxas de desperdício por tipo de filamento.
-                </p>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-base">Simular Perfil de Usuário (Teste)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Label htmlFor="simulatedUserProfile" className="text-xs">Selecionar Perfil Simulado:</Label>
+                  <Select value={currentUserRole} onValueChange={(value) => setUserRole(value as UserRole)}>
+                    <SelectTrigger id="simulatedUserProfile" className="mt-1">
+                      <SelectValue placeholder="Selecione um perfil para simular" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableRoles.map(role => (
+                        <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                   <p className="text-xs text-muted-foreground mt-1">
+                    Perfil atual simulado: <span className="font-semibold text-primary">{ROLES_CONFIG[currentUserRole].name}</span>.
+                    A interface será atualizada de acordo com as permissões deste perfil.
+                  </p>
+                </CardContent>
+              </Card>
 
-        <AccordionItem value="item-2" className="border rounded-lg bg-card shadow-sm">
+              <div className="space-y-4">
+                {Object.entries(ROLES_CONFIG).map(([roleKey, roleConfig]) => (
+                  <Card key={roleKey}>
+                    <CardHeader>
+                      <CardTitle className="text-md flex items-center">
+                        <ShieldCheck className="mr-2 h-5 w-5 text-primary/80" />
+                        {roleConfig.name}
+                      </CardTitle>
+                      <CardDescription className="text-xs">{roleConfig.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <h5 className="text-sm font-medium mb-2">Permissões:</h5>
+                      {roleConfig.permissions.length > 0 ? (
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          {roleConfig.permissions.map(permission => (
+                            <li key={permission}>{PERMISSION_DESCRIPTIONS[permission] || permission}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Nenhuma permissão específica para este perfil.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+               <CardFooter className="mt-4 text-xs text-muted-foreground">
+                Nota: O gerenciamento efetivo de usuários e atribuição de perfis será implementado em uma etapa futura, integrando com um sistema de autenticação.
+              </CardFooter>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        <AccordionItem value="item-ui-customization" className="border rounded-lg bg-card shadow-sm">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center text-lg font-semibold">
               <Cog className="mr-3 h-6 w-6 text-primary" />
@@ -420,11 +489,11 @@ export default function ConfiguracoesPage() {
             </div>
           </AccordionContent>
         </AccordionItem>
-        
-        <AccordionItem value="item-3" className="border rounded-lg bg-card shadow-sm">
+
+        <AccordionItem value="item-other-configs" className="border rounded-lg bg-card shadow-sm">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center text-lg font-semibold">
-              <Icons.Settings2 className="mr-3 h-6 w-6 text-primary" /> 
+              <Icons.Settings2 className="mr-3 h-6 w-6 text-primary" />
               Outras Configurações
             </div>
           </AccordionTrigger>
@@ -444,4 +513,3 @@ export default function ConfiguracoesPage() {
     </div>
   );
 }
-
