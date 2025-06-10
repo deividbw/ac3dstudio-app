@@ -1,7 +1,7 @@
 
 "use client";
 
-// This page is now effectively superseded by the ProductsTab component
+// This page is now effectively superseded by the ProductsTab component certo
 // under /servicos/cadastros.
 // You can choose to redirect from here, remove this page, or keep it if you want a direct link.
 // For now, I'll make it a simple redirect to the new location.

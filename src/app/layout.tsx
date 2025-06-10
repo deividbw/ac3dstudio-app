@@ -1,9 +1,10 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Added Toaster
 
 export const metadata: Metadata = {
-  title: '3D Budgeteer',
+  title: 'AC3DStudio',
   description: 'Orçamento de peças feitas em 3D',
 };
 
@@ -26,3 +27,4 @@ export default function RootLayout({
     </html>
   );
 }
+

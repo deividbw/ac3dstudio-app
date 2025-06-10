@@ -5,7 +5,7 @@ import {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings as SettingsIcon, ShoppingCart // Added ShoppingCart
+  WalletCards, CalendarX2, TrendingDown, Settings as SettingsIcon, ShoppingCart
 } from 'lucide-react';
 
 // Interface para itens de navegação, reutilizada do AppSidebar
@@ -68,7 +68,7 @@ export const MOBILE_SIDEBAR_NAV_ITEMS: NavItem[] = [
 ];
 
 
-export const APP_NAME = "3D Budgeteer";
+export const APP_NAME = "AC3DStudio";
 
 export interface BottomNavItem {
   href: string;
@@ -88,7 +88,7 @@ export const Icons = {
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
   Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings: SettingsIcon, ShoppingCart // Added ShoppingCart
+  WalletCards, CalendarX2, TrendingDown, Settings: SettingsIcon, ShoppingCart
 };
 
 export interface SummaryCardConfig {
@@ -188,3 +188,4 @@ export const ALL_SHORTCUT_CARDS_CONFIG: ShortcutCardConfig[] = [
     defaultVisible: true,
   },
 ];
+

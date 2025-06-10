@@ -1,5 +1,6 @@
+
 {
-  "name": "3D Budgeteer",
+  "name": "AC3DStudio",
   "version": "1.0.0",
   "description": "Aplicação para gerenciamento e cálculo de orçamentos de impressão 3D.",
   "author": "Firebase Studio AI",
@@ -19,3 +20,4 @@
   // dentro dos arquivos layout.tsx ou page.tsx usando a API de Metadata.
   // Este arquivo JSON é fornecido conforme solicitado e pode ser usado para outras ferramentas ou fins informacionais.
 }
+
