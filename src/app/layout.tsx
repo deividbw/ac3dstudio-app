@@ -6,6 +6,16 @@ import { Toaster } from "@/components/ui/toaster"; // Added Toaster
 export const metadata: Metadata = {
   title: 'AC3DStudio',
   description: 'Orçamento de peças feitas em 3D',
+  manifest: '/manifest.json',
+  themeColor: '#26E600',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'AC3DStudio',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({
@@ -27,4 +37,3 @@ export default function RootLayout({
     </html>
   );
 }
-
