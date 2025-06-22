@@ -1,16 +1,22 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import type { UserRole, Permission } from '@/lib/types';
 import { ROLES_CONFIG, USER_ROLES_AVAILABLE } from '@/config/roles';
+import { createSupabaseBrowserClient } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
-// Chave para localStorage
+// Chave para localStorage (fallback)
 const USER_ROLE_STORAGE_KEY = 'ac3dstudio_user_role';
 
 export function useAuth() {
-  // Tenta carregar o perfil do localStorage, ou usa 'admin' como padrão inicial ANTES do useEffect.
-  // Isso evita que o valor padrão 'admin' seja usado brevemente se outro perfil estiver no localStorage.
+  const supabase = createSupabaseBrowserClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole>('admin');
+  const [isLoadingRole, setIsLoadingRole] = useState(true);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  // Função para obter role do usuário do Supabase ou localStorage
   const getInitialRole = (): UserRole => {
     if (typeof window !== 'undefined') {
       const storedRole = localStorage.getItem(USER_ROLE_STORAGE_KEY) as UserRole | null;
@@ -18,27 +24,37 @@ export function useAuth() {
         return storedRole;
       }
     }
-    return 'admin'; // Padrão se nada for encontrado ou se estiver no servidor
+    return 'admin';
   };
-  
-  const [currentUserRole, setCurrentUserRole] = useState<UserRole>(getInitialRole());
-  const [isLoadingRole, setIsLoadingRole] = useState(true); // Começa como true até o useEffect rodar
 
+  // Autenticação com Supabase
   useEffect(() => {
-    // Este useEffect sincroniza com o localStorage após a montagem inicial no cliente.
-    // A lógica principal de carregamento já foi feita em getInitialRole.
-    // Apenas define isLoadingRole para false.
-    const roleFromStorage = localStorage.getItem(USER_ROLE_STORAGE_KEY) as UserRole | null;
-    if (roleFromStorage && USER_ROLES_AVAILABLE.includes(roleFromStorage)) {
-        if (currentUserRole !== roleFromStorage) { // Sincroniza se houver discrepância (improvável com getInitialRole)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        setIsLoadingAuth(false);
+
+        if (session?.user) {
+          // Aqui você pode buscar o role do usuário do Supabase
+          // Por enquanto, vamos usar o localStorage como fallback
+          const roleFromStorage = localStorage.getItem(USER_ROLE_STORAGE_KEY) as UserRole | null;
+          if (roleFromStorage && USER_ROLES_AVAILABLE.includes(roleFromStorage)) {
             setCurrentUserRole(roleFromStorage);
+          } else {
+            // Se não há role salvo, assume admin (você pode implementar lógica diferente)
+            setCurrentUserRole('admin');
+            localStorage.setItem(USER_ROLE_STORAGE_KEY, 'admin');
+          }
+        } else {
+          // Usuário não autenticado, usa role padrão
+          setCurrentUserRole(getInitialRole());
         }
-    } else if (!roleFromStorage && currentUserRole !== 'admin') { // Se não há nada no storage, garante que é 'admin'
-        localStorage.setItem(USER_ROLE_STORAGE_KEY, 'admin');
-         if (currentUserRole !== 'admin') setCurrentUserRole('admin'); // Atualiza se o estado inicial não foi admin por algum motivo
-    }
-    setIsLoadingRole(false);
-  }, [currentUserRole]); // Adicionado currentUserRole para re-executar se mudar externamente (pouco provável aqui)
+        setIsLoadingRole(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const setUserRole = useCallback((role: UserRole) => {
     if (USER_ROLES_AVAILABLE.includes(role)) {
@@ -50,19 +66,45 @@ export function useAuth() {
   }, []);
 
   const hasPermission = useCallback((permissionToCheck?: Permission): boolean => {
-    if (!permissionToCheck) return true; // Se não requer permissão, permite acesso
-    if (isLoadingRole) return false; // Não conceder permissão enquanto o perfil está carregando
+    if (!permissionToCheck) return true;
+    if (isLoadingRole || isLoadingAuth) return false;
 
     const roleConfig = ROLES_CONFIG[currentUserRole];
     return roleConfig?.permissions.includes(permissionToCheck) ?? false;
-  }, [currentUserRole, isLoadingRole]);
+  }, [currentUserRole, isLoadingRole, isLoadingAuth]);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { data, error };
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    return { data, error };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    const { error } = await supabase.auth.signOut();
+    return { error };
+  }, []);
 
   return {
+    user,
     currentUserRole,
     setUserRole,
     currentRoleConfig: ROLES_CONFIG[currentUserRole],
-    isLoadingRole,
+    isLoadingRole: isLoadingRole || isLoadingAuth,
     hasPermission,
     availableRoles: USER_ROLES_AVAILABLE.map(role => ({ value: role, label: ROLES_CONFIG[role].name })),
+    signIn,
+    signUp,
+    signOut,
+    isAuthenticated: !!user,
   };
 }
