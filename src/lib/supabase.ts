@@ -11,7 +11,7 @@ export function createSupabaseBrowserClient() {
 export type Database = {
   public: {
     Tables: {
-      products: {
+      produtos: {
         Row: {
           id: string
           nome: string
@@ -61,7 +61,7 @@ export type Database = {
           updated_at?: string
         }
       }
-      filaments: {
+      filamentos: {
         Row: {
           id: string
           tipo: string
@@ -105,7 +105,7 @@ export type Database = {
           updated_at?: string
         }
       }
-      printers: {
+      impressoras: {
         Row: {
           id: string
           marca_id: string | null
@@ -143,7 +143,7 @@ export type Database = {
           updated_at?: string
         }
       }
-      brands: {
+      marcas: {
         Row: {
           id: string
           nome: string
@@ -163,7 +163,7 @@ export type Database = {
           updated_at?: string
         }
       }
-      filament_types: {
+      tipos_filamentos: {
         Row: {
           id: string
           nome: string
@@ -218,7 +218,7 @@ export type Database = {
           updated_at?: string
         }
       }
-      orcamento_items: {
+      orcamento_itens: {
         Row: {
           id: string
           orcamento_id: string
@@ -249,38 +249,6 @@ export type Database = {
           quantidade?: number
           valor_unitario?: number
           valor_total_item?: number
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      power_overrides: {
-        Row: {
-          id: string
-          printer_id: string
-          printer_name: string
-          filament_type_id: string
-          filament_type_name: string
-          power_watts: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          printer_id: string
-          printer_name: string
-          filament_type_id: string
-          filament_type_name: string
-          power_watts: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          printer_id?: string
-          printer_name?: string
-          filament_type_id?: string
-          filament_type_name?: string
-          power_watts?: number
           created_at?: string
           updated_at?: string
         }

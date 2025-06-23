@@ -58,19 +58,19 @@ CREATE TABLE IF NOT EXISTS impressoras (
 CREATE TABLE IF NOT EXISTS produtos (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id),
-    nomeProduto VARCHAR(200) NOT NULL,
+    nome_produto VARCHAR(200) NOT NULL,
     descricao TEXT,
     filamento_id UUID NOT NULL REFERENCES filamentos(id),
     impressora_id UUID NOT NULL REFERENCES impressoras(id),
-    tempoImpressaoH DECIMAL(5,2) NOT NULL CHECK (tempoImpressaoH > 0),
-    pesoPecaG INTEGER NOT NULL CHECK (pesoPecaG > 0),
-    imageUrl TEXT,
-    custoModelagem DECIMAL(10,2) DEFAULT 0 CHECK (custoModelagem >= 0),
-    custosExtras DECIMAL(10,2) DEFAULT 0 CHECK (custosExtras >= 0),
-    percentualLucro DECIMAL(5,2) DEFAULT 20 CHECK (percentualLucro >= 0),
-    custoTotalCalculado DECIMAL(10,2),
-    precoVendaCalculado DECIMAL(10,2),
-    custoDetalhado JSONB,
+    tempo_impressao_h DECIMAL(5,2) NOT NULL CHECK (tempo_impressao_h > 0),
+    peso_peca_g INTEGER NOT NULL CHECK (peso_peca_g > 0),
+    image_url TEXT,
+    custo_modelagem DECIMAL(10,2) DEFAULT 0 CHECK (custo_modelagem >= 0),
+    custos_extras DECIMAL(10,2) DEFAULT 0 CHECK (custos_extras >= 0),
+    percentual_lucro DECIMAL(5,2) DEFAULT 20 CHECK (percentual_lucro >= 0),
+    custo_total_calculado DECIMAL(10,2),
+    preco_venda_calculado DECIMAL(10,2),
+    custo_detalhado JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -79,18 +79,18 @@ CREATE TABLE IF NOT EXISTS produtos (
 CREATE TABLE IF NOT EXISTS orcamentos (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id),
-    nomeOrcamento VARCHAR(200) NOT NULL,
-    clienteNome VARCHAR(200) NOT NULL,
-    dataCriacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    nome_orcamento VARCHAR(200) NOT NULL,
+    cliente_nome VARCHAR(200) NOT NULL,
+    data_criacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     status VARCHAR(50) NOT NULL DEFAULT 'Pendente' CHECK (status IN ('Pendente', 'Aprovado', 'Rejeitado', 'Concluído')),
     observacao TEXT,
-    valorTotalCalculado DECIMAL(10,2) DEFAULT 0 CHECK (valorTotalCalculado >= 0),
+    valor_total_calculado DECIMAL(10,2) DEFAULT 0 CHECK (valor_total_calculado >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Tabela de itens do orçamento
-CREATE TABLE IF NOT EXISTS orcamento_items (
+CREATE TABLE IF NOT EXISTS orcamento_itens (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     orcamento_id UUID NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
     produto_id UUID NOT NULL REFERENCES produtos(id),
@@ -100,19 +100,6 @@ CREATE TABLE IF NOT EXISTS orcamento_items (
     valor_total_item DECIMAL(10,2) NOT NULL CHECK (valor_total_item >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabela de power overrides
-CREATE TABLE IF NOT EXISTS power_overrides (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    printer_id UUID NOT NULL REFERENCES impressoras(id) ON DELETE CASCADE,
-    printer_name VARCHAR(200) NOT NULL,
-    filament_type_id UUID NOT NULL REFERENCES tipos_filamentos(id) ON DELETE CASCADE,
-    filament_type_name VARCHAR(200) NOT NULL,
-    power_watts INTEGER NOT NULL CHECK (power_watts > 0),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(printer_id, filament_type_id)
 );
 
 -- Função para atualizar updated_at automaticamente
@@ -131,8 +118,7 @@ CREATE TRIGGER update_filamentos_updated_at BEFORE UPDATE ON filamentos FOR EACH
 CREATE TRIGGER update_impressoras_updated_at BEFORE UPDATE ON impressoras FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_produtos_updated_at BEFORE UPDATE ON produtos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_orcamentos_updated_at BEFORE UPDATE ON orcamentos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_orcamento_items_updated_at BEFORE UPDATE ON orcamento_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_power_overrides_updated_at BEFORE UPDATE ON power_overrides FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_orcamento_itens_updated_at BEFORE UPDATE ON orcamento_itens FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Inserir dados de exemplo
 INSERT INTO marcas (nome_marca) VALUES 
@@ -167,8 +153,7 @@ ALTER TABLE filamentos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE impressoras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orcamentos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orcamento_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE power_overrides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orcamento_itens ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para marcas
 CREATE POLICY "Permitir acesso total para usuários autenticados" ON marcas
@@ -194,10 +179,6 @@ CREATE POLICY "Permitir acesso total para usuários autenticados" ON produtos
 CREATE POLICY "Permitir acesso total para usuários autenticados" ON orcamentos
     FOR ALL TO authenticated USING (true);
 
--- Políticas para orcamento_items
-CREATE POLICY "Permitir acesso total para usuários autenticados" ON orcamento_items
-    FOR ALL TO authenticated USING (true);
-
--- Políticas para power_overrides
-CREATE POLICY "Permitir acesso total para usuários autenticados" ON power_overrides
+-- Políticas para orcamento_itens
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON orcamento_itens
     FOR ALL TO authenticated USING (true); 

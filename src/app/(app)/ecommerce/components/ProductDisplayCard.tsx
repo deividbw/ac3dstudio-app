@@ -39,7 +39,7 @@ export function ProductDisplayCard({ product, onAddToCart, isAddedToCart }: Prod
           </CardDescription>
         )}
         <p className="text-xl font-bold text-primary mt-auto pt-2">
-          {formatCurrency(product.custoDetalhado?.precoVendaCalculado)}
+          {formatCurrency(product.custoDetalhado?.preco_venda_calculado)}
         </p>
       </CardContent>
       <CardFooter className="p-4 border-t">

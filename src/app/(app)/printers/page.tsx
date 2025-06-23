@@ -33,23 +33,23 @@ import { PrinterForm } from './components/PrinterForm';
 import type { Printer, Brand } from '@/lib/types'; // Import Brand
 import { useToast } from "@/hooks/use-toast";
 import { exportToCsv } from '@/lib/csv-export';
-import { getPrinters as mockGetPrinters, createPrinter as mockCreatePrinter, updatePrinter as mockUpdatePrinter, deletePrinter as mockDeletePrinter } from '@/lib/actions/printer.actions';
-import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; // Import getBrands
+import { getImpressoras as mockGetimpressoras, createPrinter as mockCreatePrinter, updatePrinter as mockUpdatePrinter, deletePrinter as mockDeletePrinter } from '@/lib/actions/printer.actions';
+import { getmarcas as mockGetmarcas } from '@/lib/actions/brand.actions'; // Import getmarcas
 
-export default function PrintersPage() {
-  const [printers, setPrinters] = useState<Printer[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]); // State for brands
+export default function impressorasPage() {
+  const [impressoras, setimpressoras] = useState<Printer[]>([]);
+  const [marcas, setmarcas] = useState<Brand[]>([]); // State for marcas
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
   const { toast } = useToast();
 
-  const loadData = useCallback(async () => { // Renamed from loadPrinters to loadData
-    const [printersData, brandsData] = await Promise.all([
-      mockGetPrinters(),
-      mockGetBrands(),
+  const loadData = useCallback(async () => { // Renamed from loadimpressoras to loadData
+    const [impressorasData, marcasData] = await Promise.all([
+      mockGetimpressoras(),
+      mockGetmarcas(),
     ]);
-    setPrinters(printersData);
-    setBrands(brandsData);
+    setimpressoras(impressorasData);
+    setmarcas(marcasData);
   }, []);
 
   useEffect(() => {
@@ -58,9 +58,9 @@ export default function PrintersPage() {
 
   const getBrandNameById = useCallback((brandId?: string | null) => {
     if (!brandId) return "N/A";
-    const brand = brands.find(b => b.id === brandId);
+    const brand = marcas.find(b => b.id === brandId);
     return brand ? brand.nome_marca : "Desconhecida";
-  }, [brands]);
+  }, [marcas]);
   
   const getPrinterDisplayName = (printer: Printer) => {
     const brandName = getBrandNameById(printer.marca_id);
@@ -89,11 +89,11 @@ export default function PrintersPage() {
   };
 
   const handleExport = () => {
-     if (printers.length === 0) {
+     if (impressoras.length === 0) {
       toast({ title: "Exportar Dados", description: "Não há dados para exportar."});
       return;
     }
-    exportToCsv("impressoras.csv", printers.map(p => ({
+    exportToCsv("impressoras.csv", impressoras.map(p => ({
       ID: p.id,
       Marca: getBrandNameById(p.marca_id),
       Modelo: p.modelo || "N/A",
@@ -122,7 +122,7 @@ export default function PrintersPage() {
           <DialogContent className="sm:max-w-md">
             <PrinterForm 
               printer={editingPrinter} 
-              marcas={brands}
+              marcas={marcas}
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingPrinter(null); }}
             />
@@ -132,7 +132,7 @@ export default function PrintersPage() {
 
       <Card className="shadow-lg">
         <CardContent className="p-0">
-          {printers.length === 0 ? (
+          {impressoras.length === 0 ? (
              <div className="p-6 text-center text-muted-foreground">
               Nenhuma impressora cadastrada ainda.
             </div>
@@ -149,7 +149,7 @@ export default function PrintersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {printers.map((printer) => (
+                {impressoras.map((printer) => (
                   <TableRow key={printer.id}>
                     <TableCell className="font-medium">{getBrandNameById(printer.marca_id)}</TableCell>
                     <TableCell className="font-medium">{printer.modelo || "N/A"}</TableCell>

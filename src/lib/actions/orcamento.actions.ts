@@ -9,28 +9,28 @@ import { v4 as uuidv4 } from 'uuid'; // Para gerar IDs únicos para itens
 let mockOrcamentos: Orcamento[] = [
     {
         id: "orc_1",
-        nomeOrcamento: "Projeto Inicial Cliente X",
-        clienteNome: "Empresa X",
-        dataCriacao: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 dias atrás
+        nome_orcamento: "Projeto Inicial Cliente X",
+        cliente_nome: "Empresa X",
+        data_criacao: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 dias atrás
         status: "Aprovado",
         itens: [
             { id: uuidv4(), produtoId: "prod_1", produtoNome: "Suporte Articulado para Celular", quantidade: 2, valorUnitario: 46.63, valorTotalItem: 93.26 }
         ],
-        valorTotalCalculado: 93.26,
+        valor_total_calculado: 93.26,
         observacao: "Entrega urgente."
     },
     {
         id: "orc_2",
-        nomeOrcamento: "Peças Reposição Y",
-        clienteNome: "Indústria Y",
-        dataCriacao: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 dia atrás
+        nome_orcamento: "Peças Reposição Y",
+        cliente_nome: "Indústria Y",
+        data_criacao: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 dia atrás
         status: "Pendente",
         itens: [
             { id: uuidv4(), produtoId: "prod_1", produtoNome: "Suporte Articulado para Celular", quantidade: 5, valorUnitario: 46.63, valorTotalItem: 233.15 },
-            // Supondo que prod_2 tenha um custoDetalhado.precoVendaCalculado de, digamos, 60
+            // Supondo que prod_2 tenha um custoDetalhado.preco_venda_calculado de, digamos, 60
             // { id: uuidv4(), produtoId: "prod_2", produtoNome: "Vaso Decorativo Geométrico", quantidade: 1, valorUnitario: 60.00, valorTotalItem: 60.00 }
         ],
-        valorTotalCalculado: 233.15, // 233.15 + 60 = 293.15
+        valor_total_calculado: 233.15, // 233.15 + 60 = 293.15
         observacao: "Verificar dimensões."
     }
 ];
@@ -46,14 +46,14 @@ export async function getOrcamentoById(id: string): Promise<Orcamento | undefine
   return orcamento ? JSON.parse(JSON.stringify(orcamento)) : undefined;
 }
 
-export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao' | 'valorTotalCalculado' | 'itens'> & { itens: Omit<OrcamentoItem, 'id' | 'produtoNome' | 'valorTotalItem'>[] } ): Promise<{ success: boolean, orcamento?: Orcamento, error?: string }> {
+export async function createOrcamento(data: Omit<Orcamento, 'id' | 'data_criacao' | 'valor_total_calculado' | 'itens'> & { itens: Omit<OrcamentoItem, 'id' | 'produtoNome' | 'valorTotalItem'>[] } ): Promise<{ success: boolean, orcamento?: Orcamento, error?: string }> {
   console.log("createOrcamento: Recebido data:", JSON.stringify(data, null, 2));
 
   const produtosImportados = await import('@/lib/actions/product.actions');
-  const allProducts = await produtosImportados.getProducts();
-  console.log("createOrcamento: Total de produtos carregados:", allProducts.length);
+  const allprodutos = await produtosImportados.getprodutos();
+  console.log("createOrcamento: Total de produtos carregados:", allprodutos.length);
 
-  if (!allProducts || allProducts.length === 0) {
+  if (!allprodutos || allprodutos.length === 0) {
     console.error("createOrcamento: Nenhum produto encontrado no sistema.");
     return { success: false, error: "Nenhum produto disponível no sistema para criar orçamento." };
   }
@@ -62,7 +62,7 @@ export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao'
   const itemProcessingErrors: string[] = [];
 
   for (const item of data.itens) {
-    const productDetails = allProducts.find(p => p.id === item.produtoId);
+    const productDetails = allprodutos.find(p => p.id === item.produtoId);
     console.log(`createOrcamento: Processando item com produtoId: ${item.produtoId}`);
 
     if (!productDetails) {
@@ -72,8 +72,8 @@ export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao'
       continue;
     }
 
-    if (!productDetails.custoDetalhado?.precoVendaCalculado || productDetails.custoDetalhado.precoVendaCalculado <= 0) {
-      const errorMsg = `Produto "${productDetails.nome}" (ID: ${item.produtoId}) não possui um preço de venda válido para cálculo. Preço fornecido: ${productDetails.custoDetalhado?.precoVendaCalculado}`;
+    if (!productDetails.custoDetalhado?.preco_venda_calculado || productDetails.custoDetalhado.preco_venda_calculado <= 0) {
+      const errorMsg = `Produto "${productDetails.nome}" (ID: ${item.produtoId}) não possui um preço de venda válido para cálculo. Preço fornecido: ${productDetails.custoDetalhado?.preco_venda_calculado}`;
       console.error(`createOrcamento: ${errorMsg}`);
       itemProcessingErrors.push(errorMsg);
       continue;
@@ -84,10 +84,10 @@ export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao'
         produtoId: item.produtoId,
         produtoNome: productDetails.nome,
         quantidade: item.quantidade,
-        valorUnitario: productDetails.custoDetalhado.precoVendaCalculado,
-        valorTotalItem: item.quantidade * productDetails.custoDetalhado.precoVendaCalculado,
+        valorUnitario: productDetails.custoDetalhado.preco_venda_calculado,
+        valorTotalItem: item.quantidade * productDetails.custoDetalhado.preco_venda_calculado,
     });
-    console.log(`createOrcamento: Item processado: ${productDetails.nome}, Qtd: ${item.quantidade}, ValorUnit: ${productDetails.custoDetalhado.precoVendaCalculado}`);
+    console.log(`createOrcamento: Item processado: ${productDetails.nome}, Qtd: ${item.quantidade}, ValorUnit: ${productDetails.custoDetalhado.preco_venda_calculado}`);
   }
 
   if (itemProcessingErrors.length > 0 && processedItems.length === 0) {
@@ -102,14 +102,14 @@ export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao'
     return { success: false, error: errorMsg };
   }
 
-  const valorTotalCalculado = processedItems.reduce((sum, item) => sum + item.valorTotalItem, 0);
-  console.log("createOrcamento: Valor total calculado:", valorTotalCalculado);
+  const valor_total_calculado = processedItems.reduce((sum, item) => sum + item.valorTotalItem, 0);
+  console.log("createOrcamento: Valor total calculado:", valor_total_calculado);
 
   const orcamentoToValidate = {
     ...data,
     itens: processedItems,
-    valorTotalCalculado, // Adicionado aqui
-    dataCriacao: new Date().toISOString(), // Adicionado aqui
+    valor_total_calculado, // Adicionado aqui
+    data_criacao: new Date().toISOString(), // Adicionado aqui
   };
   console.log("createOrcamento: Orcamento para validar:", JSON.stringify(orcamentoToValidate, null, 2));
 
@@ -145,14 +145,14 @@ export async function createOrcamento(data: Omit<Orcamento, 'id' | 'dataCriacao'
   return { success: true, orcamento: JSON.parse(JSON.stringify(newOrcamento)) };
 }
 
-export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 'id' | 'dataCriacao' | 'valorTotalCalculado' | 'itens'>> & { itens?: Partial<Omit<OrcamentoItem, 'id' | 'produtoNome' | 'valorTotalItem'>>[] }): Promise<{ success: boolean, orcamento?: Orcamento, error?: string }> {
+export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 'id' | 'data_criacao' | 'valor_total_calculado' | 'itens'>> & { itens?: Partial<Omit<OrcamentoItem, 'id' | 'produtoNome' | 'valorTotalItem'>>[] }): Promise<{ success: boolean, orcamento?: Orcamento, error?: string }> {
   const existingOrcamentoIndex = mockOrcamentos.findIndex(o => o.id === id);
   if (existingOrcamentoIndex === -1) {
     return { success: false, error: "Orçamento não encontrado" };
   }
 
   const produtosImportados = await import('@/lib/actions/product.actions');
-  const allProducts = await produtosImportados.getProducts();
+  const allprodutos = await produtosImportados.getprodutos();
 
   const existingOrcamento = mockOrcamentos[existingOrcamentoIndex];
 
@@ -166,8 +166,8 @@ export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 
             itemProcessingErrors.push(`Item inválido fornecido para atualização: ID ${item.produtoId}, Qtd ${item.quantidade}`);
             continue;
         }
-        const productDetails = allProducts.find(p => p.id === item.produtoId);
-        if (!productDetails || !productDetails.custoDetalhado?.precoVendaCalculado || productDetails.custoDetalhado.precoVendaCalculado <=0) {
+        const productDetails = allprodutos.find(p => p.id === item.produtoId);
+        if (!productDetails || !productDetails.custoDetalhado?.preco_venda_calculado || productDetails.custoDetalhado.preco_venda_calculado <=0) {
             itemProcessingErrors.push(`Produto "${productDetails?.nome || item.produtoId}" não encontrado ou sem preço definido para atualização.`);
             continue;
         }
@@ -178,8 +178,8 @@ export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 
             produtoId: item.produtoId!,
             produtoNome: productDetails.nome,
             quantidade: item.quantidade!,
-            valorUnitario: productDetails.custoDetalhado.precoVendaCalculado,
-            valorTotalItem: item.quantidade! * productDetails.custoDetalhado.precoVendaCalculado,
+            valorUnitario: productDetails.custoDetalhado.preco_venda_calculado,
+            valorTotalItem: item.quantidade! * productDetails.custoDetalhado.preco_venda_calculado,
         });
     }
     if (data.itens.length > 0 && processedItems.length === 0 && itemProcessingErrors.length > 0) {
@@ -196,13 +196,13 @@ export async function updateOrcamento(id: string, data: Partial<Omit<Orcamento, 
     return { success: false, error: "O orçamento deve conter pelo menos um item válido para ser atualizado." };
   }
 
-  const valorTotalCalculado = processedItems.reduce((sum, item) => sum + item.valorTotalItem, 0);
+  const valor_total_calculado = processedItems.reduce((sum, item) => sum + item.valorTotalItem, 0);
 
   const mergedData = {
     ...existingOrcamento,
     ...data,
     itens: processedItems,
-    valorTotalCalculado,
+    valor_total_calculado,
   };
 
   const validation = OrcamentoSchema.safeParse(mergedData);

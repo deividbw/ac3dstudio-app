@@ -23,22 +23,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { FilamentSchema } from "@/lib/schemas";
+import { filamentoschema } from "@/lib/schemas";
 import type { Filament, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
 
 interface FilamentFormProps {
   filament?: Filament | null;
-  brands: Brand[];
+  marcas: Brand[];
   onSuccess: (filament: Filament) => void;
   onCancel: () => void;
 }
 
-export function FilamentForm({ filament, brands, onSuccess, onCancel }: FilamentFormProps) {
+export function FilamentForm({ filament, marcas, onSuccess, onCancel }: FilamentFormProps) {
   const { toast } = useToast();
-  const form = useForm<z.infer<typeof FilamentSchema>>({
-    resolver: zodResolver(FilamentSchema),
+  const form = useForm<z.infer<typeof filamentoschema>>({
+    resolver: zodResolver(filamentoschema),
     defaultValues: filament ? {
       ...filament,
       marcaId: filament.marcaId ?? undefined,
@@ -73,7 +73,7 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
   }
 
 
-  async function onSubmit(values: z.infer<typeof FilamentSchema>) {
+  async function onSubmit(values: z.infer<typeof filamentoschema>) {
     try {
       // Ensure numeric fields are correctly typed or undefined
       const dataForAction = {
@@ -184,7 +184,7 @@ export function FilamentForm({ filament, brands, onSuccess, onCancel }: Filament
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {brands.map((brand) => (
+                        {marcas.map((brand) => (
                           <SelectItem key={brand.id} value={brand.id}>
                             {brand.nome}
                           </SelectItem>

@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type * as z from "zod";
 
 import { PageHeader } from '@/components/PageHeader';
-import { getProducts } from '@/lib/actions/product.actions';
+import { getprodutos } from '@/lib/actions/product.actions';
 import { createOrcamento } from '@/lib/actions/orcamento.actions';
 import type { Product, OrcamentoStatus } from '@/lib/types';
 import { OrcamentoSolicitanteSchema, type OrcamentoSolicitanteValues } from '@/lib/schemas';
@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/form";
 
 export default function EcommercePage() {
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allprodutos, setAllprodutos] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -75,11 +75,11 @@ export default function EcommercePage() {
 
 
   useEffect(() => {
-    async function loadProducts() {
+    async function loadprodutos() {
       setIsLoading(true);
       try {
-        const productsData = await getProducts();
-        setAllProducts(productsData.filter(p => p.custoDetalhado?.precoVendaCalculado && p.custoDetalhado.precoVendaCalculado > 0));
+        const produtosData = await getprodutos();
+        setAllprodutos(produtosData.filter(p => p.custoDetalhado?.preco_venda_calculado && p.custoDetalhado.preco_venda_calculado > 0));
       } catch (error) {
         console.error("Erro ao carregar produtos:", error);
         toast({ title: "Erro ao Carregar Produtos", description: "Não foi possível buscar os produtos.", variant: "destructive" });
@@ -87,15 +87,15 @@ export default function EcommercePage() {
         setIsLoading(false);
       }
     }
-    loadProducts();
+    loadprodutos();
   }, [toast]);
 
-  const filteredProducts = useMemo(() => {
-    return allProducts.filter(product =>
+  const filteredprodutos = useMemo(() => {
+    return allprodutos.filter(product =>
       product.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [allProducts, searchTerm]);
+  }, [allprodutos, searchTerm]);
 
   const handleAddToCart = (product: Product) => {
     setCart(prevCart => [...prevCart, product]);
@@ -108,7 +108,7 @@ export default function EcommercePage() {
 
   const handleRemoveFromCart = (productId: string) => {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
-    const removedProduct = allProducts.find(p => p.id === productId);
+    const removedProduct = allprodutos.find(p => p.id === productId);
     toast({
       title: `${removedProduct?.nome || 'Produto'} removido`,
       description: "Todas as unidades deste item foram removidas do seu carrinho.",
@@ -117,7 +117,7 @@ export default function EcommercePage() {
   };
 
   const handleUpdateCartItemQuantity = (productId: string, newQuantity: number) => {
-    const productDetails = allProducts.find(p => p.id === productId);
+    const productDetails = allprodutos.find(p => p.id === productId);
     if (!productDetails) return;
 
     const nonNegativeQuantity = Math.max(0, newQuantity);
@@ -182,8 +182,8 @@ export default function EcommercePage() {
     ].join('\n');
 
     const orcamentoData = {
-      nomeOrcamento: `Orçamento E-commerce - ${solicitanteData.nomeCompleto.split(' ')[0]} - ${new Date().toLocaleDateString('pt-BR')}`,
-      clienteNome: solicitanteData.nomeCompleto,
+      nome_orcamento: `Orçamento E-commerce - ${solicitanteData.nomeCompleto.split(' ')[0]} - ${new Date().toLocaleDateString('pt-BR')}`,
+      cliente_nome: solicitanteData.nomeCompleto,
       status: "Pendente" as OrcamentoStatus,
       itens: orcamentoItensParaAction,
       observacao: observacoes,
@@ -231,7 +231,7 @@ export default function EcommercePage() {
   };
 
   const cartTotal = useMemo(() => {
-    return cartGrouped.reduce((total, item) => total + ((item.custoDetalhado?.precoVendaCalculado || 0) * item.quantity), 0);
+    return cartGrouped.reduce((total, item) => total + ((item.custoDetalhado?.preco_venda_calculado || 0) * item.quantity), 0);
   }, [cartGrouped]);
 
 
@@ -293,7 +293,7 @@ export default function EcommercePage() {
                                 />
                                 <div className="flex-grow space-y-1">
                                     <p className="text-sm font-medium leading-tight line-clamp-2">{item.nome}</p>
-                                    <p className="text-xs text-primary font-semibold">{formatCurrency(item.custoDetalhado?.precoVendaCalculado)} cada</p>
+                                    <p className="text-xs text-primary font-semibold">{formatCurrency(item.custoDetalhado?.preco_venda_calculado)} cada</p>
                                     <div className="flex items-center gap-1.5 pt-1">
                                         <Button variant="outline" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-muted/80" onClick={() => handleUpdateCartItemQuantity(item.id, item.quantity - 1)} disabled={isSubmittingOrcamento}>
                                             <Minus className="h-3.5 w-3.5" />
@@ -337,9 +337,9 @@ export default function EcommercePage() {
 
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">Carregando produtos...</div>
-      ) : filteredProducts.length > 0 ? (
+      ) : filteredprodutos.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
-          {filteredProducts.map(product => (
+          {filteredprodutos.map(product => (
             <ProductDisplayCard
                 key={product.id}
                 product={product}

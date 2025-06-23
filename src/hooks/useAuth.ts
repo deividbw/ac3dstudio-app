@@ -1,4 +1,4 @@
-c"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import type { UserRole, Permission } from '@/lib/types';

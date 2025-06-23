@@ -53,15 +53,15 @@ type OrcamentoFormValues = z.infer<typeof OrcamentoSchema>;
 
 interface OrcamentoFormProps {
   orcamento?: Orcamento | null;
-  products: Product[];
+  produtos: Product[];
   onSuccess: (orcamento: Orcamento) => void;
   onCancel: () => void;
 }
 
-export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: OrcamentoFormProps) {
+export function OrcamentoForm({ orcamento, produtos, onSuccess, onCancel }: OrcamentoFormProps) {
   const { toast } = useToast();
 
-  const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [produtosearchOpen, setprodutosearchOpen] = useState(false);
   const [selectedProductForAddition, setSelectedProductForAddition] = useState<Product | null>(null);
   const [quantityForAddition, setQuantityForAddition] = useState<number>(1);
 
@@ -73,8 +73,8 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
       observacao: orcamento.observacao ?? "",
       itens: orcamento.itens.map(item => ({ ...item, id: item.id || uuidv4() }))
     } : {
-      nomeOrcamento: "",
-      clienteNome: "",
+      nome_orcamento: "",
+      cliente_nome: "",
       status: "Pendente",
       observacao: "",
       itens: [],
@@ -93,9 +93,9 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
     let needsUpdate = false;
 
     const updatedItens = currentItens.map(item => {
-      const productDetails = products.find(p => p.id === item.produtoId);
-      if (productDetails && productDetails.custoDetalhado?.precoVendaCalculado) {
-        const newValorUnitario = productDetails.custoDetalhado.precoVendaCalculado;
+      const productDetails = produtos.find(p => p.id === item.produtoId);
+      if (productDetails && productDetails.custoDetalhado?.preco_venda_calculado) {
+        const newValorUnitario = productDetails.custoDetalhado.preco_venda_calculado;
         const newProdutoNome = productDetails.nome;
         const newValorTotalItem = (item.quantidade || 0) * newValorUnitario;
 
@@ -116,11 +116,11 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
     if (needsUpdate) {
       form.setValue("itens", updatedItens, { shouldValidate: true, shouldDirty: true });
     }
-  }, [watchedItens, products, form]);
+  }, [watchedItens, produtos, form]);
 
 
   const handleProductAddToBudget = () => {
-    if (!selectedProductForAddition || !selectedProductForAddition.custoDetalhado?.precoVendaCalculado) {
+    if (!selectedProductForAddition || !selectedProductForAddition.custoDetalhado?.preco_venda_calculado) {
       toast({ title: "Produto Inválido", description: "Selecione um produto válido com preço definido.", variant: "destructive" });
       return;
     }
@@ -145,13 +145,13 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
         produtoId: selectedProductForAddition.id,
         produtoNome: selectedProductForAddition.nome,
         quantidade: quantityForAddition,
-        valorUnitario: selectedProductForAddition.custoDetalhado.precoVendaCalculado,
-        valorTotalItem: quantityForAddition * selectedProductForAddition.custoDetalhado.precoVendaCalculado,
+        valorUnitario: selectedProductForAddition.custoDetalhado.preco_venda_calculado,
+        valorTotalItem: quantityForAddition * selectedProductForAddition.custoDetalhado.preco_venda_calculado,
       });
     }
     setSelectedProductForAddition(null);
     setQuantityForAddition(1);
-    setProductSearchOpen(false);
+    setprodutosearchOpen(false);
   };
   
   const handleUpdateOrcamentoItemQuantity = (index: number, newQuantityStr: string) => {
@@ -192,8 +192,8 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
         }
 
         const dataForAction = {
-            nomeOrcamento: values.nomeOrcamento,
-            clienteNome: values.clienteNome,
+            nome_orcamento: values.nome_orcamento,
+            cliente_nome: values.cliente_nome,
             status: values.status,
             observacao: values.observacao,
             itens: itensParaSalvar,
@@ -209,7 +209,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
       if (actionResult.success && actionResult.orcamento) {
         toast({
           title: orcamento ? "Orçamento Atualizado" : "Orçamento Criado",
-          description: `O orçamento "${actionResult.orcamento.nomeOrcamento}" foi salvo.`,
+          description: `O orçamento "${actionResult.orcamento.nome_orcamento}" foi salvo.`,
           variant: "success",
         });
         onSuccess(actionResult.orcamento);
@@ -237,10 +237,10 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
   }, [form, watchedItens]);
 
 
-  const availableProductsForSelection = useMemo(() => {
-    return products.filter(p => p.custoDetalhado?.precoVendaCalculado && p.custoDetalhado.precoVendaCalculado > 0)
+  const availableprodutosForSelection = useMemo(() => {
+    return produtos.filter(p => p.custoDetalhado?.preco_venda_calculado && p.custoDetalhado.preco_venda_calculado > 0)
                    .sort((a,b) => a.nome.localeCompare(b.nome));
-  }, [products]);
+  }, [produtos]);
 
 
   return (
@@ -258,7 +258,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
             <div className="p-6 space-y-4">
               <FormField
                 control={form.control}
-                name="nomeOrcamento"
+                name="nome_orcamento"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nome do Orçamento*</FormLabel>
@@ -271,7 +271,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
               />
               <FormField
                 control={form.control}
-                name="clienteNome"
+                name="cliente_nome"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Cliente*</FormLabel>
@@ -288,16 +288,16 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
                 <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-end">
                   <FormItem>
                     <FormLabel>Produto*</FormLabel>
-                    <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
+                    <Popover open={produtosearchOpen} onOpenChange={setprodutosearchOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           role="combobox"
-                          aria-expanded={productSearchOpen}
+                          aria-expanded={produtosearchOpen}
                           className="w-full justify-between h-9 text-xs font-normal" 
                         >
                           {selectedProductForAddition
-                            ? `${selectedProductForAddition.nome} (R$ ${selectedProductForAddition.custoDetalhado?.precoVendaCalculado.toFixed(2)})`
+                            ? `${selectedProductForAddition.nome} (R$ ${selectedProductForAddition.custoDetalhado?.preco_venda_calculado.toFixed(2)})`
                             : "Pesquisar produto..."}
                           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -309,13 +309,13 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
                             <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
                             <CommandGroup>
                               <ScrollArea className="h-48">
-                                {availableProductsForSelection.map((product) => (
+                                {availableprodutosForSelection.map((product) => (
                                   <CommandItem
                                     key={product.id}
                                     value={`${product.nome} ${product.id}`}
                                     onSelect={() => {
                                       setSelectedProductForAddition(product);
-                                      setProductSearchOpen(false);
+                                      setprodutosearchOpen(false);
                                     }}
                                     className="text-xs"
                                   >
@@ -325,7 +325,7 @@ export function OrcamentoForm({ orcamento, products, onSuccess, onCancel }: Orca
                                         selectedProductForAddition?.id === product.id ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    {product.nome} (R$ {product.custoDetalhado!.precoVendaCalculado.toFixed(2)})
+                                    {product.nome} (R$ {product.custoDetalhado!.preco_venda_calculado.toFixed(2)})
                                   </CommandItem>
                                 ))}
                               </ScrollArea>

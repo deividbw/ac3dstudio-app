@@ -40,5 +40,5 @@ export function getColorCode(colorName?: string | null): string {
   }
   
   // Procura no mapa de cores
-  return colorMap[lowerCaseColor] || '#FFFFFF'; // Retorna branco se não encontrar
+  return colorMap[lowerCaseColor] || colorName; 
 }

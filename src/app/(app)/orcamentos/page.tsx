@@ -48,7 +48,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Orcamento, Product, OrcamentoStatus } from '@/lib/types';
 import { OrcamentoStatusOptions } from '@/lib/types'; // Import non-type for direct use
-import { getProducts } from '@/lib/actions/product.actions';
+import { getprodutos } from '@/lib/actions/product.actions';
 import { getOrcamentos, createOrcamento, updateOrcamento, deleteOrcamento } from '@/lib/actions/orcamento.actions';
 import { OrcamentoForm } from './components/OrcamentoForm'; 
 import { OrcamentoCard } from './components/OrcamentoCard'; 
@@ -57,7 +57,7 @@ import { cn } from '@/lib/utils';
 
 export default function OrcamentosPage() {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [produtos, setprodutos] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrcamento, setEditingOrcamento] = useState<Orcamento | null>(null);
@@ -73,12 +73,12 @@ export default function OrcamentosPage() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [orcamentosData, productsData] = await Promise.all([
+      const [orcamentosData, produtosData] = await Promise.all([
         getOrcamentos(),
-        getProducts(),
+        getprodutos(),
       ]);
-      setOrcamentos(orcamentosData.sort((a,b) => new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime()));
-      setProducts(productsData.filter(p => p.custoDetalhado?.precoVendaCalculado && p.custoDetalhado.precoVendaCalculado > 0)); 
+      setOrcamentos(orcamentosData.sort((a,b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime()));
+      setprodutos(produtosData.filter(p => p.custoDetalhado?.preco_venda_calculado && p.custoDetalhado.preco_venda_calculado > 0)); 
     } catch (error) {
       console.error("Erro ao carregar dados para orçamentos:", error);
       toast({ title: "Erro ao Carregar Dados", description: "Não foi possível buscar os orçamentos ou produtos.", variant: "destructive" });
@@ -93,8 +93,8 @@ export default function OrcamentosPage() {
 
   const filteredOrcamentos = useMemo(() => {
     return orcamentos.filter(orc => 
-      (orc.nomeOrcamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      orc.clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (orc.nome_orcamento.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      orc.cliente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       orc.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (filterStatus === "all" || orc.status === filterStatus) // Apply status filter, check for "all"
     );
@@ -167,21 +167,21 @@ export default function OrcamentosPage() {
             if (!isOpen) setEditingOrcamento(null);
         }}>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={handleOpenNewDialog} disabled={products.length === 0}>
+            <Button size="sm" onClick={handleOpenNewDialog} disabled={produtos.length === 0}>
               <FilePlus2 className="mr-2 h-4 w-4" />
               Novo Orçamento
             </Button>
           </DialogTrigger>
-          {products.length === 0 && !isLoading && (
+          {produtos.length === 0 && !isLoading && (
             <p className="text-sm text-destructive text-center py-2">
               Não há produtos cadastrados com preço para criar orçamentos. Cadastre produtos primeiro.
             </p>
           )}
-          {isFormOpen && products.length > 0 && ( 
+          {isFormOpen && produtos.length > 0 && ( 
              <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 overflow-y-auto">
                 <OrcamentoForm
                     orcamento={editingOrcamento}
-                    products={products}
+                    produtos={produtos}
                     onSuccess={handleFormSuccess}
                     onCancel={() => { setIsFormOpen(false); setEditingOrcamento(null);}}
                 />
@@ -302,15 +302,15 @@ export default function OrcamentosPage() {
                   <TableBody>
                     {filteredOrcamentos.map((orc) => (
                       <TableRow key={orc.id}>
-                        <TableCell className="font-medium text-xs py-2 px-3">{orc.nomeOrcamento}</TableCell>
-                        <TableCell className="text-xs py-2 px-3">{orc.clienteNome}</TableCell>
-                        <TableCell className="text-xs py-2 px-3">{formatDate(orc.dataCriacao)}</TableCell>
+                        <TableCell className="font-medium text-xs py-2 px-3">{orc.nome_orcamento}</TableCell>
+                        <TableCell className="text-xs py-2 px-3">{orc.cliente_nome}</TableCell>
+                        <TableCell className="text-xs py-2 px-3">{formatDate(orc.data_criacao)}</TableCell>
                         <TableCell className="text-xs py-2 px-3">
                           <Badge variant={getStatusBadgeVariant(orc.status)} className={cn(getStatusBadgeColorClass(orc.status), 'text-xs')}>
                               {orc.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-primary text-xs py-2 px-3">{formatCurrency(orc.valorTotalCalculado)}</TableCell>
+                        <TableCell className="text-right font-semibold text-primary text-xs py-2 px-3">{formatCurrency(orc.valor_total_calculado)}</TableCell>
                         <TableCell className="text-center py-1.5 px-3">
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-yellow-500 hover:bg-yellow-100" onClick={() => handleOpenEditDialog(orc)}>
                             <Edit className="h-3.5 w-3.5" />
@@ -325,7 +325,7 @@ export default function OrcamentosPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Tem certeza que deseja excluir o orçamento "{orc.nomeOrcamento}"? Esta ação não pode ser desfeita.
+                                    Tem certeza que deseja excluir o orçamento "{orc.nome_orcamento}"? Esta ação não pode ser desfeita.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -347,7 +347,7 @@ export default function OrcamentosPage() {
               <p className="text-sm">Nenhum orçamento encontrado.</p>
               {searchTerm && <p className="text-xs mt-1">Tente refinar sua busca ou limpar o filtro.</p>}
                {filterStatus !== "all" && <p className="text-xs mt-1">Tente alterar o filtro de status aplicado.</p>}
-              {products.length === 0 && !isLoading &&
+              {produtos.length === 0 && !isLoading &&
                  <p className="text-sm mt-2 text-destructive">
                     Atenção: Não há produtos com preço definido cadastrados para criar orçamentos.
                 </p>
@@ -362,7 +362,7 @@ export default function OrcamentosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o orçamento "{orcamentos.find(o => o.id === deletingOrcamentoId)?.nomeOrcamento}"? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir o orçamento "{orcamentos.find(o => o.id === deletingOrcamentoId)?.nome_orcamento}"? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

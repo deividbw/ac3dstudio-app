@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ProductForm } from '@/app/(app)/products/components/ProductForm';
 import { CostDisplayDialog } from '@/app/(app)/products/components/CostDisplayDialog';
-import { getProdutos, deleteProduto, updateProduto } from '@/lib/actions/product.actions';
+import { getProdutos, deletarProduto, atualizarProduto } from '@/lib/actions/product.actions.supabase';
 import type { Produto, Filamento, Impressora } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,7 +39,7 @@ import { getImpressoras } from '@/lib/actions/printer.actions';
 
 type SortableField = 'nome_produto' | 'tipo_nome' | 'impressora_nome' | 'preco_venda_calculado';
 
-export function ProductsTab() {
+export function ProdutosTab() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [filamentos, setFilamentos] = useState<Filamento[]>([]);
   const [impressoras, setImpressoras] = useState<Impressora[]>([]);
@@ -56,19 +56,10 @@ export function ProductsTab() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      console.log("Buscando todos os dados...");
-      const [produtosData, filamentosData, impressorasData] = await Promise.all([
-        getProdutos(),
-        getFilamentos(),
-        getImpressoras(),
-      ]);
-      console.log("Filamentos recebidos:", filamentosData);
-      console.log("Impressoras recebidas:", impressorasData);
+      const produtosData = await getProdutos();
       setProdutos(produtosData);
-      setFilamentos(filamentosData);
-      setImpressoras(impressorasData);
     } catch (error) {
-      console.error("Erro ao buscar dados:", error);
+      console.error("Erro ao buscar produtos:", error);
       toast({
         title: "Erro ao carregar dados",
         description: "Não foi possível buscar os dados necessários.",
@@ -95,7 +86,7 @@ export function ProductsTab() {
 
   const confirmDelete = async () => {
     if (productToDelete) {
-      const result = await deleteProduto(productToDelete);
+      const result = await deletarProduto(productToDelete);
       if (result.success) {
         toast({ title: "Sucesso", description: "Produto deletado." });
         fetchData();
@@ -129,7 +120,7 @@ export function ProductsTab() {
     setSortConfig({ key, direction });
   };
 
-  const sortedProducts = useMemo(() => {
+  const sortedprodutos = useMemo(() => {
     let sortableItems = [...produtos];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
@@ -208,7 +199,7 @@ export function ProductsTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? renderSkeleton() : sortedProducts.map((product) => (
+            {isLoading ? renderSkeleton() : sortedprodutos.map((product) => (
               <TableRow key={product.id}>
                 <TableCell>
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground">

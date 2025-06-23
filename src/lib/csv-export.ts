@@ -16,9 +16,9 @@ export function exportToCsv(filename: string, rows: object[]) {
       let cell = (row as any)[k] === null || (row as any)[k] === undefined ? '' : (row as any)[k];
       cell = cell instanceof Date
         ? cell.toLocaleString('pt-BR')
-        : cell.toString().replace(/"/g, '""'); // Escape double quotes
+        : cell.toString().replace(/"/g, '""'); // Escape double orcamentos
       
-      // If cell contains separator, newline, or double quote, enclose in double quotes
+      // If cell contains separator, newline, or double quote, enclose in double orcamentos
       if (cell.search(/("|,|\n)/g) >= 0) {
         cell = `"${cell}"`;
       }

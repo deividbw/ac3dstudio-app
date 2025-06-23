@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { OrcamentoStatusOptions } from './types';
 
-export const FilamentSchema = z.object({
+export const filamentoschema = z.object({
   id: z.string().optional(),
   tipo_id: z.string().min(1, "Tipo do filamento é obrigatório."),
   marca_id: z.string().nullable().optional(),
@@ -15,7 +15,7 @@ export const FilamentSchema = z.object({
 });
 
 
-export const PrinterSchema = z.object({
+export const impressoraschema = z.object({
   id: z.string().optional(),
   marca_id: z.string().uuid().optional().nullable(),
   modelo: z.string().min(1, "Modelo é obrigatório"),
@@ -26,7 +26,7 @@ export const PrinterSchema = z.object({
   consumo_energia_w: z.coerce.number().optional().nullable(),
 });
 
-export const ProductSchema = z.object({
+export const produtoschema = z.object({
   id: z.string().optional(),
   nome_produto: z.string().min(3, "Nome do produto precisa de pelo menos 3 caracteres."),
   descricao: z.string().optional(),
@@ -40,7 +40,7 @@ export const ProductSchema = z.object({
   custo_detalhado: z.any().optional(),
 });
 
-export const BrandSchema = z.object({
+export const marcaschema = z.object({
   id: z.string().optional(),
   nome_marca: z.string().min(1, { message: "Nome da marca é obrigatório" }),
 });
@@ -92,7 +92,7 @@ export const OrcamentoSolicitanteSchema = z.object({
 });
 export type OrcamentoSolicitanteValues = z.infer<typeof OrcamentoSolicitanteSchema>;
 
-export const FilamentStockSchema = z.object({
+export const filamentostockSchema = z.object({
   filamento_id: z.string().uuid(),
   tipo_movimentacao: z.enum(['ENTRADA', 'SAIDA']),
   quantidade_kg: z.coerce.number().positive("A quantidade deve ser positiva"),

@@ -36,6 +36,7 @@ const PrinterActionSchema = z.object({
   valor_equipamento: z.coerce.number().positive(),
   vida_util_anos: z.coerce.number().positive(),
   trabalho_horas_dia: z.coerce.number().positive(),
+  depreciacao_calculada: z.coerce.number().optional().nullable(),
   consumo_energia_w: z.coerce.number().optional().nullable(),
 });
 

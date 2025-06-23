@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import type { Product } from '@/lib/types';
-import { ProductSchema } from '@/lib/schemas';
+import { produtoschema } from '@/lib/schemas';
 import { z } from 'zod';
 
 // Função de teste para verificar a estrutura do banco
@@ -40,75 +40,19 @@ export async function testDatabaseConnection() {
 }
 
 export async function getProdutos(): Promise<Product[]> {
-  console.log('getProdutos called');
   const supabase = await createClient();
-  
-  // Primeiro, vamos verificar se a tabela produtos existe e tem dados
-  const { data: produtosData, error: erroProdutos } = await supabase
-    .from('produtos')
+
+  const { data, error } = await supabase
+    .from('v_produtos_detalhados')
     .select('*');
 
-  console.log('getProdutos result:', { data: produtosData, error: erroProdutos });
-
-  if (erroProdutos) {
-    console.error('Error fetching products:', erroProdutos);
+  if (error) {
+    console.error('Error fetching from view v_produtos_detalhados:', error);
     return [];
   }
 
-  // Se não há dados, retorna array vazio
-  if (!produtosData || produtosData.length === 0) {
-    console.log('No products found in database');
-    return [];
-  }
-
-  // Para cada produto, buscar os dados relacionados separadamente
-  const productsWithDetails = await Promise.all(
-    produtosData.map(async (p) => {
-      // Buscar dados do filamento com joins
-      const { data: filamentData } = await supabase
-        .from('filamentos')
-        .select(`
-          cor,
-          tipos_filamento ( tipo ),
-          marcas ( nome_marca )
-        `)
-        .eq('id', p.filamento_id)
-        .single();
-
-      // Buscar dados da impressora
-      const { data: printerData } = await supabase
-        .from('impressoras')
-        .select('modelo')
-        .eq('id', p.impressora_id)
-        .single();
-
-      return {
-        id: p.id,
-        created_at: p.created_at,
-        user_id: p.user_id,
-        nome_produto: p.nome_produto || 'Produto sem nome',
-        descricao: p.descricao || '',
-        impressora_id: p.impressora_id,
-        filamento_id: p.filamento_id,
-        peso_peca_g: p.peso_peca_g || 0,
-        tempo_impressao_h: p.tempo_impressao_h || 0,
-        custo_modelagem: p.custo_modelagem || 0,
-        custos_extras: p.custos_extras || 0,
-        percentual_lucro: p.percentual_lucro || 0,
-        custo_total_calculado: p.custo_total_calculado || 0,
-        preco_venda_calculado: p.preco_venda_calculado || 0,
-        // @ts-ignore
-        marca_nome: filamentData?.marcas?.nome_marca || 'Sem marca',
-        // @ts-ignore
-        tipo_nome: filamentData?.tipos_filamento?.tipo || 'Sem tipo',
-        filamento_cor: filamentData?.cor || 'Sem cor',
-        impressora_nome: printerData?.modelo || 'Sem impressora',
-        image_url: p.image_url || '',
-      };
-    })
-  );
-
-  return productsWithDetails;
+  console.log('Produtos retornados da view:', data);
+  return data || [];
 }
 
 export async function deletarProduto(id: string): Promise<{ success: boolean; error?: string }> {
@@ -124,7 +68,7 @@ export async function deletarProduto(id: string): Promise<{ success: boolean; er
   return { success: true };
 }
 
-export async function criarProduto(values: z.infer<typeof ProductSchema>) {
+export async function criarProduto(values: z.infer<typeof produtoschema>) {
     console.log('criarProduto called with:', values);
     const supabase = await createClient();
 
@@ -155,8 +99,8 @@ export async function criarProduto(values: z.infer<typeof ProductSchema>) {
             custo_modelagem: values.custo_modelagem,
             custos_extras: values.custos_extras,
             percentual_lucro: values.percentual_lucro,
-            custo_total_calculado: costResult.data.custoTotalProducao,
-            preco_venda_calculado: costResult.data.precoVenda,
+            custo_total_calculado: costResult.data.custo_total_producao,
+            preco_venda_calculado: costResult.data.preco_venda,
         };
 
         // 3. Inserir o produto no banco de dados
@@ -176,7 +120,7 @@ export async function criarProduto(values: z.infer<typeof ProductSchema>) {
     }
 }
 
-export async function atualizarProduto(id: string, values: z.infer<typeof ProductSchema>) {
+export async function atualizarProduto(id: string, values: z.infer<typeof produtoschema>) {
     console.log('atualizarProduto called with:', { id, values });
     const supabase = await createClient();
 
@@ -207,8 +151,8 @@ export async function atualizarProduto(id: string, values: z.infer<typeof Produc
             custo_modelagem: values.custo_modelagem,
             custos_extras: values.custos_extras,
             percentual_lucro: values.percentual_lucro,
-            custo_total_calculado: costResult.data.custoTotalProducao,
-            preco_venda_calculado: costResult.data.precoVenda,
+            custo_total_calculado: costResult.data.custo_total_producao,
+            preco_venda_calculado: costResult.data.preco_venda,
         };
 
         // 3. Atualizar o produto no banco de dados
@@ -288,11 +232,11 @@ export async function calculateProductCostPreview(params: any) {
     return {
       success: true,
       data: {
-        custoMaterial,
-        custoImpressao,
-        custoTotalProducao,
+        custo_material: custoMaterial,
+        custo_impressao: custoImpressao,
+        custo_total_producao: custoTotalProducao,
         lucro,
-        precoVenda
+        preco_venda: precoVenda
       }
     };
 

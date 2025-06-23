@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { PrinterSchema } from "@/lib/schemas";
+import { impressoraschema } from "@/lib/schemas";
 import type { Printer, Brand } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createPrinter, updatePrinter } from '@/lib/actions/printer.actions';
@@ -38,8 +38,8 @@ interface PrinterFormProps {
 export function PrinterForm({ printer, marcas, onSuccess, onCancel }: PrinterFormProps) {
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof PrinterSchema>>({
-    resolver: zodResolver(PrinterSchema),
+  const form = useForm<z.infer<typeof impressoraschema>>({
+    resolver: zodResolver(impressoraschema),
     defaultValues: printer ? {
       ...printer,
       modelo: printer.modelo || "",
@@ -75,7 +75,7 @@ export function PrinterForm({ printer, marcas, onSuccess, onCancel }: PrinterFor
   }, [valorEquipamentoWatched, vidaUtilAnosWatched, trabalhoHorasDiaWatched, form.setValue]);
 
 
-  async function onSubmit(values: z.infer<typeof PrinterSchema>) {
+  async function onSubmit(values: z.infer<typeof impressoraschema>) {
     try {
       const isCreatingNew = !printer;
       

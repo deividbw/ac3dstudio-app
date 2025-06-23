@@ -2,10 +2,10 @@
 "use server";
 
 import type { Product, ProductCostBreakdown } from "@/lib/types";
-import { ProductSchema } from "@/lib/schemas";
+import { produtoschema } from "@/lib/schemas";
 // AI flow for cost calculation is no longer used.
 
-let mockProducts: Product[] = [
+let mockprodutos: Product[] = [
   {
     id: "prod_1",
     nome_produto: "Suporte Articulado para Celular",
@@ -68,16 +68,16 @@ let mockProducts: Product[] = [
   }
 ];
 
-export async function getProducts(): Promise<Product[]> {
-  return mockProducts;
+export async function getprodutos(): Promise<Product[]> {
+  return mockprodutos;
 }
 
 export async function getProductById(id: string): Promise<Product | undefined> {
-  return mockProducts.find(p => p.id === id);
+  return mockprodutos.find(p => p.id === id);
 }
 
 export async function createProduct(data: Omit<Product, 'id'>): Promise<{ success: boolean, product?: Product, error?: string }> {
-  const validation = ProductSchema.safeParse(data);
+  const validation = produtoschema.safeParse(data);
   if (!validation.success) {
     console.error("Server-side validation failed for createProduct:", validation.error.flatten());
     return { success: false, error: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') };
@@ -92,17 +92,17 @@ export async function createProduct(data: Omit<Product, 'id'>): Promise<{ succes
     percentual_lucro: newProductData.percentual_lucro,
     custo_detalhado: data.custo_detalhado,
   };
-  mockProducts.push(newProduct);
+  mockprodutos.push(newProduct);
   return { success: true, product: newProduct };
 }
 
 export async function updateProduct(id: string, data: Product): Promise<{ success: boolean, product?: Product, error?: string }> {
-  const existingProductIndex = mockProducts.findIndex(p => p.id === id);
+  const existingProductIndex = mockprodutos.findIndex(p => p.id === id);
   if (existingProductIndex === -1) {
     return { success: false, error: "Produto não encontrado" };
   }
   
-  const validation = ProductSchema.safeParse(data);
+  const validation = produtoschema.safeParse(data);
    if (!validation.success) {
     console.error("Server-side validation failed for updateProduct:", validation.error.flatten());
     return { success: false, error: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') };
@@ -110,23 +110,23 @@ export async function updateProduct(id: string, data: Product): Promise<{ succes
 
   const updatedProductDataFromSchema = validation.data;
   const finalProductData: Product = { 
-    ...mockProducts[existingProductIndex],
+    ...mockprodutos[existingProductIndex],
     ...updatedProductDataFromSchema,
     custo_detalhado: data.custo_detalhado,
   };
   finalProductData.id = id;
-  mockProducts[existingProductIndex] = finalProductData;
+  mockprodutos[existingProductIndex] = finalProductData;
   return { success: true, product: finalProductData};
 }
 
 export async function deleteProduct(id: string): Promise<{ success: boolean, error?: string }> {
-  const initialLength = mockProducts.length;
-  mockProducts = mockProducts.filter(p => p.id !== id);
-   if (mockProducts.length === initialLength) {
+  const initialLength = mockprodutos.length;
+  mockprodutos = mockprodutos.filter(p => p.id !== id);
+   if (mockprodutos.length === initialLength) {
     return { success: false, error: "Produto não encontrado" };
   }
   return { success: true };
 }
 
-export { getProducts as getProdutos, deleteProduct as deleteProduto, updateProduct as updateProduto, createProduct as addProduto };
+export { getprodutos as getProdutos, deleteProduct as deleteProduto, updateProduct as updateProduto, createProduct as addProduto };
 

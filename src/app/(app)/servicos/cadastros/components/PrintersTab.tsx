@@ -35,8 +35,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from '@/components/ui/card';
 
-export function PrintersTab() {
-  const [printers, setPrinters] = useState<Printer[]>([]);
+export function ImpressorasTab() {
+  const [impressoras, setimpressoras] = useState<Printer[]>([]);
   const [marcas, setMarcas] = useState<Brand[]>([]); 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
@@ -47,11 +47,11 @@ export function PrintersTab() {
   const [filterModelo, setFilterModelo] = useState("");
 
   const loadData = useCallback(async () => { 
-    const [printersData, marcasData] = await Promise.all([
+    const [impressorasData, marcasData] = await Promise.all([
       getImpressoras(),
       getMarcas()
     ]);
-    setPrinters(printersData);
+    setimpressoras(impressorasData);
     setMarcas(marcasData);
   }, []);
 
@@ -65,12 +65,12 @@ export function PrintersTab() {
     return brand ? brand.nome_marca : "Desconhecida";
   }, [marcas]);
 
-  const filteredPrinters = useMemo(() => {
-    return printers.filter(p => 
+  const filteredimpressoras = useMemo(() => {
+    return impressoras.filter(p => 
       (filterMarca === "" || getBrandNameById(p.marca_id).toLowerCase().includes(filterMarca.toLowerCase())) &&
       (filterModelo === "" || (p.modelo && p.modelo.toLowerCase().includes(filterModelo.toLowerCase())))
     );
-  }, [printers, filterMarca, filterModelo, getBrandNameById]);
+  }, [impressoras, filterMarca, filterModelo, getBrandNameById]);
 
   const handleFormSuccess = () => {
     loadData();
@@ -142,14 +142,14 @@ export function PrintersTab() {
           </div>
 
           <div className="mb-3 text-sm text-muted-foreground">
-            Exibindo {filteredPrinters.length} de {printers.length} impressora(s).
+            Exibindo {filteredimpressoras.length} de {impressoras.length} impressora(s).
           </div>
       
-          {filteredPrinters.length === 0 && printers.length > 0 ? (
+          {filteredimpressoras.length === 0 && impressoras.length > 0 ? (
              <div className="p-6 text-center text-muted-foreground">
               Nenhuma impressora encontrada com os filtros aplicados.
             </div>
-          ) : filteredPrinters.length === 0 && printers.length === 0 ? (
+          ) : filteredimpressoras.length === 0 && impressoras.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">
               Nenhuma impressora cadastrada ainda.
             </div>
@@ -166,7 +166,7 @@ export function PrintersTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPrinters.map((printer) => (
+                {filteredimpressoras.map((printer) => (
                   <TableRow key={printer.id}>
                     <TableCell className="px-2 py-1.5">{getBrandNameById(printer.marca_id)}</TableCell>
                     <TableCell className="px-2 py-1.5">{printer.modelo || "N/A"}</TableCell>

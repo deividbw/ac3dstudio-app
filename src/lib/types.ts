@@ -12,7 +12,7 @@ export interface Filament {
   densidade?: number;
   quantidade_estoque_gramas?: number;
   preco_por_kg?: number;
-  marca_nome?: string;
+  nome_marca?: string;
   tipo_nome?: string;
 }
 
@@ -54,9 +54,9 @@ export type Product = {
   custo_total_calculado?: number;
   preco_venda_calculado?: number;
   custo_detalhado?: ProductCostBreakdown;
-  marca_nome?: string;
-  tipo_nome?: string;
   filamento_cor?: string;
+  tipo_nome?: string;
+  marca_nome?: string;
   impressora_nome?: string;
 };
 

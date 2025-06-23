@@ -32,8 +32,9 @@ const createSupabaseClient = async () => {
     );
 };
 
-const BrandSchema = z.object({
-  nome_marca: z.string().min(1, "Nome da marca é obrigatório"),
+const BrandFormSchema = z.object({
+  id: z.string().optional(),
+  nome_marca: z.string().min(2, "O nome da marca deve ter pelo menos 2 caracteres."),
 });
 
 export interface BrandFormState {
@@ -41,40 +42,68 @@ export interface BrandFormState {
   errors?: {
     nome_marca?: string[];
     _form?: string[];
+    id?: string[];
   };
   success: boolean;
 }
 
-export async function createBrand(data: z.infer<typeof BrandSchema>) {
-    const supabase = await createSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+export async function createBrand(
+  prevState: BrandFormState,
+  formData: FormData
+): Promise<BrandFormState> {
+  const supabase = await createSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        return { success: false, error: "Usuário não autenticado." };
+  if (!user) {
+    return {
+      message: "Erro de Autenticação",
+      errors: { _form: ["Usuário não autenticado. Ação não permitida."] },
+      success: false
+    };
+  }
+  
+  const rawData = {
+    nome_marca: formData.get("nome_marca") as string,
+  };
+
+  const validatedFields = BrandFormSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return {
+      message: "Falha na validação.",
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+  
+  const { error } = await supabase.from("marcas").insert({
+    ...validatedFields.data,
+    created_by_user_id: user.id,
+  });
+
+  if (error) {
+    if (error.code === '23505') { // Unique constraint violation
+      return {
+        message: "Erro no formulário.",
+        errors: { _form: ["Essa marca já existe."] },
+        success: false,
+      };
     }
+    return {
+      message: "Erro no Banco de Dados: Falha ao criar a marca.",
+      errors: { _form: [error.message] },
+      success: false,
+    };
+  }
 
-    const validation = BrandSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
-    }
-
-    const { error } = await supabase.from("marcas").insert({
-      ...validation.data,
-      created_by_user_id: user.id,
-    });
-
-    if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-            return { success: false, error: "Essa marca já existe." };
-        }
-        return { success: false, error: "Erro ao criar a marca." };
-    }
-
-    revalidatePath("/servicos/cadastros");
-    return { success: true };
+  revalidatePath("/servicos/cadastros");
+  return {
+    message: "Marca criada com sucesso!",
+    success: true,
+  };
 }
 
-export async function getBrands(): Promise<Brand[]> {
+export async function getmarcas(): Promise<Brand[]> {
   const supabase = await createSupabaseClient();
   const { data, error } = await supabase
     .from("marcas")
@@ -82,7 +111,7 @@ export async function getBrands(): Promise<Brand[]> {
     .order("nome_marca", { ascending: true });
 
   if (error) {
-    console.error("Supabase error fetching brands:", error);
+    console.error("Supabase error fetching marcas:", error);
     return [];
   }
 
@@ -106,16 +135,61 @@ export async function getBrandById(id: string): Promise<Brand | undefined> {
   return brand;
 }
 
-export async function updateBrand(id: string, data: Partial<Brand>) {
-    const supabase = await createSupabaseClient();
-    const { error } = await supabase.from("marcas").update(data).eq("id", id);
-    
-    if (error) {
-        return { success: false, error: "Erro ao atualizar a marca." };
-    }
+export async function updateBrand(
+  prevState: BrandFormState,
+  formData: FormData
+): Promise<BrandFormState> {
+  const supabase = await createSupabaseClient();
+  
+  const rawData = {
+    id: formData.get("id") as string,
+    nome_marca: formData.get("nome_marca") as string,
+  };
 
-    revalidatePath("/servicos/cadastros");
-    return { success: true };
+  const validatedFields = BrandFormSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return {
+      message: "Falha na validação.",
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+
+  const { id, ...dataToUpdate } = validatedFields.data;
+
+  if (!id) {
+    return {
+        message: "Erro: ID da marca não fornecido.",
+        success: false,
+    };
+  }
+  
+  const { error } = await supabase
+    .from("marcas")
+    .update(dataToUpdate)
+    .eq("id", id);
+  
+  if (error) {
+    if (error.code === '23505') {
+       return {
+        message: "Erro no formulário.",
+        errors: { _form: ["Já existe uma marca com este nome."] },
+        success: false,
+      };
+    }
+    return {
+      message: "Erro no Banco de Dados: Falha ao atualizar a marca.",
+      errors: { _form: [error.message] },
+      success: false,
+    };
+  }
+
+  revalidatePath("/servicos/cadastros");
+  return {
+    message: "Marca atualizada com sucesso!",
+    success: true,
+  };
 }
 
 export async function deleteBrand(id: string) {
@@ -159,4 +233,4 @@ export async function deleteBrand(id: string) {
     return { success: true };
 }
 
-export { getBrands as getMarcas, deleteBrand as deleteMarca, updateBrand as updateMarca, createBrand as addMarca };
+export { getmarcas as getMarcas, deleteBrand as deleteMarca, updateBrand as updateMarca, createBrand as addMarca };

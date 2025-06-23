@@ -19,8 +19,8 @@ import type { Filament } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const stockUpdateSchema = z.object({
-  novaQuantidadeCompradaGramas: z.coerce.number().positive({ message: "A quantidade deve ser positiva." }),
-  novoPrecoKg: z.coerce.number().positive({ message: "O preço deve ser positivo." }),
+  nova_quantidade_comprada_gramas: z.coerce.number().positive({ message: "A quantidade deve ser positiva." }),
+  novo_preco_kg: z.coerce.number().positive({ message: "O preço deve ser positivo." }),
 });
 
 type StockUpdateFormValues = z.infer<typeof stockUpdateSchema>;
@@ -29,7 +29,7 @@ interface FilamentStockUpdateDialogProps {
   isOpen: boolean;
   onClose: () => void;
   filament: Filament | null;
-  onSave: (update: { id: string; novaQuantidadeCompradaGramas: number; novoPrecoKg: number; }) => Promise<void>;
+  onSave: (update: { id: string; nova_quantidade_comprada_gramas: number; novo_preco_kg: number; }) => Promise<void>;
 }
 
 export function FilamentStockUpdateDialog({
@@ -46,8 +46,8 @@ export function FilamentStockUpdateDialog({
   useEffect(() => {
     if (isOpen) {
       reset({
-        novaQuantidadeCompradaGramas: undefined,
-        novoPrecoKg: filament?.precoPorKg || undefined,
+        nova_quantidade_comprada_gramas: undefined,
+        novo_preco_kg: filament?.preco_por_kg || undefined,
       });
     }
   }, [isOpen, filament, reset]);
@@ -62,7 +62,7 @@ export function FilamentStockUpdateDialog({
     <Dialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Atualizar Estoque: {filament.marca_nome} {filament.tipo_nome} {filament.cor}</DialogTitle>
+          <DialogTitle>Atualizar Estoque: {filament.nome_marca} {filament.tipo_nome} {filament.cor}</DialogTitle>
           <DialogDescription>
             Modifique a quantidade em estoque e/ou o preço por Kg do filamento.
           </DialogDescription>
@@ -71,35 +71,35 @@ export function FilamentStockUpdateDialog({
             <ScrollArea className="max-h-[60vh] -mx-6 px-6">
                 <div className='space-y-4'>
                     <div className="text-sm p-4 border rounded-md bg-muted/50">
-                        <p><span className="font-semibold">Marca:</span> {filament.marca_nome}</p>
+                        <p><span className="font-semibold">Marca:</span> {filament.nome_marca}</p>
                         <p><span className="font-semibold">Tipo:</span> {filament.tipo_nome}</p>
                         <p><span className="font-semibold">Cor:</span> {filament.cor}</p>
                         {filament.modelo && <p><span className="font-semibold">Modelo:</span> {filament.modelo}</p>}
-                        <p className='mt-2'><span className="font-semibold">Qtd. Atual:</span> {(filament.quantidadeEstoqueGramas || 0).toLocaleString('pt-BR')}g</p>
-                        <p><span className="font-semibold">Preço Atual (Kg):</span> {(filament.precoPorKg || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        <p className='mt-2'><span className="font-semibold">Qtd. Atual:</span> {(filament.quantidade_estoque_gramas || 0).toLocaleString('pt-BR')}g</p>
+                        <p><span className="font-semibold">Preço Atual (Kg):</span> {(filament.preco_por_kg || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     </div>
 
                     <div>
-                        <Label htmlFor="novaQuantidadeCompradaGramas">Adicionar Quantidade (g)</Label>
+                        <Label htmlFor="nova_quantidade_comprada_gramas">Adicionar Quantidade (g)</Label>
                         <Input 
-                        id="novaQuantidadeCompradaGramas"
+                        id="nova_quantidade_comprada_gramas"
                         type="number" 
                         placeholder="Ex: 500 (para 500g)"
                         step="500"
-                        {...register("novaQuantidadeCompradaGramas")}
+                        {...register("nova_quantidade_comprada_gramas")}
                         />
-                        {errors.novaQuantidadeCompradaGramas && <p className="text-red-500 text-xs mt-1">{errors.novaQuantidadeCompradaGramas.message}</p>}
+                        {errors.nova_quantidade_comprada_gramas && <p className="text-red-500 text-xs mt-1">{errors.nova_quantidade_comprada_gramas.message}</p>}
                     </div>
                     <div>
-                        <Label htmlFor="novoPrecoKg">Novo Preço do Kg (R$)</Label>
+                        <Label htmlFor="novo_preco_kg">Novo Preço do Kg (R$)</Label>
                         <Input 
-                        id="novoPrecoKg"
+                        id="novo_preco_kg"
                         type="number" 
                         placeholder="Ex: 110.50"
                         step="any"
-                        {...register("novoPrecoKg")}
+                        {...register("novo_preco_kg")}
                         />
-                        {errors.novoPrecoKg && <p className="text-red-500 text-xs mt-1">{errors.novoPrecoKg.message}</p>}
+                        {errors.novo_preco_kg && <p className="text-red-500 text-xs mt-1">{errors.novo_preco_kg.message}</p>}
                     </div>
                 </div>
             </ScrollArea>

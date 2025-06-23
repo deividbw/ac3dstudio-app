@@ -31,28 +31,63 @@ const createSupabaseClient = async () => {
 };
 
 const FilamentTypeSchema = z.object({
-  tipo: z.string().min(1, "O nome do tipo é obrigatório"),
+  id: z.string().optional(),
+  tipo: z.string().min(2, "O nome do tipo deve ter pelo menos 2 caracteres."),
 });
 
-export async function createFilamentType(data: z.infer<typeof FilamentTypeSchema>) {
-    const supabase = await createSupabaseClient();
+export interface FilamentTypeFormState {
+  message: string;
+  errors?: {
+    _form?: string[];
+    id?: string[];
+    tipo?: string[];
+  };
+  success: boolean;
+}
 
-    const validation = FilamentTypeSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
+export async function createFilamentType(
+  prevState: FilamentTypeFormState,
+  formData: FormData
+): Promise<FilamentTypeFormState> {
+  
+  const rawData = {
+    tipo: formData.get("tipo") as string,
+  };
+
+  const validatedFields = FilamentTypeSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return {
+      message: "Falha na validação.",
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+  
+  const supabase = await createSupabaseClient();
+  const { error } = await supabase
+    .from("tipos_filamentos")
+    .insert(validatedFields.data);
+
+  if (error) {
+    if (error.code === '23505') { // Unique constraint violation
+      return {
+        message: "Erro no formulário.",
+        errors: { _form: ["Esse tipo de filamento já existe."] },
+        success: false,
+      };
     }
+    return {
+      message: "Erro no Banco de Dados: Falha ao criar o tipo de filamento.",
+      success: false,
+    };
+  }
 
-    const { error } = await supabase.from("tipos_filamentos").insert(validation.data);
-
-    if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-            return { success: false, error: "Esse tipo de filamento já existe." };
-        }
-        return { success: false, error: "Erro ao criar o tipo de filamento." };
-    }
-
-    revalidatePath("/servicos/cadastros");
-    return { success: true };
+  revalidatePath("/servicos/cadastros");
+  return {
+    message: "Tipo de filamento criado com sucesso!",
+    success: true,
+  };
 }
 
 export async function getFilamentTypes(): Promise<FilamentType[]> {
@@ -86,19 +121,60 @@ export async function getFilamentTypeById(id: string): Promise<FilamentType | un
   return data?.[0] as FilamentType | undefined;
 }
 
-export async function updateFilamentType(id: string, data: Partial<FilamentType>) {
-    const supabase = await createSupabaseClient();
-    const { error } = await supabase.from("tipos_filamentos").update(data).eq("id", id);
-    
-    if (error) {
-        if (error.code === '23505') {
-            return { success: false, error: "Já existe um tipo de filamento com este nome." };
-        }
-        return { success: false, error: "Erro ao atualizar o tipo de filamento." };
-    }
+export async function updateFilamentType(
+  prevState: FilamentTypeFormState,
+  formData: FormData
+): Promise<FilamentTypeFormState> {
+  
+  const rawData = {
+    id: formData.get("id") as string,
+    tipo: formData.get("tipo") as string,
+  };
+  
+  const validatedFields = FilamentTypeSchema.safeParse(rawData);
 
-    revalidatePath("/servicos/cadastros");
-    return { success: true };
+  if (!validatedFields.success) {
+    return {
+      message: "Falha na validação.",
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+
+  const { id, ...dataToUpdate } = validatedFields.data;
+
+  if (!id) {
+    return {
+        message: "Erro: ID do tipo de filamento não fornecido.",
+        success: false,
+    };
+  }
+  
+  const supabase = await createSupabaseClient();
+  const { error } = await supabase
+    .from("tipos_filamentos")
+    .update(dataToUpdate)
+    .eq("id", id);
+  
+  if (error) {
+    if (error.code === '23505') {
+       return {
+        message: "Erro no formulário.",
+        errors: { _form: ["Já existe um tipo de filamento com este nome."] },
+        success: false,
+      };
+    }
+    return {
+      message: "Erro no Banco de Dados: Falha ao atualizar o tipo de filamento.",
+      success: false,
+    };
+  }
+
+  revalidatePath("/servicos/cadastros");
+  return {
+    message: "Tipo de filamento atualizado com sucesso!",
+    success: true,
+  };
 }
 
 export async function deleteFilamentType(id: string) {

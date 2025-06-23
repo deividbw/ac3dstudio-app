@@ -22,23 +22,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
-import { FilamentSchema } from "@/lib/schemas";
+import { filamentoschema } from "@/lib/schemas";
 import type { Filament, Brand, FilamentType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
+import { getMarcas } from "@/lib/actions/brand.actions";
+import { getFilamentTypes } from "@/lib/actions/filamentType.actions";
+import React, { useState, useEffect } from 'react';
 
 interface FilamentFormProps {
   filament?: Filament | null;
-  marcas: Brand[];
-  filamentTypes: FilamentType[];
   onSuccess: (filament: Filament, isNew: boolean) => void;
   onCancel: () => void;
 }
 
-export function FilamentForm({ filament, marcas, filamentTypes, onSuccess, onCancel }: FilamentFormProps) {
+export function FilamentForm({ filament, onSuccess, onCancel }: FilamentFormProps) {
   const { toast } = useToast();
-  const form = useForm<z.infer<typeof FilamentSchema>>({
-    resolver: zodResolver(FilamentSchema),
+  const [marcas, setMarcas] = useState<Brand[]>([]);
+  const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const [marcasData, typesData] = await Promise.all([
+        getMarcas(),
+        getFilamentTypes()
+      ]);
+      setMarcas(marcasData);
+      setFilamentTypes(typesData);
+    }
+    fetchData();
+  }, []);
+
+  const form = useForm<z.infer<typeof filamentoschema>>({
+    resolver: zodResolver(filamentoschema),
     defaultValues: filament ? {
       id: filament.id,
       tipo_id: filament.tipo_id,
@@ -72,7 +88,7 @@ export function FilamentForm({ filament, marcas, filamentTypes, onSuccess, onCan
       return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
 
-  async function onSubmit(values: z.infer<typeof FilamentSchema>) {
+  async function onSubmit(values: z.infer<typeof filamentoschema>) {
     console.log("Valores do formulário a serem enviados:", values);
     try {
       const isCreatingNew = !filament || !filament.id;

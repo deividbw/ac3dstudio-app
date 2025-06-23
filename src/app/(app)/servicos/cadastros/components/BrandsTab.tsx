@@ -19,6 +19,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PageHeader } from '@/components/PageHeader';
 import { BrandForm } from '@/app/(app)/brands/components/BrandForm';
 import type { Marca } from '@/lib/types';
@@ -34,7 +40,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from '@/components/ui/card';
 
-export function BrandsTab() {
+export function MarcasTab() {
   const [marcas, setMarcas] = useState<Marca[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -44,7 +50,7 @@ export function BrandsTab() {
 
   const [filterNome, setFilterNome] = useState("");
 
-  const loadBrands = useCallback(async () => {
+  const loadmarcas = useCallback(async () => {
     setIsLoading(true);
     try {
       const marcasData = await getMarcas();
@@ -57,10 +63,10 @@ export function BrandsTab() {
   }, [toast]);
 
   useEffect(() => {
-    loadBrands();
-  }, [loadBrands]);
+    loadmarcas();
+  }, [loadmarcas]);
 
-  const filteredBrands = useMemo(() => {
+  const filteredmarcas = useMemo(() => {
     return marcas.filter(b => 
       (filterNome === "" || b.nome_marca.toLowerCase().includes(filterNome.toLowerCase()))
     );
@@ -69,7 +75,7 @@ export function BrandsTab() {
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     setEditingBrand(null);
-    loadBrands();
+    loadmarcas();
   };
   
   const openEditDialog = (brand: Marca) => {
@@ -87,7 +93,7 @@ export function BrandsTab() {
     const result = await deleteMarca(deletingBrandId);
     if (result.success) {
       toast({ title: "Sucesso", description: "Marca excluída.", variant: "success" });
-      loadBrands();
+      loadmarcas();
     } else {
       toast({ title: "Erro", description: result.error || "Não foi possível excluir a marca.", variant: "destructive" });
     }
@@ -128,12 +134,12 @@ export function BrandsTab() {
           </div>
 
           <div className="mb-3 text-sm text-muted-foreground">
-             {isLoading ? "Carregando marcas..." : `Exibindo ${filteredBrands.length} de ${marcas.length} marca(s).`}
+             {isLoading ? "Carregando marcas..." : `Exibindo ${filteredmarcas.length} de ${marcas.length} marca(s).`}
           </div>
       
           {isLoading ? (
             <div className="p-6 text-center text-muted-foreground">Carregando...</div>
-          ) : filteredBrands.length === 0 ? (
+          ) : filteredmarcas.length === 0 ? (
             <div className="p-6 text-center text-muted-foreground">
               {marcas.length > 0 ? "Nenhuma marca encontrada com os filtros." : "Nenhuma marca cadastrada."}
             </div>
@@ -146,25 +152,45 @@ export function BrandsTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBrands.map((brand) => (
-                  <TableRow key={brand.id}>
-                    <TableCell className="font-medium px-2 py-1.5">{brand.nome_marca}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-center">
-                      <Button
-                        onClick={() => openEditDialog(brand)}
-                        className="mr-1 h-8 w-8 bg-transparent text-yellow-500 hover:bg-yellow-100 hover:text-yellow-600 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-400" 
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        className="h-8 w-8 bg-transparent text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400"
-                        onClick={() => openDeleteDialog(brand.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                <TooltipProvider>
+                  {filteredmarcas.map((brand) => (
+                    <TableRow key={brand.id}>
+                      <TableCell className="font-medium px-2 py-1.5">{brand.nome_marca}</TableCell>
+                      <TableCell className="px-2 py-1.5 text-center">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(brand)}
+                              className="mr-1 h-8 w-8 text-yellow-500 hover:text-yellow-600"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Editar Marca</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openDeleteDialog(brand.id)}
+                              className="h-8 w-8 text-red-500 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Excluir Marca</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TooltipProvider>
               </TableBody>
             </Table>
           )}

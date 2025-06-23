@@ -3,8 +3,8 @@ import {
   LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare,
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
-  Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings as SettingsIcon, ShoppingCart, UsersRound
+  Users, PackageSearch, Archive, CalendarCheck2, Hourglass,
+  WalletCards, CalendarX2, TrendingDown, Settings, ShoppingCart, UsersRound
 } from 'lucide-react';
 import type { Permission } from './types'; // Adicionar este import
 
@@ -68,7 +68,7 @@ export const MOBILE_SIDEBAR_NAV_ITEMS: NavItem[] = [
   },
   {
     href: '/configuracoes',
-    icon: SettingsIcon,
+    icon: Settings,
     label: 'Configurações',
     requiredPermission: 'manage_configuracoes_sistema',
   },
@@ -94,8 +94,8 @@ export const Icons = {
   LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare,
   MessageSquare, Menu, SlidersHorizontal, EyeOff, Eye, ChevronRight, FilePlus2,
   WalletMinimal, CalendarPlus, UserPlus, ClipboardList, CalendarDays, DollarSign,
-  Users, PackageSearch, Settings2, Archive, CalendarCheck2, Hourglass,
-  WalletCards, CalendarX2, TrendingDown, Settings: SettingsIcon, ShoppingCart, UsersRound
+  Users, PackageSearch, Archive, CalendarCheck2, Hourglass,
+  WalletCards, CalendarX2, TrendingDown, Settings, ShoppingCart, UsersRound
 };
 
 export interface SummaryCardConfig {
@@ -174,7 +174,7 @@ export const ALL_SHORTCUT_CARDS_CONFIG: ShortcutCardConfig[] = [
   {
     id: 'configuracoesRapidas',
     label: 'Configurações',
-    icon: SettingsIcon,
+    icon: Settings,
     iconBgColor: 'bg-gray-500',
     defaultVisible: true,
     href: '/configuracoes',

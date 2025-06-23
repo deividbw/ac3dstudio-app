@@ -76,26 +76,21 @@ export async function createFilament(data: z.infer<typeof FilamentActionSchema>)
     return { success: true, filament: inserted };
 }
 
-export async function getFilaments(): Promise<Filament[]> {
+export async function getfilamentos(): Promise<Filament[]> {
+    console.log("Chamando getfilamentos...");
     const supabase = await createSupabaseClient();
     const { data, error } = await supabase
-        .from("filamentos")
-        .select(`
-            *,
-            marcas ( nome_marca ),
-            tipos_filamentos ( tipo )
-        `);
+        .from("v_filamentos_com_estoque")
+        .select("*");
 
     if (error) {
-        console.error("Supabase error fetching filaments:", error);
-        return [];
+        console.error("Supabase error fetching from view v_filamentos_com_estoque:", JSON.stringify(error, null, 2));
+        // Lançar o erro para que possa ser pego pelo bloco catch no componente
+        throw new Error(`Erro ao buscar filamentos: ${error.message}`);
     }
-
-    return (data as any[] || []).map(f => ({
-        ...f,
-        marca_nome: f.marcas?.nome_marca,
-        tipo_nome: f.tipos_filamentos?.tipo,
-    }));
+    
+    console.log("Dados recebidos da v_filamentos_com_estoque:", data);
+    return data as any[] || [];
 }
 
 export async function updateFilament(id: string, data: Partial<z.infer<typeof FilamentActionSchema>>) {
@@ -147,15 +142,15 @@ export async function deleteFilament(id: string) {
         }
 
         // Verificar se há produtos que dependem deste filamento
-        const { data: dependentProducts, error: productsError } = await supabase
+        const { data: dependentprodutos, error: produtosError } = await supabase
             .from("produtos")
             .select("id, nome_produto")
             .eq("filamento_id", id);
 
-        if (productsError) {
-            console.error("Erro ao verificar produtos dependentes:", productsError);
-        } else if (dependentProducts && dependentProducts.length > 0) {
-            const productNames = dependentProducts.map(p => p.nome_produto).join(", ");
+        if (produtosError) {
+            console.error("Erro ao verificar produtos dependentes:", produtosError);
+        } else if (dependentprodutos && dependentprodutos.length > 0) {
+            const productNames = dependentprodutos.map(p => p.nome_produto).join(", ");
             return { 
                 success: false, 
                 error: `Não é possível excluir o filamento pois está sendo usado pelos seguintes produtos: ${productNames}` 
@@ -211,7 +206,7 @@ export async function deleteFilament(id: string) {
     }
 }
 
-export async function addFilamentStockEntry(
+export async function addfilamentostockEntry(
     filamentId: string, 
     quantityGrams: number, 
     newPriceKg: number
@@ -239,4 +234,4 @@ export async function addFilamentStockEntry(
     return { success: true };
 }
 
-export { getFilaments as getFilamentos, deleteFilament as deleteFilamento, updateFilament as updateFilamento, createFilament as addFilamento };
+export { getfilamentos as getFilamentos, deleteFilament as deleteFilamento, updateFilament as updateFilamento, createFilament as addFilamento };

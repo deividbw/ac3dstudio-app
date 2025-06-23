@@ -24,10 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ProductSchema } from "@/lib/schemas";
+import { produtoschema } from "@/lib/schemas";
 import type { Product, Filament, Printer, ProductCostBreakdown } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { createProduct, updateProduct, calculateProductCostPreview } from '@/lib/actions/product.actions.supabase';
+import { criarProduto, atualizarProduto, calculateProductCostPreview } from '@/lib/actions/product.actions.supabase';
 import { Loader2 } from "lucide-react";
 
 interface ProductFormProps {
@@ -44,8 +44,8 @@ export function ProductForm({ open, product, filamentos, impressoras, onSuccess,
   const [isCalculating, setIsCalculating] = useState(false);
   const [costBreakdown, setCostBreakdown] = useState<ProductCostBreakdown | undefined>();
   
-  const form = useForm<z.infer<typeof ProductSchema>>({
-    resolver: zodResolver(ProductSchema),
+  const form = useForm<z.infer<typeof produtoschema>>({
+    resolver: zodResolver(produtoschema),
     defaultValues: {
       nome_produto: product?.nome_produto || "",
       descricao: product?.descricao || "",
@@ -76,7 +76,7 @@ export function ProductForm({ open, product, filamentos, impressoras, onSuccess,
 
   const triggerCostCalculation = useCallback(async () => {
     const values = form.getValues();
-    const parsedValues = ProductSchema.pick({ 
+    const parsedValues = produtoschema.pick({ 
         filamento_id: true, impressora_id: true, peso_peca_g: true, tempo_impressao_h: true 
     }).safeParse(values);
 
@@ -119,10 +119,10 @@ export function ProductForm({ open, product, filamentos, impressoras, onSuccess,
     triggerCostCalculation
   ]);
   
-  async function onSubmit(values: z.infer<typeof ProductSchema>) {
+  async function onSubmit(values: z.infer<typeof produtoschema>) {
     const action = product?.id 
-      ? updateProduct(product.id, values) 
-      : createProduct(values);
+      ? atualizarProduto(product.id, values) 
+      : criarProduto(values);
     
     const result = await action;
 
@@ -164,7 +164,7 @@ export function ProductForm({ open, product, filamentos, impressoras, onSuccess,
                         <SelectContent>
                           {(filamentos || []).map(f => (
                             <SelectItem key={f.id} value={f.id}>
-                              {f.marca_nome || 'S/M'} {f.tipo_nome} - {f.cor}
+                              {f.nome_marca || 'S/M'} {f.tipo_nome} - {f.cor}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -277,11 +277,10 @@ export function ProductForm({ open, product, filamentos, impressoras, onSuccess,
                     <div className="flex justify-between items-center text-sm"><span>Custo Impressão:</span> <span className="font-medium">{formatCurrency(costBreakdown.custo_impressao)}</span></div>
                     <div className="flex justify-between items-center text-sm"><span>Custo Total:</span> <span className="font-medium">{formatCurrency(costBreakdown.custo_total_producao)}</span></div>
                     <div className="flex justify-between items-center text-sm"><span>Lucro ({form.getValues('percentual_lucro') || 0}%):</span> <span className="font-medium">{formatCurrency(costBreakdown.lucro)}</span></div>
-                    <div className="border-t my-2"></div>
-                    <div className="flex justify-between items-center text-lg font-bold text-primary"><span>Preço Final:</span> <span>{formatCurrency(costBreakdown.preco_venda)}</span></div>
+                    <div className="flex justify-between items-center text-sm"><span>Preço Venda:</span> <span className="font-medium">{formatCurrency(costBreakdown.preco_venda)}</span></div>
                   </>
                 ) : (
-                  <p className="text-center text-sm text-muted-foreground">Preencha os campos de impressão para calcular.</p>
+                  <div className="text-center text-muted-foreground">Preencha os campos para calcular.</div>
                 )}
               </div>
             </div>

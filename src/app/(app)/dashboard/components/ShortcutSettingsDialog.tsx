@@ -23,31 +23,31 @@ interface DialogShortcutCardConfig extends ShortcutCardConfig {
   visible: boolean;
 }
 
-interface ShortcutSettingsDialogProps {
+interface ShortcutconfiguracoesDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  currentSettings: DialogShortcutCardConfig[];
-  onSave: (updatedSettings: DialogShortcutCardConfig[]) => void;
+  currentconfiguracoes: DialogShortcutCardConfig[];
+  onSave: (updatedconfiguracoes: DialogShortcutCardConfig[]) => void;
 }
 
-export function ShortcutSettingsDialog({
+export function ShortcutconfiguracoesDialog({
   isOpen,
   onOpenChange,
-  currentSettings,
+  currentconfiguracoes,
   onSave,
-}: ShortcutSettingsDialogProps) {
-  const [localSettings, setLocalSettings] = useState<DialogShortcutCardConfig[]>([]);
+}: ShortcutconfiguracoesDialogProps) {
+  const [localconfiguracoes, setLocalconfiguracoes] = useState<DialogShortcutCardConfig[]>([]);
 
   useEffect(() => {
     if (isOpen) {
-      let newLocalSettings: DialogShortcutCardConfig[] = [];
+      let newLocalconfiguracoes: DialogShortcutCardConfig[] = [];
 
-      // 1. Process currentSettings, keeping their order and visibility,
+      // 1. Process currentconfiguracoes, keeping their order and visibility,
       //    refreshing static data, and filtering out stale items.
-      currentSettings.forEach(userSetting => {
+      currentconfiguracoes.forEach(userSetting => {
         const originalCardConfig = ALL_SHORTCUT_CARDS_CONFIG.find(c => c.id === userSetting.id);
         if (originalCardConfig) { // Only include if it's still a valid card
-          newLocalSettings.push({
+          newLocalconfiguracoes.push({
             // Static properties from original config
             id: originalCardConfig.id,
             label: originalCardConfig.label,
@@ -60,45 +60,45 @@ export function ShortcutSettingsDialog({
         }
       });
 
-      // 2. Add any new cards from ALL_SHORTCUT_CARDS_CONFIG that weren't in currentSettings
+      // 2. Add any new cards from ALL_SHORTCUT_CARDS_CONFIG that weren't in currentconfiguracoes
       ALL_SHORTCUT_CARDS_CONFIG.forEach(originalCardConfig => {
-        if (!newLocalSettings.find(s => s.id === originalCardConfig.id)) {
-          newLocalSettings.push({
+        if (!newLocalconfiguracoes.find(s => s.id === originalCardConfig.id)) {
+          newLocalconfiguracoes.push({
             ...originalCardConfig, // All static props from original
             visible: originalCardConfig.defaultVisible, // Default visibility for new items
           });
         }
       });
-      setLocalSettings(newLocalSettings);
+      setLocalconfiguracoes(newLocalconfiguracoes);
     }
-  }, [currentSettings, isOpen]);
+  }, [currentconfiguracoes, isOpen]);
 
   const handleCheckboxChange = (cardId: string, checked: boolean) => {
-    setLocalSettings(prevSettings =>
-      prevSettings.map(card =>
+    setLocalconfiguracoes(prevconfiguracoes =>
+      prevconfiguracoes.map(card =>
         card.id === cardId ? { ...card, visible: checked } : card
       )
     );
   };
 
   const handleMoveItem = (index: number, direction: 'up' | 'down') => {
-    setLocalSettings(prevSettings => {
-      const newSettings = [...prevSettings];
-      const itemToMove = newSettings[index];
+    setLocalconfiguracoes(prevconfiguracoes => {
+      const newconfiguracoes = [...prevconfiguracoes];
+      const itemToMove = newconfiguracoes[index];
       const swapIndex = direction === 'up' ? index - 1 : index + 1;
 
-      if (swapIndex < 0 || swapIndex >= newSettings.length) {
-        return prevSettings;
+      if (swapIndex < 0 || swapIndex >= newconfiguracoes.length) {
+        return prevconfiguracoes;
       }
 
-      newSettings[index] = newSettings[swapIndex];
-      newSettings[swapIndex] = itemToMove;
-      return newSettings;
+      newconfiguracoes[index] = newconfiguracoes[swapIndex];
+      newconfiguracoes[swapIndex] = itemToMove;
+      return newconfiguracoes;
     });
   };
 
   const handleSaveChanges = () => {
-    onSave(localSettings);
+    onSave(localconfiguracoes);
     onOpenChange(false);
   };
 
@@ -117,7 +117,7 @@ export function ShortcutSettingsDialog({
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] p-1 pr-3">
           <div className="space-y-2 py-3">
-            {localSettings.map((card, index) => (
+            {localconfiguracoes.map((card, index) => (
               <div key={card.id} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50">
                 <div className="flex items-center space-x-3 flex-grow">
                   <Checkbox
@@ -145,7 +145,7 @@ export function ShortcutSettingsDialog({
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-foreground"
                     onClick={() => handleMoveItem(index, 'down')}
-                    disabled={index === localSettings.length - 1}
+                    disabled={index === localconfiguracoes.length - 1}
                     aria-label={`Mover ${card.label} para baixo`}
                   >
                     <ArrowDown className="h-4 w-4" />
@@ -153,7 +153,7 @@ export function ShortcutSettingsDialog({
                 </div>
               </div>
             ))}
-            {localSettings.length === 0 && (
+            {localconfiguracoes.length === 0 && (
               <p className="text-sm text-muted-foreground text-center">Não há atalhos para configurar.</p>
             )}
           </div>

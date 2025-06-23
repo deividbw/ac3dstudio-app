@@ -1,9 +1,9 @@
 
 import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
-import ProductsRedirectClient from './components/ProductsRedirectClient';
+import produtosRedirectClient from './components/produtosRedirectClient';
 
-export default function ProductsPage() {
+export default function produtosPage() {
   return (
     <Suspense fallback={
       <div className="flex justify-center items-center min-h-screen">
@@ -13,7 +13,7 @@ export default function ProductsPage() {
         </div>
       </div>
     }>
-      <ProductsRedirectClient />
+      <produtosRedirectClient />
     </Suspense>
   );
 }

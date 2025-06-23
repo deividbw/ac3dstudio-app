@@ -34,9 +34,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField, UserRole, Permission, RolesConfig } from '@/lib/types';
-import { getPrinters } from '@/lib/actions/printer.actions';
+import { getimpressoras } from '@/lib/actions/printer.actions';
 import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
-import { getBrands } from '@/lib/actions/brand.actions';
+import { getmarcas } from '@/lib/actions/brand.actions';
 import { getPowerOverrides, savePowerOverride, getKwhValue, saveKwhValue as saveGlobalKwhValue } from '@/lib/actions/powerOverride.actions';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLES_CONFIG as staticRolesConfig, PERMISSION_DESCRIPTIONS, ALL_PERMISSIONS } from '@/config/roles';
@@ -47,9 +47,9 @@ export default function ConfiguracoesPage() {
   const { toast } = useToast();
   const { currentUserRole, setUserRole, availableRoles, hasPermission, isLoadingRole } = useAuth();
 
-  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [impressoras, setimpressoras] = useState<Printer[]>([]);
   const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
-  const [brandsData, setBrandsData] = useState<Brand[]>([]);
+  const [marcasData, setmarcasData] = useState<Brand[]>([]);
 
   const [selectedPrinterId, setSelectedPrinterId] = useState<string>("");
   const [selectedFilamentTypeId, setSelectedFilamentTypeId] = useState<string>("");
@@ -70,16 +70,16 @@ export default function ConfiguracoesPage() {
 
   const loadConfigData = useCallback(async () => {
     try {
-      const [printersDataRes, filamentTypesDataRes, brandsRes, powerOverridesDataRes, currentKwhValueRes] = await Promise.all([
-        getPrinters(),
+      const [impressorasDataRes, filamentTypesDataRes, marcasRes, powerOverridesDataRes, currentKwhValueRes] = await Promise.all([
+        getimpressoras(),
         getFilamentTypes(),
-        getBrands(),
+        getmarcas(),
         getPowerOverrides(),
         getKwhValue(),
       ]);
-      setPrinters(printersDataRes);
+      setimpressoras(impressorasDataRes);
       setFilamentTypes(filamentTypesDataRes);
-      setBrandsData(brandsRes);
+      setmarcasData(marcasRes);
       setConfiguredOverrides(powerOverridesDataRes);
       setKwhValue(currentKwhValueRes.toString());
     } catch (error) {
@@ -98,9 +98,9 @@ export default function ConfiguracoesPage() {
 
   const getBrandNameById = useCallback((brandId?: string) => {
     if (!brandId) return "";
-    const brand = brandsData.find(b => b.id === brandId);
+    const brand = marcasData.find(b => b.id === brandId);
     return brand ? brand.nome : "Marca Desconhecida";
-  }, [brandsData]);
+  }, [marcasData]);
 
   const getPrinterDisplayName = useCallback((printer: Printer) => {
     const brandName = getBrandNameById(printer.marcaId);
@@ -155,7 +155,7 @@ export default function ConfiguracoesPage() {
       return;
     }
 
-    const printer = printers.find(p => p.id === selectedPrinterId);
+    const printer = impressoras.find(p => p.id === selectedPrinterId);
     const filamentType = filamentTypes.find(ft => ft.id === selectedFilamentTypeId);
 
     if (!printer || !filamentType) {
@@ -318,7 +318,7 @@ export default function ConfiguracoesPage() {
                             <SelectValue placeholder="Selecione uma impressora" />
                           </SelectTrigger>
                           <SelectContent>
-                            {printers.sort((a,b) => getPrinterDisplayName(a).localeCompare(getPrinterDisplayName(b))).map(p => (
+                            {impressoras.sort((a,b) => getPrinterDisplayName(a).localeCompare(getPrinterDisplayName(b))).map(p => (
                               <SelectItem key={p.id} value={p.id}>{getPrinterDisplayName(p)}</SelectItem>
                             ))}
                           </SelectContent>
@@ -544,7 +544,7 @@ export default function ConfiguracoesPage() {
         <AccordionItem value="item-other-configs" className="border rounded-lg bg-card shadow-sm">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center text-lg font-semibold">
-              <Icons.Settings2 className="mr-3 h-6 w-6 text-primary" />
+              <Icons.configuracoes2 className="mr-3 h-6 w-6 text-primary" />
               Outras Configurações
             </div>
           </AccordionTrigger>

@@ -9,8 +9,8 @@ import { SummaryCard } from '@/components/SummaryCard';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ALL_SUMMARY_CARDS_CONFIG, type SummaryCardConfig, ALL_SHORTCUT_CARDS_CONFIG, type ShortcutCardConfig } from '@/lib/constants';
-import { SummarySettingsDialog } from './components/SummarySettingsDialog';
-import { ShortcutSettingsDialog } from './components/ShortcutSettingsDialog';
+import { SummaryconfiguracoesDialog } from './components/SummarySettingsDialog';
+import { ShortcutconfiguracoesDialog } from './components/ShortcutSettingsDialog';
 import { useAuth } from '@/hooks/useAuth'; // Importar o hook de autenticação
 import { Loader2 } from 'lucide-react';
 
@@ -37,16 +37,16 @@ export default function DashboardPage() {
   const { hasPermission, isLoadingRole } = useAuth();
   const [showSummaryValues, setShowSummaryValues] = useState(true);
 
-  const [isSummarySettingsDialogOpen, setIsSummarySettingsDialogOpen] = useState(false);
-  const [summaryCardSettings, setSummaryCardSettings] = useState<VisibleSummaryCardConfig[]>(() => {
+  const [isSummaryconfiguracoesDialogOpen, setIsSummaryconfiguracoesDialogOpen] = useState(false);
+  const [summaryCardconfiguracoes, setSummaryCardconfiguracoes] = useState<VisibleSummaryCardConfig[]>(() => {
     return ALL_SUMMARY_CARDS_CONFIG.map(card => ({
       ...card,
       visible: card.defaultVisible,
     }));
   });
 
-  const [isShortcutSettingsDialogOpen, setIsShortcutSettingsDialogOpen] = useState(false);
-  const [shortcutCardSettings, setShortcutCardSettings] = useState<VisibleShortcutCardConfig[]>(() => {
+  const [isShortcutconfiguracoesDialogOpen, setIsShortcutconfiguracoesDialogOpen] = useState(false);
+  const [shortcutCardconfiguracoes, setShortcutCardconfiguracoes] = useState<VisibleShortcutCardConfig[]>(() => {
     return ALL_SHORTCUT_CARDS_CONFIG.map(card => ({
       ...card,
       visible: card.defaultVisible,
@@ -54,20 +54,20 @@ export default function DashboardPage() {
   });
 
   // Filtra os cards com base nas permissões quando o hook estiver pronto
-  const visibleSummaryCards = summaryCardSettings.filter(card => card.visible && hasPermission(card.requiredPermission));
-  const visibleShortcutCards = shortcutCardSettings.filter(card => card.visible && hasPermission(card.requiredPermission));
+  const visibleSummaryCards = summaryCardconfiguracoes.filter(card => card.visible && hasPermission(card.requiredPermission));
+  const visibleShortcutCards = shortcutCardconfiguracoes.filter(card => card.visible && hasPermission(card.requiredPermission));
 
 
   const toggleSummaryValuesVisibility = () => {
     setShowSummaryValues(prevState => !prevState);
   };
 
-  const handleSaveSummarySettings = (updatedSettings: VisibleSummaryCardConfig[]) => {
-    setSummaryCardSettings(updatedSettings);
+  const handleSaveSummaryconfiguracoes = (updatedconfiguracoes: VisibleSummaryCardConfig[]) => {
+    setSummaryCardconfiguracoes(updatedconfiguracoes);
   };
 
-  const handleSaveShortcutSettings = (updatedSettings: VisibleShortcutCardConfig[]) => {
-    setShortcutCardSettings(updatedSettings);
+  const handleSaveShortcutconfiguracoes = (updatedconfiguracoes: VisibleShortcutCardConfig[]) => {
+    setShortcutCardconfiguracoes(updatedconfiguracoes);
   };
 
   if (isLoadingRole) {
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         )}
         {hasPermission('manage_cadastros_filamentos') && ( // Exemplo, use uma permissão genérica de "acessar_servicos" se tiver
             <FeatureCard
-                icon={Icons.Settings2}
+                icon={Icons.Archive}
                 title="Cadastros e Estoque"
                 iconBgColor={featureCardIconColors.servicos}
                 onClick={() => router.push('/servicos/cadastros')}
@@ -129,7 +129,7 @@ export default function DashboardPage() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground"
-                    onClick={() => setIsShortcutSettingsDialogOpen(true)}
+                    onClick={() => setIsShortcutconfiguracoesDialogOpen(true)}
                     title="Personalizar atalhos"
                 >
                     <Icons.SlidersHorizontal className="h-5 w-5" />
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground"
-                    onClick={() => setIsSummarySettingsDialogOpen(true)}
+                    onClick={() => setIsSummaryconfiguracoesDialogOpen(true)}
                     title="Personalizar resumo"
                 >
                     <Icons.SlidersHorizontal className="h-5 w-5" />
@@ -201,7 +201,7 @@ export default function DashboardPage() {
       )}
       {visibleSummaryCards.length === 0 && visibleShortcutCards.length === 0 && !hasPermission('manage_orcamentos') && (
          <div className="text-center py-10">
-            <p className="text-lg text-muted-foreground">Bem-vindo ao {Icons.APP_NAME}!</p>
+            <p className="text-lg text-muted-foreground">Bem-vindo ao Studio!</p>
             <p className="text-sm text-muted-foreground">Parece que você não tem permissões para visualizar os módulos principais.</p>
             {hasPermission('view_ecommerce') && (
                 <Button onClick={() => router.push('/ecommerce')} className="mt-4">
@@ -224,17 +224,17 @@ export default function DashboardPage() {
 
       {hasPermission('manage_permissoes_usuarios') && (
         <>
-            <SummarySettingsDialog
-                isOpen={isSummarySettingsDialogOpen}
-                onOpenChange={setIsSummarySettingsDialogOpen}
-                currentSettings={summaryCardSettings}
-                onSave={handleSaveSummarySettings}
+            <SummaryconfiguracoesDialog
+                isOpen={isSummaryconfiguracoesDialogOpen}
+                onOpenChange={setIsSummaryconfiguracoesDialogOpen}
+                currentconfiguracoes={summaryCardconfiguracoes}
+                onSave={handleSaveSummaryconfiguracoes}
             />
-            <ShortcutSettingsDialog
-                isOpen={isShortcutSettingsDialogOpen}
-                onOpenChange={setIsShortcutSettingsDialogOpen}
-                currentSettings={shortcutCardSettings}
-                onSave={handleSaveShortcutSettings}
+            <ShortcutconfiguracoesDialog
+                isOpen={isShortcutconfiguracoesDialogOpen}
+                onOpenChange={setIsShortcutconfiguracoesDialogOpen}
+                currentconfiguracoes={shortcutCardconfiguracoes}
+                onSave={handleSaveShortcutconfiguracoes}
             />
         </>
       )}

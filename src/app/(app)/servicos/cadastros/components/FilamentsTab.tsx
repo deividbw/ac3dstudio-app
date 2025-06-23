@@ -25,14 +25,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
-import { FilamentForm } from '@/app/(app)/filamentos/components/FilamentForm';
-import type { Filament, Brand, FilamentType } from '@/lib/types';
+import { FilamentForm } from '@/app/(app)/filaments/components/FilamentForm';
+import type { Filament } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { getFilamentos, deleteFilamento, updateFilamento } from '@/lib/actions/filament.actions';
-import { getMarcas } from '@/lib/actions/brand.actions';
-import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
+import { getFilamentos, deleteFilamento } from '@/lib/actions/filament.actions';
 import { getColorCode } from '@/lib/utils';
 import {
   Table,
@@ -44,38 +43,42 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from '@/components/ui/card';
 
-type SortableFilamentField = 'marca_nome' | 'tipo_nome' | 'cor' | 'modelo' | 'densidade';
+type SortDirection = 'asc' | 'desc';
+type SortableFilamentField = 'nome_marca' | 'tipo_nome' | 'cor' | 'modelo' | 'densidade';
 
-export function FilamentsTab() {
-  const [filamentos, setFilamentos] = useState<(Filament & { marca_nome?: string; tipo_nome?: string; })[]>([]);
-  const [marcas, setMarcas] = useState<Brand[]>([]);
-  const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
+export function FilamentosTab() {
+  const [filamentos, setFilamentos] = useState<Filament[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFilament, setEditingFilament] = useState<Filament | null>(null);
-  const [deletingFilamentId, setDeletingFilamentId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [filamentToDelete, setFilamentToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const [filterMarca, setFilterMarca] = useState("");
-  const [filterTipo, setFilterTipo] = useState("");
-  const [filterModelo, setFilterModelo] = useState("");
-
-  const [sortField, setSortField] = useState<SortableFilamentField>('marca_nome');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<SortableFilamentField>('nome_marca');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  const [filters, setFilters] = useState<{ marca: string; tipo: string; modelo: string }>({
+    marca: '',
+    tipo: '',
+    modelo: '',
+  });
+
   const loadData = useCallback(async () => {
-    const [filamentosData, marcasData, filamentTypesData] = await Promise.all([
-      getFilamentos(),
-      getMarcas(),
-      getFilamentTypes()
-    ]);
-    setFilamentos(filamentosData);
-    setMarcas(marcasData);
-    setFilamentTypes(filamentTypesData);
-  }, []);
+    try {
+        const filamentosData = await getFilamentos();
+        // A VIEW já retorna 'marca_nome' e 'tipo_nome', então não são necessárias buscas adicionais.
+        setFilamentos(filamentosData);
+    } catch (error) {
+        console.error("Erro ao carregar filamentos:", error);
+        toast({
+            title: "Erro ao carregar dados",
+            description: "Não foi possível buscar os filamentos.",
+            variant: "destructive",
+        });
+    }
+  }, [toast]);
 
   useEffect(() => {
     loadData();
@@ -83,13 +86,7 @@ export function FilamentsTab() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterMarca, filterTipo, filterModelo, sortField, sortDirection, itemsPerPage]);
-
-  const getBrandNameById = useCallback((brandId?: string | null) => {
-    if (!brandId) return "N/A";
-    const marca = marcas.find(b => b.id === brandId);
-    return marca ? marca.nome_marca : "Desconhecida";
-  }, [marcas]);
+  }, [filters.marca, filters.tipo, filters.modelo, sortField, sortDirection, itemsPerPage]);
 
   const handleSort = (field: SortableFilamentField) => {
     if (field === sortField) {
@@ -100,57 +97,63 @@ export function FilamentsTab() {
     }
   };
 
-  const paginatedData = useMemo(() => {
-    let filtered = filamentos.filter(f =>
-      (filterMarca === "" || (f.marca_nome && f.marca_nome.toLowerCase().includes(filterMarca.toLowerCase()))) &&
-      (filterTipo === "" || (f.tipo_nome && f.tipo_nome.toLowerCase().includes(filterTipo.toLowerCase()))) &&
-      (filterModelo === "" || (f.modelo && f.modelo.toLowerCase().includes(filterModelo.toLowerCase())))
+  const sortedFilamentos = useMemo(() => {
+    return [...filamentos].sort((a, b) => {
+      let valA: string | number = '';
+      let valB: string | number = '';
+
+      switch (sortField) {
+        case 'nome_marca':
+          valA = a.nome_marca?.toLowerCase() || '';
+          valB = b.nome_marca?.toLowerCase() || '';
+          break;
+        case 'tipo_nome':
+          valA = a.tipo_nome?.toLowerCase() || '';
+          valB = b.tipo_nome?.toLowerCase() || '';
+          break;
+        case 'cor':
+          valA = a.cor?.toLowerCase() || '';
+          valB = b.cor?.toLowerCase() || '';
+          break;
+        case 'modelo':
+          valA = a.modelo?.toLowerCase() || '';
+          valB = b.modelo?.toLowerCase() || '';
+          break;
+        case 'densidade':
+          valA = a.densidade || 0;
+          valB = b.densidade || 0;
+          break;
+      }
+      
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        const comparison = valA.localeCompare(valB);
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        const comparison = valA - valB;
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+      return 0;
+    });
+  }, [filamentos, sortField, sortDirection]);
+
+  const filteredFilamentos = useMemo(() => {
+    return sortedFilamentos.filter(
+      (f) =>
+        (filters.marca === '' ||
+          f.nome_marca?.toLowerCase().includes(filters.marca.toLowerCase())) &&
+        (filters.tipo === '' ||
+          f.tipo_nome?.toLowerCase().includes(filters.tipo.toLowerCase())) &&
+        (filters.modelo === '' ||
+          f.modelo?.toLowerCase().includes(filters.modelo.toLowerCase()))
     );
+  }, [sortedFilamentos, filters]);
 
-    if (sortField) {
-      filtered.sort((a, b) => {
-        let valA: string | number | undefined | null = '';
-        let valB: string | number | undefined | null = '';
-
-        switch (sortField) {
-          case 'marca_nome':
-            valA = a.marca_nome?.toLowerCase() || '';
-            valB = b.marca_nome?.toLowerCase() || '';
-            break;
-          case 'tipo_nome':
-            valA = a.tipo_nome?.toLowerCase() || '';
-            valB = b.tipo_nome?.toLowerCase() || '';
-            break;
-          case 'cor':
-            valA = a.cor.toLowerCase();
-            valB = b.cor.toLowerCase();
-            break;
-          case 'modelo':
-            valA = a.modelo?.toLowerCase() || '';
-            valB = b.modelo?.toLowerCase() || '';
-            break;
-          case 'densidade':
-            valA = a.densidade;
-            valB = b.densidade;
-            break;
-          default:
-            return 0;
-        }
-        
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return sortDirection === 'asc' ? valA - valB : valB - valA;
-        }
-        return 0;
-      });
-    }
-
-    const totalFilteredItems = filtered.length;
+  const paginatedData = useMemo(() => {
+    const totalFilteredItems = filteredFilamentos.length;
     const totalPages = Math.ceil(totalFilteredItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const itemsToDisplay = filtered.slice(startIndex, startIndex + itemsPerPage);
+    const itemsToDisplay = filteredFilamentos.slice(startIndex, startIndex + itemsPerPage);
 
     return {
       itemsToDisplay,
@@ -158,7 +161,7 @@ export function FilamentsTab() {
       totalFilteredItems,
       startIndex,
     };
-  }, [filamentos, filterMarca, filterTipo, filterModelo, sortField, sortDirection, currentPage, itemsPerPage]);
+  }, [filteredFilamentos, currentPage, itemsPerPage]);
 
   const renderSortIcon = (field: SortableFilamentField) => {
     if (sortField === field) {
@@ -179,15 +182,14 @@ export function FilamentsTab() {
   };
 
   const openDeleteDialog = (filamentId: string) => {
-    setDeletingFilamentId(filamentId);
+    setFilamentToDelete(filamentId);
   };
 
   const confirmDelete = async () => {
-    if (!deletingFilamentId) return;
+    if (!filamentToDelete) return;
 
-    setIsDeleting(true);
     try {
-      const result = await deleteFilamento(deletingFilamentId);
+      const result = await deleteFilamento(filamentToDelete);
       if (result.success) {
         toast({ 
           title: "Sucesso", 
@@ -210,8 +212,7 @@ export function FilamentsTab() {
         variant: "destructive" 
       });
     } finally {
-      setIsDeleting(false);
-      setDeletingFilamentId(null);
+      setFilamentToDelete(null);
     }
   };
 
@@ -239,8 +240,6 @@ export function FilamentsTab() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <FilamentForm
               filament={editingFilament}
-              marcas={marcas}
-              filamentTypes={filamentTypes}
               onSuccess={handleFormSuccess}
               onCancel={() => {
                 setIsFormOpen(false);
@@ -257,134 +256,106 @@ export function FilamentsTab() {
             <div className="flex-1">
               <Input
                 placeholder="Filtrar por marca..."
-                value={filterMarca}
-                onChange={(e) => setFilterMarca(e.target.value)}
+                value={filters.marca}
+                onChange={(e) => setFilters({ ...filters, marca: e.target.value })}
                 className="w-full"
               />
             </div>
             <div className="flex-1">
               <Input
                 placeholder="Filtrar por tipo..."
-                value={filterTipo}
-                onChange={(e) => setFilterTipo(e.target.value)}
+                value={filters.tipo}
+                onChange={(e) => setFilters({ ...filters, tipo: e.target.value })}
                 className="w-full"
               />
             </div>
             <div className="flex-1">
               <Input
                 placeholder="Filtrar por modelo..."
-                value={filterModelo}
-                onChange={(e) => setFilterModelo(e.target.value)}
+                value={filters.modelo}
+                onChange={(e) => setFilters({ ...filters, modelo: e.target.value })}
                 className="w-full"
               />
             </div>
           </div>
 
-          <div className="rounded-md border">
+          <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-bold">
-                    {/* @ts-ignore */}
-                    <Button variant="ghost" onClick={() => handleSort('marca_nome')} className="flex items-center gap-2 p-0 h-auto hover:bg-transparent">
-                      Marca {renderSortIcon('marca_nome')}
-                    </Button>
+                  <TableHead onClick={() => handleSort('nome_marca')} className="cursor-pointer">
+                    Marca {renderSortIcon('nome_marca')}
                   </TableHead>
-                  <TableHead className="font-bold">
-                    {/* @ts-ignore */}
-                    <Button variant="ghost" onClick={() => handleSort('tipo_nome')} className="flex items-center gap-2 p-0 h-auto hover:bg-transparent">
-                      Tipo {renderSortIcon('tipo_nome')}
-                    </Button>
+                  <TableHead onClick={() => handleSort('tipo_nome')} className="cursor-pointer">
+                    Tipo {renderSortIcon('tipo_nome')}
                   </TableHead>
-                  <TableHead className="font-bold">
-                    {/* @ts-ignore */}
-                    <Button variant="ghost" onClick={() => handleSort('cor')} className="flex items-center gap-2 p-0 h-auto hover:bg-transparent">
-                      Cor {renderSortIcon('cor')}
-                    </Button>
+                  <TableHead onClick={() => handleSort('cor')} className="cursor-pointer">
+                    Cor {renderSortIcon('cor')}
                   </TableHead>
-                  <TableHead className="font-bold">
-                    {/* @ts-ignore */}
-                    <Button variant="ghost" onClick={() => handleSort('modelo')} className="flex items-center gap-2 p-0 h-auto hover:bg-transparent">
-                      Modelo {renderSortIcon('modelo')}
-                    </Button>
+                  <TableHead onClick={() => handleSort('modelo')} className="cursor-pointer">
+                    Modelo {renderSortIcon('modelo')}
                   </TableHead>
-                  <TableHead className="font-bold">
-                    {/* @ts-ignore */}
-                    <Button variant="ghost" onClick={() => handleSort('densidade')} className="flex items-center gap-2 p-0 h-auto hover:bg-transparent">
-                      Densidade (g/cm³) {renderSortIcon('densidade')}
-                    </Button>
+                  <TableHead onClick={() => handleSort('densidade')} className="cursor-pointer">
+                    Densidade (g/cm³) {renderSortIcon('densidade')}
                   </TableHead>
-                  <TableHead className="text-center font-bold">Ações</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedData.itemsToDisplay.length > 0 ? (
-                  paginatedData.itemsToDisplay.map((filament) => (
-                    <TableRow key={filament.id}>
-                      <TableCell>{filament.marca_nome}</TableCell>
-                      <TableCell>{filament.tipo_nome}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <span 
-                            className="h-4 w-4 rounded-full mr-2 border"
-                            style={{ backgroundColor: getColorCode(filament.cor), minWidth: '1rem' }}
-                            title={filament.cor}
-                          />
-                          {filament.cor}
-                        </div>
-                      </TableCell>
-                      <TableCell>{filament.modelo || '-'}</TableCell>
-                      <TableCell>{filament.densidade || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center space-x-1">
-                          {/* @ts-ignore */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditDialog(filament)}
-                            className="text-yellow-500 hover:text-yellow-600"
-                          >
-                            <span className="sr-only">Editar</span>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {/* @ts-ignore */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog(filament.id)}
-                            className="text-red-500 hover:text-red-600"
-                          >
-                            <span className="sr-only">Excluir</span>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      Nenhum filamento encontrado.
+                {paginatedData.itemsToDisplay.map((filamento) => (
+                  <TableRow key={filamento.id}>
+                    <TableCell className="font-medium">
+                      {filamento.nome_marca || 'N/A'}
+                    </TableCell>
+                    <TableCell>{filamento.tipo_nome || 'N/A'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div
+                          className="h-4 w-4 rounded-full border mr-2"
+                          style={{
+                            backgroundColor: getColorCode(filamento.cor),
+                          }}
+                        />
+                        {filamento.cor || 'N/A'}
+                      </div>
+                    </TableCell>
+                    <TableCell>{filamento.modelo || 'N/A'}</TableCell>
+                    <TableCell>{filamento.densidade}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(filamento)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteDialog(filamento.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
 
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
-                Mostrando {paginatedData.startIndex + 1} a {Math.min(paginatedData.startIndex + itemsPerPage, paginatedData.totalFilteredItems)} de {paginatedData.totalFilteredItems} filamentos
-              </span>
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-sm text-muted-foreground">
+              Mostrando {paginatedData.startIndex + 1} a {paginatedData.startIndex + paginatedData.itemsToDisplay.length} de {paginatedData.totalFilteredItems} filamentos
             </div>
             <div className="flex items-center gap-2">
-              <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+              <span className="text-sm">Itens por página:</span>
+              <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
                 <SelectTrigger className="w-[70px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
                   <SelectItem value="10">10</SelectItem>
                   <SelectItem value="20">20</SelectItem>
                   <SelectItem value="50">50</SelectItem>
@@ -414,21 +385,17 @@ export function FilamentsTab() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!deletingFilamentId} onOpenChange={(open) => !open && setDeletingFilamentId(null)}>
+      <AlertDialog open={!!filamentToDelete} onOpenChange={(open) => !open && setFilamentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isto irá excluir permanentemente o filamento.
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o filamento.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeletingFilamentId(null)} disabled={isDeleting}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting}>
-              {isDeleting ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
+            <AlertDialogCancel onClick={() => setFilamentToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

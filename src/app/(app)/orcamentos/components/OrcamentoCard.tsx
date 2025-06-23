@@ -40,7 +40,7 @@ export function OrcamentoCard({ orcamento, onEdit, onDeleteRequest }: OrcamentoC
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-semibold text-primary flex items-center">
             <FileText className="h-5 w-5 mr-2 text-primary/80" />
-            {orcamento.nomeOrcamento}
+            {orcamento.nome_orcamento}
           </CardTitle>
           <Badge className={cn("text-xs", getStatusBadgeColorClass(orcamento.status))}>
             {orcamento.status}
@@ -51,11 +51,11 @@ export function OrcamentoCard({ orcamento, onEdit, onDeleteRequest }: OrcamentoC
       <CardContent className="space-y-2 text-sm flex-grow">
         <div className="flex items-center">
           <User className="h-4 w-4 mr-2 text-muted-foreground" />
-          <span>Cliente: <strong>{orcamento.clienteNome}</strong></span>
+          <span>Cliente: <strong>{orcamento.cliente_nome}</strong></span>
         </div>
         <div className="flex items-center">
           <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
-          <span>Data: <strong>{formatDate(orcamento.dataCriacao)}</strong></span>
+          <span>Data: <strong>{formatDate(orcamento.data_criacao)}</strong></span>
         </div>
         <div className="flex items-center">
           <PackageSearch className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -63,7 +63,7 @@ export function OrcamentoCard({ orcamento, onEdit, onDeleteRequest }: OrcamentoC
         </div>
         <div className="flex items-center pt-1">
           <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-          <span className="font-semibold">Valor Total: <strong className="text-green-600">{formatCurrency(orcamento.valorTotalCalculado)}</strong></span>
+          <span className="font-semibold">Valor Total: <strong className="text-green-600">{formatCurrency(orcamento.valor_total_calculado)}</strong></span>
         </div>
         {orcamento.observacao && (
           <p className="text-xs text-muted-foreground pt-2 border-t mt-2">

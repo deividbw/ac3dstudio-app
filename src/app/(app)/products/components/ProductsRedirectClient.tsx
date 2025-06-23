@@ -5,14 +5,14 @@ import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
-export default function ProductsRedirectClient() {
+export default function produtosRedirectClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', 'produtos');
-    // Redirect to the new products management UI within the cadastros tabs
+    // Redirect to the new produtos management UI within the cadastros tabs
     router.replace(`/servicos/cadastros?${params.toString()}`);
   }, [router, searchParams]);
 
