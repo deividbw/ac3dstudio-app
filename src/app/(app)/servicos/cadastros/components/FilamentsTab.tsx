@@ -283,22 +283,22 @@ export function FilamentosTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead onClick={() => handleSort('nome_marca')} className="cursor-pointer">
+                  <TableHead onClick={() => handleSort('nome_marca')} className="cursor-pointer w-[200px]">
                     Marca {renderSortIcon('nome_marca')}
                   </TableHead>
-                  <TableHead onClick={() => handleSort('tipo_nome')} className="cursor-pointer">
+                  <TableHead onClick={() => handleSort('tipo_nome')} className="cursor-pointer w-[150px]">
                     Tipo {renderSortIcon('tipo_nome')}
                   </TableHead>
-                  <TableHead onClick={() => handleSort('cor')} className="cursor-pointer">
+                  <TableHead onClick={() => handleSort('cor')} className="cursor-pointer w-[180px]">
                     Cor {renderSortIcon('cor')}
                   </TableHead>
                   <TableHead onClick={() => handleSort('modelo')} className="cursor-pointer">
                     Modelo {renderSortIcon('modelo')}
                   </TableHead>
-                  <TableHead onClick={() => handleSort('densidade')} className="cursor-pointer">
-                    Densidade (g/cm³) {renderSortIcon('densidade')}
+                  <TableHead onClick={() => handleSort('densidade')} className="cursor-pointer w-[180px]">
+                    Densidade {renderSortIcon('densidade')}
                   </TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="w-[100px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -320,15 +320,15 @@ export function FilamentosTab() {
                       </div>
                     </TableCell>
                     <TableCell>{filamento.modelo || 'N/A'}</TableCell>
-                    <TableCell>{filamento.densidade}</TableCell>
-                    <TableCell>
+                    <TableCell>{filamento.densidade ? `${filamento.densidade} g/cm³` : 'N/A'}</TableCell>
+                    <TableCell className="w-[120px]">
                       <div className="flex items-center space-x-1">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => openEditDialog(filamento)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-4 w-4 text-yellow-500" />
                         </Button>
                         <Button
                           variant="ghost"
