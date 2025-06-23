@@ -5,65 +5,72 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Tabela de marcas
-CREATE TABLE IF NOT EXISTS brands (
+CREATE TABLE IF NOT EXISTS marcas (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL UNIQUE,
+    nome_marca VARCHAR(100) NOT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by_user_id UUID REFERENCES auth.users(id)
 );
 
 -- Tabela de tipos de filamento
-CREATE TABLE IF NOT EXISTS filament_types (
+CREATE TABLE IF NOT EXISTS tipos_filamentos (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    nome VARCHAR(50) NOT NULL UNIQUE,
+    tipo VARCHAR(50) NOT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Tabela de filamentos
-CREATE TABLE IF NOT EXISTS filaments (
+CREATE TABLE IF NOT EXISTS filamentos (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    tipo VARCHAR(100) NOT NULL,
+    user_id UUID REFERENCES auth.users(id),
+    tipo_id UUID NOT NULL REFERENCES tipos_filamentos(id),
     cor VARCHAR(100) NOT NULL,
     densidade DECIMAL(5,3) NOT NULL CHECK (densidade > 0),
-    marca_id UUID REFERENCES brands(id) ON DELETE SET NULL,
+    marca_id UUID REFERENCES marcas(id) ON DELETE SET NULL,
     modelo VARCHAR(100),
     temperatura_bico_ideal INTEGER,
     temperatura_mesa_ideal INTEGER,
     preco_por_kg DECIMAL(10,2) CHECK (preco_por_kg >= 0),
     quantidade_estoque_gramas INTEGER DEFAULT 0 CHECK (quantidade_estoque_gramas >= 0),
+    notas_filamento TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Tabela de impressoras
-CREATE TABLE IF NOT EXISTS printers (
+CREATE TABLE IF NOT EXISTS impressoras (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    marca_id UUID REFERENCES brands(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES auth.users(id),
+    marca_id UUID REFERENCES marcas(id) ON DELETE SET NULL,
     modelo VARCHAR(100),
-    custo_aquisicao DECIMAL(10,2) NOT NULL CHECK (custo_aquisicao >= 0),
-    taxa_depreciacao_hora DECIMAL(10,2) NOT NULL CHECK (taxa_depreciacao_hora >= 0),
+    valor_equipamento DECIMAL(10,2) NOT NULL CHECK (valor_equipamento >= 0),
+    consumo_energia_w INT,
     vida_util_anos INTEGER NOT NULL CHECK (vida_util_anos > 0),
-    horas_trabalho_dia INTEGER NOT NULL CHECK (horas_trabalho_dia > 0),
-    custo_energia_kwh DECIMAL(10,4) CHECK (custo_energia_kwh >= 0),
+    trabalho_horas_dia INTEGER NOT NULL CHECK (trabalho_horas_dia > 0),
+    depreciacao_calculada DECIMAL(10,4),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Tabela de produtos
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE IF NOT EXISTS produtos (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    nome VARCHAR(200) NOT NULL,
+    user_id UUID REFERENCES auth.users(id),
+    nomeProduto VARCHAR(200) NOT NULL,
     descricao TEXT,
-    filamento_id UUID NOT NULL REFERENCES filaments(id) ON DELETE CASCADE,
-    impressora_id UUID NOT NULL REFERENCES printers(id) ON DELETE CASCADE,
-    tempo_impressao_horas DECIMAL(5,2) NOT NULL CHECK (tempo_impressao_horas > 0),
-    peso_gramas INTEGER NOT NULL CHECK (peso_gramas > 0),
-    image_url TEXT,
-    custo_modelagem DECIMAL(10,2) DEFAULT 0 CHECK (custo_modelagem >= 0),
-    custos_extras DECIMAL(10,2) DEFAULT 0 CHECK (custos_extras >= 0),
-    margem_lucro_percentual DECIMAL(5,2) DEFAULT 20 CHECK (margem_lucro_percentual >= 0),
-    custo_detalhado JSONB,
+    filamento_id UUID NOT NULL REFERENCES filamentos(id),
+    impressora_id UUID NOT NULL REFERENCES impressoras(id),
+    tempoImpressaoH DECIMAL(5,2) NOT NULL CHECK (tempoImpressaoH > 0),
+    pesoPecaG INTEGER NOT NULL CHECK (pesoPecaG > 0),
+    imageUrl TEXT,
+    custoModelagem DECIMAL(10,2) DEFAULT 0 CHECK (custoModelagem >= 0),
+    custosExtras DECIMAL(10,2) DEFAULT 0 CHECK (custosExtras >= 0),
+    percentualLucro DECIMAL(5,2) DEFAULT 20 CHECK (percentualLucro >= 0),
+    custoTotalCalculado DECIMAL(10,2),
+    precoVendaCalculado DECIMAL(10,2),
+    custoDetalhado JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -71,12 +78,13 @@ CREATE TABLE IF NOT EXISTS products (
 -- Tabela de orçamentos
 CREATE TABLE IF NOT EXISTS orcamentos (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    nome_orcamento VARCHAR(200) NOT NULL,
-    cliente_nome VARCHAR(200) NOT NULL,
-    data_criacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_id UUID REFERENCES auth.users(id),
+    nomeOrcamento VARCHAR(200) NOT NULL,
+    clienteNome VARCHAR(200) NOT NULL,
+    dataCriacao TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     status VARCHAR(50) NOT NULL DEFAULT 'Pendente' CHECK (status IN ('Pendente', 'Aprovado', 'Rejeitado', 'Concluído')),
     observacao TEXT,
-    valor_total_calculado DECIMAL(10,2) DEFAULT 0 CHECK (valor_total_calculado >= 0),
+    valorTotalCalculado DECIMAL(10,2) DEFAULT 0 CHECK (valorTotalCalculado >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -85,7 +93,7 @@ CREATE TABLE IF NOT EXISTS orcamentos (
 CREATE TABLE IF NOT EXISTS orcamento_items (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     orcamento_id UUID NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
-    produto_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    produto_id UUID NOT NULL REFERENCES produtos(id),
     produto_nome VARCHAR(200) NOT NULL,
     quantidade INTEGER NOT NULL CHECK (quantidade > 0),
     valor_unitario DECIMAL(10,2) NOT NULL CHECK (valor_unitario >= 0),
@@ -97,9 +105,9 @@ CREATE TABLE IF NOT EXISTS orcamento_items (
 -- Tabela de power overrides
 CREATE TABLE IF NOT EXISTS power_overrides (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    printer_id UUID NOT NULL REFERENCES printers(id) ON DELETE CASCADE,
+    printer_id UUID NOT NULL REFERENCES impressoras(id) ON DELETE CASCADE,
     printer_name VARCHAR(200) NOT NULL,
-    filament_type_id UUID NOT NULL REFERENCES filament_types(id) ON DELETE CASCADE,
+    filament_type_id UUID NOT NULL REFERENCES tipos_filamentos(id) ON DELETE CASCADE,
     filament_type_name VARCHAR(200) NOT NULL,
     power_watts INTEGER NOT NULL CHECK (power_watts > 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -117,36 +125,79 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers para atualizar updated_at
-CREATE TRIGGER update_brands_updated_at BEFORE UPDATE ON brands FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_filament_types_updated_at BEFORE UPDATE ON filament_types FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_filaments_updated_at BEFORE UPDATE ON filaments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_printers_updated_at BEFORE UPDATE ON printers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_marcas_updated_at BEFORE UPDATE ON marcas FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_tipos_filamentos_updated_at BEFORE UPDATE ON tipos_filamentos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_filamentos_updated_at BEFORE UPDATE ON filamentos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_impressoras_updated_at BEFORE UPDATE ON impressoras FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_produtos_updated_at BEFORE UPDATE ON produtos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_orcamentos_updated_at BEFORE UPDATE ON orcamentos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_orcamento_items_updated_at BEFORE UPDATE ON orcamento_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_power_overrides_updated_at BEFORE UPDATE ON power_overrides FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Inserir dados de exemplo
-INSERT INTO brands (nome) VALUES 
+INSERT INTO marcas (nome_marca) VALUES 
     ('Creality'),
     ('Prusa Research'),
     ('Voolt')
-ON CONFLICT (nome) DO NOTHING;
+ON CONFLICT (nome_marca) DO NOTHING;
 
-INSERT INTO filament_types (nome) VALUES 
+INSERT INTO tipos_filamentos (tipo) VALUES 
     ('PLA'),
     ('ABS'),
     ('PETG'),
     ('TPU')
-ON CONFLICT (nome) DO NOTHING;
+ON CONFLICT (tipo) DO NOTHING;
 
-INSERT INTO filaments (tipo, cor, densidade, marca_id, modelo, preco_por_kg, quantidade_estoque_gramas) VALUES 
-    ('PLA', 'Branco', 1.24, (SELECT id FROM brands WHERE nome = 'Voolt'), 'Standard', 120.50, 5000),
-    ('PLA', 'Preto', 1.24, (SELECT id FROM brands WHERE nome = 'Voolt'), 'Standard', 120.50, 3000),
-    ('PETG', 'Vermelho Translúcido', 1.27, (SELECT id FROM brands WHERE nome = 'Voolt'), 'Standard', 150.75, 2000)
+INSERT INTO filamentos (tipo_id, cor, densidade, marca_id, modelo, preco_por_kg, quantidade_estoque_gramas) VALUES 
+    ((SELECT id FROM tipos_filamentos WHERE tipo = 'PLA'), 'Branco', 1.24, (SELECT id FROM marcas WHERE nome_marca = 'Voolt'), 'Standard', 120.50, 5000),
+    ((SELECT id FROM tipos_filamentos WHERE tipo = 'PLA'), 'Preto', 1.24, (SELECT id FROM marcas WHERE nome_marca = 'Voolt'), 'Standard', 120.50, 3000),
+    ((SELECT id FROM tipos_filamentos WHERE tipo = 'PETG'), 'Vermelho Translúcido', 1.27, (SELECT id FROM marcas WHERE nome_marca = 'Voolt'), 'Standard', 150.75, 2000)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO printers (marca_id, modelo, custo_aquisicao, taxa_depreciacao_hora, vida_util_anos, horas_trabalho_dia, custo_energia_kwh) VALUES 
-    ((SELECT id FROM brands WHERE nome = 'Creality'), 'Ender 3 V2', 1500.00, 0.65, 3, 8, 0.75),
-    ((SELECT id FROM brands WHERE nome = 'Prusa Research'), 'MK3S+', 3000.00, 1.00, 5, 8, 0.75)
-ON CONFLICT DO NOTHING; 
+INSERT INTO impressoras (marca_id, modelo, valor_equipamento, vida_util_anos, trabalho_horas_dia) VALUES 
+    ((SELECT id FROM marcas WHERE nome_marca = 'Creality'), 'Ender 3 V2', 1500.00, 3, 8),
+    ((SELECT id FROM marcas WHERE nome_marca = 'Prusa Research'), 'MK3S+', 3000.00, 5, 8)
+ON CONFLICT DO NOTHING;
+
+-- Configuração de Row Level Security (RLS) para as tabelas principais
+-- Habilitar RLS nas tabelas
+ALTER TABLE marcas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipos_filamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE filamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE impressoras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orcamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orcamento_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE power_overrides ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para marcas
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON marcas
+    FOR ALL TO authenticated USING (true);
+
+-- Políticas para tipos_filamentos
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON tipos_filamentos
+    FOR ALL TO authenticated USING (true);
+
+-- Políticas para filamentos
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON filamentos
+    FOR ALL TO authenticated USING (true);
+
+-- Políticas para impressoras
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON impressoras
+    FOR ALL TO authenticated USING (true);
+
+-- Políticas para produtos
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON produtos
+    FOR ALL TO authenticated USING (true);
+
+-- Políticas para orcamentos
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON orcamentos
+    FOR ALL TO authenticated USING (true);
+
+-- Políticas para orcamento_items
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON orcamento_items
+    FOR ALL TO authenticated USING (true);
+
+-- Políticas para power_overrides
+CREATE POLICY "Permitir acesso total para usuários autenticados" ON power_overrides
+    FOR ALL TO authenticated USING (true); 

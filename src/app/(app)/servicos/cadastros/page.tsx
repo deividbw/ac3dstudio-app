@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,10 +11,11 @@ import { ProductsTab } from './components/ProductsTab'; // Novo import
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Filament } from '@/lib/types';
-import { getFilaments as mockGetFilaments } from '@/lib/actions/filament.actions';
-import { getProducts as mockGetProducts } from '@/lib/actions/product.actions';
-import type { Product } from '@/lib/types';
+import type { Filamento } from '@/lib/types';
+import { getFilamentos as mockGetFilamentos } from '@/lib/actions/filament.actions';
+import { getProdutos as mockGetProdutos } from '@/lib/actions/product.actions';
+import type { Produto } from '@/lib/types';
+import { HydrationSuppressor } from '@/components/HydrationSuppressor';
 
 export default function CadastrosPage() {
   const [relevantFilamentCount, setRelevantFilamentCount] = useState(0);
@@ -25,16 +25,16 @@ export default function CadastrosPage() {
   const loadCounts = useCallback(async () => {
     setIsLoadingCounts(true);
     try {
-      const filamentsData = await mockGetFilaments();
-      const productsData = await mockGetProducts();
+      const filamentsData = await mockGetFilamentos();
+      const productsData = await mockGetProdutos();
 
       const filteredFilaments = filamentsData.filter(
-        f => f.precoPorKg !== undefined && f.precoPorKg > 0 && f.quantidadeEstoqueGramas !== undefined && f.quantidadeEstoqueGramas > 0
+        f => f.preco_por_kg !== undefined && f.preco_por_kg > 0 && f.quantidade_estoque_gramas !== undefined && f.quantidade_estoque_gramas > 0
       );
       setRelevantFilamentCount(filteredFilaments.length);
 
 
-      const filteredProducts = productsData.filter(p => p.custoDetalhado && p.custoDetalhado.precoVendaCalculado > 0);
+      const filteredProducts = productsData.filter(p => p.custo_detalhado && p.custo_detalhado.preco_venda > 0);
       setRelevantProductCount(filteredProducts.length);
 
     } catch (error) {

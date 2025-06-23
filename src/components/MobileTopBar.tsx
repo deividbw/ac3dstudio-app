@@ -1,8 +1,9 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/lib/constants";
+import * as Dialog from "@radix-ui/react-dialog";
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import {
   Sheet,
   SheetContent,
@@ -32,7 +33,10 @@ export function MobileTopBar() {
             <span className="sr-only">Abrir menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-72 sm:w-80"> {/* Ajuste de largura e remoção de padding padrão */}
+        <SheetContent side="left" className="p-0 w-72 sm:w-80">
+          <VisuallyHidden asChild>
+            <Dialog.Title>Menu Principal</Dialog.Title>
+          </VisuallyHidden>
           <MobileSidebar />
         </SheetContent>
       </Sheet>

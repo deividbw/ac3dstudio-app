@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -57,14 +56,14 @@ export default function PrintersPage() {
     loadData();
   }, [loadData]);
 
-  const getBrandNameById = useCallback((brandId?: string) => {
+  const getBrandNameById = useCallback((brandId?: string | null) => {
     if (!brandId) return "N/A";
     const brand = brands.find(b => b.id === brandId);
-    return brand ? brand.nome : "Desconhecida";
+    return brand ? brand.nome_marca : "Desconhecida";
   }, [brands]);
   
   const getPrinterDisplayName = (printer: Printer) => {
-    const brandName = getBrandNameById(printer.marcaId);
+    const brandName = getBrandNameById(printer.marca_id);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
     return `Impressora ID: ${printer.id}`;
@@ -96,13 +95,12 @@ export default function PrintersPage() {
     }
     exportToCsv("impressoras.csv", printers.map(p => ({
       ID: p.id,
-      Marca: getBrandNameById(p.marcaId),
+      Marca: getBrandNameById(p.marca_id),
       Modelo: p.modelo || "N/A",
-      "Custo Aquisição (R$)": p.custoAquisicao.toFixed(2),
-      "Depreciação (R$/hora)": p.taxaDepreciacaoHora.toFixed(2),
-      "Custo Energia (R$/kWh)": p.custoEnergiaKwh.toFixed(2),
-      "Vida Útil (anos)": p.vidaUtilAnos,
-      "Horas Trabalho Dia": p.horasTrabalhoDia,
+      "Custo Aquisição (R$)": p.valor_equipamento.toFixed(2),
+      "Depreciação (R$/hora)": p.depreciacao_calculada?.toFixed(2) || "0.00",
+      "Vida Útil (anos)": p.vida_util_anos,
+      "Horas Trabalho Dia": p.trabalho_horas_dia,
     })));
     toast({ title: "Exportar Dados", description: "Dados das impressoras exportados para CSV."});
   };
@@ -124,7 +122,7 @@ export default function PrintersPage() {
           <DialogContent className="sm:max-w-md">
             <PrinterForm 
               printer={editingPrinter} 
-              brands={brands} // Pass brands to the form
+              marcas={brands}
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingPrinter(null); }}
             />
@@ -153,11 +151,11 @@ export default function PrintersPage() {
               <TableBody>
                 {printers.map((printer) => (
                   <TableRow key={printer.id}>
-                    <TableCell className="font-medium">{getBrandNameById(printer.marcaId)}</TableCell>
+                    <TableCell className="font-medium">{getBrandNameById(printer.marca_id)}</TableCell>
                     <TableCell className="font-medium">{printer.modelo || "N/A"}</TableCell>
-                    <TableCell className="text-right">{printer.custoAquisicao.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{printer.taxaDepreciacaoHora.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{printer.custoEnergiaKwh.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{printer.valor_equipamento.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{printer.depreciacao_calculada?.toFixed(2) || "0.00"}</TableCell>
+                    <TableCell className="text-right">-</TableCell>
                     <TableCell className="text-center">
                       <Button variant="ghost" size="icon" className="hover:text-primary mr-1" onClick={() => { setEditingPrinter(printer); setIsFormOpen(true); }}>
                         <Edit className="h-4 w-4" />

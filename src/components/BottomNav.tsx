@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -30,16 +29,16 @@ export function BottomNav() {
       {visibleNavItems.map((item: BottomNavItem) => {
         const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
         return (
-          <Link key={item.label} href={item.href} legacyBehavior>
-            <a
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors w-full text-center", // Adicionado w-full e text-center
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <item.icon className={cn("h-6 w-6", isActive ? "text-primary" : "")} />
-              <span className="text-xs font-medium">{item.label}</span>
-            </a>
+          <Link
+            key={item.label}
+            href={item.href}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors w-full text-center",
+              isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <item.icon className={cn("h-6 w-6", isActive ? "text-primary" : "")} />
+            <span className="text-xs font-medium">{item.label}</span>
           </Link>
         );
       })}

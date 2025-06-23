@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -24,8 +23,8 @@ import { PageHeader } from '@/components/PageHeader';
 import { PrinterForm } from '@/app/(app)/printers/components/PrinterForm';
 import type { Printer, Brand } from '@/lib/types'; 
 import { useToast } from '@/hooks/use-toast';
-import { getPrinters as mockGetPrinters, deletePrinter as mockDeletePrinter } from '@/lib/actions/printer.actions';
-import { getBrands as mockGetBrands } from '@/lib/actions/brand.actions'; 
+import { getImpressoras, deleteImpressora, updateImpressora } from '@/lib/actions/printer.actions';
+import { getMarcas } from '@/lib/actions/brand.actions';
 import {
   Table,
   TableBody,
@@ -38,7 +37,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function PrintersTab() {
   const [printers, setPrinters] = useState<Printer[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]); 
+  const [marcas, setMarcas] = useState<Brand[]>([]); 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
   const [deletingPrinterId, setDeletingPrinterId] = useState<string | null>(null);
@@ -48,27 +47,27 @@ export function PrintersTab() {
   const [filterModelo, setFilterModelo] = useState("");
 
   const loadData = useCallback(async () => { 
-    const [printersData, brandsData] = await Promise.all([
-      mockGetPrinters(),
-      mockGetBrands()
+    const [printersData, marcasData] = await Promise.all([
+      getImpressoras(),
+      getMarcas()
     ]);
     setPrinters(printersData);
-    setBrands(brandsData);
+    setMarcas(marcasData);
   }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const getBrandNameById = useCallback((brandId?: string) => {
+  const getBrandNameById = useCallback((brandId?: string | null) => {
     if (!brandId) return "N/A";
-    const brand = brands.find(b => b.id === brandId);
-    return brand ? brand.nome : "Desconhecida";
-  }, [brands]);
+    const brand = marcas.find(b => b.id === brandId);
+    return brand ? brand.nome_marca : "Desconhecida";
+  }, [marcas]);
 
   const filteredPrinters = useMemo(() => {
     return printers.filter(p => 
-      (filterMarca === "" || getBrandNameById(p.marcaId).toLowerCase().includes(filterMarca.toLowerCase())) &&
+      (filterMarca === "" || getBrandNameById(p.marca_id).toLowerCase().includes(filterMarca.toLowerCase())) &&
       (filterModelo === "" || (p.modelo && p.modelo.toLowerCase().includes(filterModelo.toLowerCase())))
     );
   }, [printers, filterMarca, filterModelo, getBrandNameById]);
@@ -91,7 +90,7 @@ export function PrintersTab() {
   const confirmDelete = async () => {
     if (!deletingPrinterId) return;
     
-    const result = await mockDeletePrinter(deletingPrinterId);
+    const result = await deleteImpressora(deletingPrinterId);
     if (result.success) {
       toast({ title: "Sucesso", description: "Impressora excluída.", variant: "success" });
       loadData();
@@ -104,12 +103,12 @@ export function PrintersTab() {
   return (
     <div className="space-y-4">
       <PageHeader title="Gerenciar Impressoras" backButtonHref="/servicos">
-        <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
+        <Dialog open={isFormOpen} onOpenChange={(isOpen: boolean) => {
           setIsFormOpen(isOpen);
           if (!isOpen) setEditingPrinter(null);
         }}>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={() => { setEditingPrinter(null); setIsFormOpen(true); }}>
+            <Button onClick={() => { setEditingPrinter(null); setIsFormOpen(true); }}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Impressora
             </Button>
@@ -117,7 +116,7 @@ export function PrintersTab() {
           <DialogContent className="sm:max-w-md max-h-[85vh] p-0 overflow-y-auto">
             <PrinterForm 
               printer={editingPrinter} 
-              brands={brands} 
+              marcas={marcas} 
               onSuccess={handleFormSuccess}
               onCancel={() => { setIsFormOpen(false); setEditingPrinter(null); }}
             />
@@ -169,11 +168,13 @@ export function PrintersTab() {
               <TableBody>
                 {filteredPrinters.map((printer) => (
                   <TableRow key={printer.id}>
-                    <TableCell className="px-2 py-1.5">{getBrandNameById(printer.marcaId)}</TableCell>
+                    <TableCell className="px-2 py-1.5">{getBrandNameById(printer.marca_id)}</TableCell>
                     <TableCell className="px-2 py-1.5">{printer.modelo || "N/A"}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-right">{printer.vidaUtilAnos}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-right">{printer.horasTrabalhoDia}</TableCell>
-                    <TableCell className="px-2 py-1.5 text-right">{printer.taxaDepreciacaoHora.toFixed(2)}</TableCell>
+                    <TableCell className="px-2 py-1.5 text-right">{printer.vida_util_anos}</TableCell>
+                    <TableCell className="px-2 py-1.5 text-right">{printer.trabalho_horas_dia}</TableCell>
+                    <TableCell className="px-2 py-1.5 text-right">
+                      R$ {(printer.depreciacao_calculada || 0).toFixed(2).replace('.', ',')}
+                    </TableCell>
                     <TableCell className="px-2 py-1.5 text-center">
                       <Button 
                         variant="ghost" 
@@ -200,7 +201,7 @@ export function PrintersTab() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!deletingPrinterId} onOpenChange={(isOpen) => { if (!isOpen) setDeletingPrinterId(null); }}>
+      <AlertDialog open={!!deletingPrinterId} onOpenChange={(isOpen: boolean) => { if (!isOpen) setDeletingPrinterId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>

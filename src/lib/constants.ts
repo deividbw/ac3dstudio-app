@@ -1,4 +1,3 @@
-
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Layers, Printer, Package, Home, BarChart3, PercentSquare,
@@ -25,17 +24,17 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Painel',
   },
   {
-    href: '/filaments',
+    href: '/filamentos',
     icon: Layers,
     label: 'Filamentos',
   },
   {
-    href: '/printers',
+    href: '/impressoras',
     icon: Printer,
     label: 'Impressoras',
   },
   {
-    href: '/products',
+    href: '/produtos',
     icon: Package,
     label: 'Produtos',
   },

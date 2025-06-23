@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,513 +23,284 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DialogFooter, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ProductSchema } from "@/lib/schemas";
-import type { Product, Filament, Printer, ProductCostBreakdown, Brand, FilamentType, PowerOverride } from "@/lib/types";
+import type { Product, Filament, Printer, ProductCostBreakdown } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { createProduct, updateProduct } from '@/lib/actions/product.actions';
+import { createProduct, updateProduct, calculateProductCostPreview } from '@/lib/actions/product.actions.supabase';
 import { Loader2 } from "lucide-react";
 
 interface ProductFormProps {
   product?: Product | null;
-  filaments: Filament[];
-  printers: Printer[];
-  brands: Brand[];
-  filamentTypes: FilamentType[];
-  powerOverrides?: PowerOverride[];
-  onSuccess: (product: Product) => void;
+  filamentos: Filament[];
+  impressoras: Printer[];
+  onSuccess: () => void;
   onCancel: () => void;
+  open: boolean;
 }
 
-export function ProductForm({ product, filaments, printers, brands, filamentTypes, powerOverrides = [], onSuccess, onCancel }: ProductFormProps) {
+export function ProductForm({ open, product, filamentos, impressoras, onSuccess, onCancel }: ProductFormProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
-  const [costBreakdown, setCostBreakdown] = useState<ProductCostBreakdown | undefined>(product?.custoDetalhado);
-  const [showCostSection, setShowCostSection] = useState(!!product?.custoDetalhado);
-  const [powerOverrideWarning, setPowerOverrideWarning] = useState<string | null>(null);
-
+  const [costBreakdown, setCostBreakdown] = useState<ProductCostBreakdown | undefined>();
+  
   const form = useForm<z.infer<typeof ProductSchema>>({
     resolver: zodResolver(ProductSchema),
-    defaultValues: product || {
-      nome: "",
-      descricao: "",
-      filamentoId: "",
-      impressoraId: "",
-      tempoImpressaoHoras: 0,
-      pesoGramas: 0,
-      imageUrl: "",
-      custoModelagem: 0,
-      custosExtras: 0,
-      margemLucroPercentual: 20,
+    defaultValues: {
+      nome_produto: product?.nome_produto || "",
+      descricao: product?.descricao || "",
+      filamento_id: product?.filamento_id || "",
+      impressora_id: product?.impressora_id || "",
+      tempo_impressao_h: product?.tempo_impressao_h || 0,
+      peso_peca_g: product?.peso_peca_g || 0,
+      custo_modelagem: product?.custo_modelagem || 0,
+      custos_extras: product?.custos_extras || 0,
+      percentual_lucro: product?.percentual_lucro || 20,
     },
   });
-
-  const getBrandNameById = useCallback((brandId?: string) => {
-    if (!brandId) return "";
-    const brand = brands.find(b => b.id === brandId);
-    return brand ? brand.nome : "";
-  }, [brands]);
-
-  const getPrinterDisplayName = useCallback((printer: Printer) => {
-    const brandName = getBrandNameById(printer.marcaId);
-    if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
-    if (printer.modelo) return printer.modelo;
-    return `Impressora ID: ${printer.id}`;
-  }, [getBrandNameById]);
-
+  
+  useEffect(() => {
+    // Popula o formulário quando o produto (para edição) é carregado
+    form.reset({
+      nome_produto: product?.nome_produto || "",
+      descricao: product?.descricao || "",
+      filamento_id: product?.filamento_id || "",
+      impressora_id: product?.impressora_id || "",
+      tempo_impressao_h: product?.tempo_impressao_h || 0,
+      peso_peca_g: product?.peso_peca_g || 0,
+      custo_modelagem: product?.custo_modelagem || 0,
+      custos_extras: product?.custos_extras || 0,
+      percentual_lucro: product?.percentual_lucro || 20,
+    });
+  }, [product, form]);
 
   const triggerCostCalculation = useCallback(async () => {
-    const currentValues = form.getValues();
-    setPowerOverrideWarning(null);
+    const values = form.getValues();
+    const parsedValues = ProductSchema.pick({ 
+        filamento_id: true, impressora_id: true, peso_peca_g: true, tempo_impressao_h: true 
+    }).safeParse(values);
 
-    if (!currentValues.filamentoId || !currentValues.impressoraId) {
+    if (!parsedValues.success) {
       setCostBreakdown(undefined);
-      setShowCostSection(false);
       return;
     }
-
-    if (Number(currentValues.pesoGramas) <= 0 || Number(currentValues.tempoImpressaoHoras) <= 0) {
-       setCostBreakdown(undefined);
-       setShowCostSection(false);
-       return;
-    }
-
-    const selectedFilament = filaments.find(f => f.id === currentValues.filamentoId);
-    const selectedPrinter = printers.find(p => p.id === currentValues.impressoraId);
-
-    if (!selectedFilament || typeof selectedFilament.precoPorKg !== 'number' || selectedFilament.precoPorKg <= 0) {
-      toast({ title: "Filamento Inválido", description: "O filamento selecionado não possui um preço por Kg válido para cálculo.", variant: "destructive" });
-      setCostBreakdown(undefined);
-      setShowCostSection(false);
-      return;
-    }
-    if (!selectedPrinter) {
-      setCostBreakdown(undefined);
-      setShowCostSection(false);
-      return;
-    }
-
+    
     setIsCalculating(true);
-    try {
-      const pesoGramas = Number(currentValues.pesoGramas) || 0;
-      const tempoProducaoHoras = Number(currentValues.tempoImpressaoHoras) || 0;
-      const custoModelagemValue = Number(currentValues.custoModelagem) || 0;
-      const custosExtrasValue = Number(currentValues.custosExtras) || 0;
-      const margemLucroPercentualValue = Number(currentValues.margemLucroPercentual) || 0;
+    const result = await calculateProductCostPreview({
+      ...values, // Passa todos os valores que podem influenciar o custo
+    });
+    setIsCalculating(false);
 
-      const custoMaterialCalculado = (selectedFilament.precoPorKg / 1000) * pesoGramas;
-
-      let consumoEnergiaHoraParaCalculo = 0;
-      let localPowerOverrideWarning: string | null = null;
-
-      const filamentType = filamentTypes.find(ft => ft.nome.toUpperCase() === selectedFilament.tipo.toUpperCase());
-
-      if (filamentType && selectedPrinter) {
-        const override = powerOverrides.find(
-          ov => ov.printerId === selectedPrinter.id && ov.filamentTypeId === filamentType.id
-        );
-        if (override) {
-          consumoEnergiaHoraParaCalculo = override.powerWatts / 1000;
-        } else {
-          localPowerOverrideWarning = `Config. de potência não encontrada para ${getPrinterDisplayName(selectedPrinter)} com ${selectedFilament.tipo}. Custo de energia será 0. Verifique Configurações.`;
-          toast({
-            title: "Aviso de Cálculo",
-            description: localPowerOverrideWarning,
-            variant: "default",
-            duration: 7000,
-          });
-        }
-      } else {
-         if (!filamentType) {
-            localPowerOverrideWarning = `Tipo de filamento '${selectedFilament.tipo}' não mapeado no sistema para busca de override de potência. Verifique os cadastros de Tipos de Filamento.`;
-         } else {
-            localPowerOverrideWarning = `Impressora ou Tipo de Filamento não selecionado corretamente para busca de override.`;
-         }
-         toast({
-            title: "Aviso de Tipo de Filamento/Impressora",
-            description: localPowerOverrideWarning,
-            variant: "default",
-            duration: 7000,
-          });
-      }
-      setPowerOverrideWarning(localPowerOverrideWarning);
-
-      const custoEnergiaImpressao = consumoEnergiaHoraParaCalculo * selectedPrinter.custoEnergiaKwh * tempoProducaoHoras;
-      const custoDepreciacaoImpressao = selectedPrinter.taxaDepreciacaoHora * tempoProducaoHoras;
-      const custoImpressaoCalculado = custoEnergiaImpressao + custoDepreciacaoImpressao;
-
-      const custoTotalProducaoCalculado = custoMaterialCalculado + custoImpressaoCalculado + custoModelagemValue + custosExtrasValue;
-      const lucroCalculado = custoTotalProducaoCalculado * (margemLucroPercentualValue / 100);
-      const precoVendaCalculado = custoTotalProducaoCalculado + lucroCalculado;
-
-      const newBreakdown: ProductCostBreakdown = {
-        custoMaterialCalculado,
-        custoImpressaoCalculado,
-        custoTotalProducaoCalculado,
-        lucroCalculado,
-        precoVendaCalculado,
-      };
-      setCostBreakdown(newBreakdown);
-      setShowCostSection(true);
-
-    } catch (error: any) {
-        toast({ title: "Erro no Cálculo", description: error.message || "Ocorreu um erro ao calcular o custo.", variant: "destructive" });
-        setCostBreakdown(undefined);
-        setShowCostSection(false);
-        console.error("Erro durante cálculo de custo:", error);
-    } finally {
-        setIsCalculating(false);
+    if (result.success && result.data) {
+      setCostBreakdown(result.data);
+    } else {
+      setCostBreakdown(undefined);
     }
-  }, [form, filaments, printers, toast, filamentTypes, powerOverrides, brands, getPrinterDisplayName]);
+  }, [form]);
 
-  const filamentoId = form.watch("filamentoId");
-  const impressoraId = form.watch("impressoraId");
-  const pesoGramas = form.watch("pesoGramas");
-  const tempoImpressaoHoras = form.watch("tempoImpressaoHoras");
-  const custoModelagemWatched = form.watch("custoModelagem");
-  const custosExtrasWatched = form.watch("custosExtras");
-  const margemLucroPercentualWatched = form.watch("margemLucroPercentual");
+  const filamento_id = form.watch('filamento_id');
+  const impressora_id = form.watch('impressora_id');
+  const peso_peca_g = form.watch('peso_peca_g');
+  const tempo_impressao_h = form.watch('tempo_impressao_h');
+  const custo_modelagem = form.watch('custo_modelagem');
+  const custos_extras = form.watch('custos_extras');
+  const percentual_lucro = form.watch('percentual_lucro');
 
   useEffect(() => {
-    const currentPesoGramasValue = form.getValues("pesoGramas");
-    const currentTempoImpressaoHorasValue = form.getValues("tempoImpressaoHoras");
-
-    if (filamentoId && impressoraId && Number(currentPesoGramasValue) > 0 && Number(currentTempoImpressaoHorasValue) > 0) {
-      triggerCostCalculation();
-    } else {
-      setCostBreakdown(undefined);
-      setShowCostSection(false);
-      setPowerOverrideWarning(null);
-    }
+    triggerCostCalculation();
   }, [
-    filamentoId,
-    impressoraId,
-    pesoGramas,
-    tempoImpressaoHoras,
-    custoModelagemWatched,
-    custosExtrasWatched,
-    margemLucroPercentualWatched,
-    triggerCostCalculation,
-    form
+    filamento_id, 
+    impressora_id, 
+    peso_peca_g, 
+    tempo_impressao_h, 
+    custo_modelagem, 
+    custos_extras, 
+    percentual_lucro, 
+    triggerCostCalculation
   ]);
-
-
+  
   async function onSubmit(values: z.infer<typeof ProductSchema>) {
-    try {
-      if (!costBreakdown) {
-        toast({
-          title: "Cálculo Pendente",
-          description: "O cálculo de custo não foi concluído. Verifique os dados e tente novamente.",
-          variant: "destructive",
-        });
-        return;
-      }
+    const action = product?.id 
+      ? updateProduct(product.id, values) 
+      : createProduct(values);
+    
+    const result = await action;
 
-      const dataToSave: Omit<Product, 'id'> & { id?: string } = {
-        id: product?.id,
-        nome: values.nome,
-        descricao: values.descricao || undefined,
-        filamentoId: values.filamentoId,
-        impressoraId: values.impressoraId,
-        tempoImpressaoHoras: Number(values.tempoImpressaoHoras),
-        pesoGramas: Number(values.pesoGramas),
-        imageUrl: values.imageUrl || undefined,
-        custoModelagem: Number(values.custoModelagem),
-        custosExtras: Number(values.custosExtras),
-        margemLucroPercentual: Number(values.margemLucroPercentual),
-        custoDetalhado: costBreakdown,
-      };
-
-      let actionResult;
-      let finalProductData: Product;
-
-      if (product && product.id) {
-        actionResult = await updateProduct(product.id, dataToSave as Product );
-        finalProductData = actionResult.product!;
-      } else {
-        const createData = { ...dataToSave };
-        delete createData.id;
-        actionResult = await createProduct(createData as Omit<Product, 'id'>);
-        finalProductData = actionResult.product!;
-      }
-
-      if (actionResult.success && finalProductData) {
-        toast({
-          title: product ? "Produto Atualizado" : "Produto Criado",
-          description: `O produto "${finalProductData.nome}" foi salvo.`,
-          variant: "success",
-        });
-        onSuccess(finalProductData);
-      } else {
-         toast({
-          title: "Erro ao Salvar",
-          description: actionResult.error || "Não foi possível salvar o produto.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Erro no formulário onSubmit:", error);
-      toast({
-        title: "Erro Inesperado",
-        description: "Ocorreu um erro inesperado ao processar o formulário.",
-        variant: "destructive",
-      });
-    }
-  }
-
-  const formatCurrency = (value: number | undefined) => {
-    if (value === undefined) return "N/A";
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
-
-  const handleNumericInputChange = (field: any, value: string) => {
-    if (value.trim() === '') {
-      field.onChange(undefined);
+    if (result.success) {
+      toast({ title: "Sucesso!", description: `Produto foi salvo.` });
+      onSuccess();
     } else {
-      const num = parseFloat(value);
-      field.onChange(Number.isNaN(num) ? undefined : num);
+      toast({ title: "Erro ao Salvar", description: result.error || "Ocorreu um erro desconhecido.", variant: "destructive" });
     }
-  };
-
-  const getNumericFieldValue = (value: number | undefined | null) => {
-      return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
 
+  const formatCurrency = (value?: number) => value?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
+  
   return (
-    <>
-      <DialogHeader className="sticky top-0 z-10 bg-background px-6 pt-6 pb-0 border-b">
-        <DialogTitle className="font-headline text-xl">{product ? "Editar Produto" : "Novo Produto"}</DialogTitle>
-        <DialogDescription>
-          {product ? "Modifique os detalhes do produto." : "Preencha as informações do novo produto. Os custos serão calculados automaticamente."}
-        </DialogDescription>
-      </DialogHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="px-6 pt-3 pb-6 space-y-3">
-            <FormField
-              control={form.control}
-              name="nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Produto*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Suporte de Celular Articulado" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="descricao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL da Imagem</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://placehold.co/300x200.png" {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  {field.value && field.value.startsWith('http') ? (
-                    <img src={field.value} alt="Preview" data-ai-hint="product 3dprint" className="mt-2 h-24 w-auto max-w-xs object-contain rounded-md border" />
-                  ) : (
-                    <img src="https://placehold.co/300x200.png" alt="Placeholder" data-ai-hint="product 3dprint" className="mt-2 h-24 w-auto max-w-xs object-contain rounded-md border opacity-50" />
+    <Dialog open={open} onOpenChange={onCancel}>
+      <DialogContent className="sm:max-w-[625px]">
+        <DialogHeader>
+          <DialogTitle>{product ? "Editar Produto" : "Criar Novo Produto"}</DialogTitle>
+          <DialogDescription>
+            Preencha os detalhes para cadastrar um novo item. O preço será calculado automaticamente.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="max-h-[65vh] overflow-y-auto -mx-6 px-6 py-2 space-y-4">
+              <FormField control={form.control} name="nome_produto" render={({ field }) => ( <FormItem> <FormLabel>Nome do Produto</FormLabel> <FormControl><Input placeholder="Ex: Suporte de Celular Articulado" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+              <FormField control={form.control} name="descricao" render={({ field }) => ( <FormItem> <FormLabel>Descrição</FormLabel> <FormControl><Textarea placeholder="Detalhes sobre o produto, material, dimensões, etc." {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="filamento_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Filamento</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Selecione um filamento..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {(filamentos || []).map(f => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.marca_nome || 'S/M'} {f.tipo_nome} - {f.cor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="filamentoId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Filamento*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                />
+                <FormField
+                  control={form.control}
+                  name="impressora_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Impressora</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Selecione uma impressora..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {(impressoras || []).map(p => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.modelo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="peso_peca_g"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Material Usado (g)*</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um filamento" />
-                        </SelectTrigger>
+                        <Input type="number" step="0.1" placeholder="Ex: 50" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {filaments.map((f) => (
-                          <SelectItem key={f.id} value={f.id} disabled={typeof f.precoPorKg !== 'number' || f.precoPorKg <= 0}>
-                            {f.tipo} - {f.cor} {f.marcaId ? `(${brands.find(b => b.id === f.marcaId)?.nome || 'N/A'})` : ''}
-                            {(typeof f.precoPorKg !== 'number' || f.precoPorKg <= 0) && " (Preço Kg não definido)"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="impressoraId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Impressora*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tempo_impressao_h"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tempo Produção (h)*</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma impressora" />
-                        </SelectTrigger>
+                        <Input type="number" step="0.1" placeholder="Ex: 2.5" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {printers.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {getPrinterDisplayName(p)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="pesoGramas"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Material Usado (g)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.1" placeholder="Ex: 50"
-                              value={getNumericFieldValue(field.value)}
-                              onChange={e => handleNumericInputChange(field, e.target.value)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="tempoImpressaoHoras"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tempo Produção (h)*</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.1" placeholder="Ex: 2.5"
-                            value={getNumericFieldValue(field.value)}
-                            onChange={e => handleNumericInputChange(field, e.target.value)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                    control={form.control}
-                    name="custoModelagem"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Custo Modelagem (R$)</FormLabel>
-                        <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 10.00"
-                                value={getNumericFieldValue(field.value)}
-                                onChange={e => handleNumericInputChange(field, e.target.value)} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="custosExtras"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Custos Extras (R$)</FormLabel>
-                        <FormControl>
-                        <Input type="number" step="0.01" placeholder="Ex: 5.00"
-                                value={getNumericFieldValue(field.value)}
-                                onChange={e => handleNumericInputChange(field, e.target.value)} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="margemLucroPercentual"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Margem Lucro (%)*</FormLabel>
-                        <FormControl>
-                        <Input type="number" step="1" placeholder="Ex: 100"
-                                value={getNumericFieldValue(field.value)}
-                                onChange={e => handleNumericInputChange(field, e.target.value)} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                      control={form.control}
+                      name="custo_modelagem"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Custo Modelagem (R$)</FormLabel>
+                          <FormControl>
+                          <Input type="number" step="0.01" placeholder="Ex: 10.00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="custos_extras"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Custos Extras (R$)</FormLabel>
+                          <FormControl>
+                          <Input type="number" step="0.01" placeholder="Ex: 5.00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="percentual_lucro"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Margem Lucro (%)*</FormLabel>
+                          <FormControl>
+                          <Input type="number" step="1" placeholder="Ex: 100" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
+              </div>
 
-            {isCalculating && !costBreakdown ? (
-                <div className="mt-3 pt-3 border-t text-xs text-muted-foreground text-center">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary mx-auto mb-1" />
-                    Calculando...
-                </div>
-            ) : showCostSection && costBreakdown ? (
-              <div className="mt-3 pt-3 border-t space-y-1.5 text-xs">
-                <div className="flex justify-between items-center mb-1.5">
-                  <h4 className="font-semibold text-sm text-foreground">Previsão de Custos e Preço:</h4>
-                  {isCalculating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                </div>
-                {!isCalculating && (
+              <div className="bg-muted p-4 rounded-lg space-y-2 mt-4">
+                <h4 className="font-semibold text-center mb-3">Previsão de Custos e Preço</h4>
+                {isCalculating ? (
+                  <div className="flex items-center justify-center text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Calculando...
+                  </div>
+                ) : costBreakdown ? (
                   <>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Material:</span> <span className="font-medium">{formatCurrency(costBreakdown.custoMaterialCalculado)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Impressão:</span> <span className="font-medium">{formatCurrency(costBreakdown.custoImpressaoCalculado)}</span></div>
-                    {powerOverrideWarning && <p className="text-xs text-amber-600 dark:text-amber-500 text-center py-1">{powerOverrideWarning}</p>}
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custo Modelagem:</span> <span className="font-medium">{formatCurrency(form.getValues("custoModelagem"))}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Custos Extras:</span> <span className="font-medium">{formatCurrency(form.getValues("custosExtras"))}</span></div>
-                    <hr className="my-1"/>
-                    <div className="flex justify-between font-semibold"><span className="text-foreground">Custo Total Produção:</span> <span className="text-foreground">{formatCurrency(costBreakdown.custoTotalProducaoCalculado)}</span></div>
-                    <hr className="my-1"/>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Margem de Lucro ({form.getValues("margemLucroPercentual")}%):</span> <span className="font-medium">{formatCurrency(costBreakdown.lucroCalculado)}</span></div>
-                    <div className="flex justify-between font-semibold text-base text-primary mt-1.5 pt-1.5 border-t"><span >Preço Final (Base):</span> <span>{formatCurrency(costBreakdown.precoVendaCalculado)}</span></div>
+                    <div className="flex justify-between items-center text-sm"><span>Custo Material:</span> <span className="font-medium">{formatCurrency(costBreakdown.custo_material)}</span></div>
+                    <div className="flex justify-between items-center text-sm"><span>Custo Impressão:</span> <span className="font-medium">{formatCurrency(costBreakdown.custo_impressao)}</span></div>
+                    <div className="flex justify-between items-center text-sm"><span>Custo Total:</span> <span className="font-medium">{formatCurrency(costBreakdown.custo_total_producao)}</span></div>
+                    <div className="flex justify-between items-center text-sm"><span>Lucro ({form.getValues('percentual_lucro') || 0}%):</span> <span className="font-medium">{formatCurrency(costBreakdown.lucro)}</span></div>
+                    <div className="border-t my-2"></div>
+                    <div className="flex justify-between items-center text-lg font-bold text-primary"><span>Preço Final:</span> <span>{formatCurrency(costBreakdown.preco_venda)}</span></div>
                   </>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground">Preencha os campos de impressão para calcular.</p>
                 )}
               </div>
-            ) : (
-                 <div className="mt-3 pt-3 border-t text-xs text-muted-foreground italic text-center">
-                    Preencha os campos obrigatórios (*) e selecione um filamento com preço/Kg definido para ver a previsão de custos.
-                </div>
-            )}
-
-
-          </div>
-
-          <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" onClick={onCancel}>Cancelar</Button>
-            </DialogClose>
-            <Button type="submit" variant="default" disabled={isCalculating || !showCostSection || !costBreakdown}>
-              {isCalculating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {product ? "Salvar Alterações" : "Adicionar Produto"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </Form>
-    </>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" onClick={onCancel}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isCalculating || form.formState.isSubmitting}>
+                {isCalculating || form.formState.isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Produto'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

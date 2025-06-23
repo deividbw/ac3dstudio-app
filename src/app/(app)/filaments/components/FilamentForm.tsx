@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,34 +29,33 @@ import { createFilament, updateFilament } from '@/lib/actions/filament.actions';
 
 interface FilamentFormProps {
   filament?: Filament | null;
-  brands: Brand[];
-  filamentTypes: FilamentType[]; // Nova prop
-  allFilaments: Filament[];
+  marcas: Brand[];
+  filamentTypes: FilamentType[];
   onSuccess: (filament: Filament, isNew: boolean) => void;
   onCancel: () => void;
 }
 
-export function FilamentForm({ filament, brands, filamentTypes, allFilaments, onSuccess, onCancel }: FilamentFormProps) {
+export function FilamentForm({ filament, marcas, filamentTypes, onSuccess, onCancel }: FilamentFormProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof FilamentSchema>>({
     resolver: zodResolver(FilamentSchema),
     defaultValues: filament ? {
       id: filament.id,
-      tipo: filament.tipo,
+      tipo_id: filament.tipo_id,
+      marca_id: filament.marca_id,
       cor: filament.cor,
+      modelo: filament.modelo,
       densidade: filament.densidade,
-      marcaId: filament.marcaId ?? undefined,
-      modelo: filament.modelo ?? undefined,
-      temperaturaBicoIdeal: filament.temperaturaBicoIdeal ?? undefined,
-      temperaturaMesaIdeal: filament.temperaturaMesaIdeal ?? undefined,
+      temperatura_bico_ideal: filament.temperatura_bico_ideal,
+      temperatura_mesa_ideal: filament.temperatura_mesa_ideal,
     } : {
-      tipo: "",
+      tipo_id: "",
+      marca_id: null,
       cor: "",
+      modelo: "",
       densidade: 1.24, 
-      marcaId: undefined,
-      modelo: undefined,
-      temperaturaBicoIdeal: undefined,
-      temperaturaMesaIdeal: undefined,
+      temperatura_bico_ideal: undefined,
+      temperatura_mesa_ideal: undefined,
     },
   });
 
@@ -74,68 +72,42 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
       return value === undefined || value === null || Number.isNaN(value) ? '' : String(value);
   }
 
-
   async function onSubmit(values: z.infer<typeof FilamentSchema>) {
+    console.log("Valores do formulário a serem enviados:", values);
     try {
       const isCreatingNew = !filament || !filament.id;
 
-      if (isCreatingNew) {
-        const tipoLowerCase = values.tipo.toLowerCase();
-        const corLowerCase = values.cor.toLowerCase();
-        const modeloLowerCase = values.modelo?.toLowerCase() || null;
-        const marcaIdNormalized = values.marcaId || null;
-
-        const existingMatch = allFilaments.find(f => {
-          const fTipoLowerCase = f.tipo.toLowerCase();
-          const fCorLowerCase = f.cor.toLowerCase();
-          const fModeloLowerCase = f.modelo?.toLowerCase() || null;
-          const fMarcaIdNormalized = f.marcaId || null;
-          
-          return fTipoLowerCase === tipoLowerCase &&
-                 fCorLowerCase === corLowerCase &&
-                 fModeloLowerCase === modeloLowerCase &&
-                 fMarcaIdNormalized === marcaIdNormalized;
-        });
-
-        if (existingMatch) {
-          toast({
-            title: "Filamento Duplicado",
-            description: "Já existe um filamento cadastrado com estas mesmas características (Tipo, Cor, Marca e Modelo).",
-            variant: "destructive",
-          });
-          return; 
-        }
-      }
-
       const dataForAction = {
-        tipo: values.tipo,
+        tipo_id: values.tipo_id,
+        marca_id: values.marca_id || null,
         cor: values.cor,
+        modelo: values.modelo || null,
         densidade: Number(values.densidade),
-        marcaId: values.marcaId || undefined,
-        modelo: values.modelo || undefined,
-        temperaturaBicoIdeal: values.temperaturaBicoIdeal !== undefined ? Number(values.temperaturaBicoIdeal) : undefined,
-        temperaturaMesaIdeal: values.temperaturaMesaIdeal !== undefined ? Number(values.temperaturaMesaIdeal) : undefined,
+        temperatura_bico_ideal: values.temperatura_bico_ideal || undefined,
+        temperatura_mesa_ideal: values.temperatura_mesa_ideal || undefined,
       };
 
       let actionResult;
       if (isCreatingNew) {
-        actionResult = await createFilament(dataForAction as Omit<Filament, 'id' | 'precoPorKg' | 'quantidadeEstoqueGramas'>);
+        actionResult = await createFilament(dataForAction);
       } else { 
-        const updatePayload: Partial<Omit<Filament, 'id'>> = {
-          ...dataForAction,
-          precoPorKg: filament.precoPorKg, 
-          quantidadeEstoqueGramas: filament.quantidadeEstoqueGramas, 
-        };
-        actionResult = await updateFilament(filament!.id, updatePayload);
+        actionResult = await updateFilament(filament!.id, dataForAction);
       }
 
-      if (actionResult.success && actionResult.filament) {
+      if (actionResult.success) {
         toast({
           title: isCreatingNew ? "Filamento Criado" : "Filamento Atualizado",
           description: `O filamento foi salvo.`,
           variant: "success",
         });
-        onSuccess(actionResult.filament, isCreatingNew);
+        
+        const mockFilament = {
+          ...filament,
+          ...dataForAction,
+          id: filament?.id || "new"
+        }
+        onSuccess(mockFilament as Filament, isCreatingNew);
+
       } else {
         toast({
           title: "Erro ao Salvar",
@@ -168,7 +140,7 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="tipo"
+                name="tipo_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo do Filamento*</FormLabel>
@@ -183,8 +155,8 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
                       </FormControl>
                       <SelectContent>
                         {filamentTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.nome}>
-                            {type.nome}
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.tipo}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -211,7 +183,7 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="marcaId"
+                name="marca_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Marca</FormLabel>
@@ -225,9 +197,9 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {brands.map((brand) => (
+                        {marcas.map((brand) => (
                           <SelectItem key={brand.id} value={brand.id}>
-                            {brand.nome}
+                            {brand.nome_marca}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -270,7 +242,7 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="temperaturaBicoIdeal"
+                name="temperatura_bico_ideal"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Temp. Bico Ideal (°C)</FormLabel>
@@ -285,7 +257,7 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
               />
               <FormField
                 control={form.control}
-                name="temperaturaMesaIdeal"
+                name="temperatura_mesa_ideal"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Temp. Mesa Ideal (°C)</FormLabel>
@@ -302,9 +274,9 @@ export function FilamentForm({ filament, brands, filamentTypes, allFilaments, on
           </div>
           <DialogFooter className="sticky bottom-0 z-10 bg-background p-6 border-t">
             <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+                <Button type="button" onClick={onCancel} className="bg-transparent border border-input hover:bg-accent hover:text-accent-foreground">Cancelar</Button>
             </DialogClose>
-            <Button type="submit" variant="default">Salvar Filamento</Button>
+            <Button type="submit">Salvar Filamento</Button>
           </DialogFooter>
         </form>
       </Form>

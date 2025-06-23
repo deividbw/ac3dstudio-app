@@ -1,69 +1,129 @@
-
-// MOCK ACTIONS - In a real app, these would interact with a database.
 "use server";
 
+import { z } from "zod";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import type { FilamentType } from "@/lib/types";
-import { FilamentTypeSchema } from "@/lib/schemas";
 
-let mockFilamentTypes: FilamentType[] = [
-  { id: "ft_1", nome: "PLA" },
-  { id: "ft_2", nome: "ABS" },
-  { id: "ft_3", nome: "PETG" },
-  { id: "ft_4", nome: "TPU" },
-  { id: "ft_5", nome: "ASA" },
-];
+const createSupabaseClient = async () => {
+    const cookieStore = await cookies();
+    return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll();
+                },
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            cookieStore.set(name, value, options)
+                        );
+                    } catch {
+                        // The `setAll` method was called from a Server Component.
+                    }
+                },
+            },
+        }
+    );
+};
+
+const FilamentTypeSchema = z.object({
+  tipo: z.string().min(1, "O nome do tipo é obrigatório"),
+});
+
+export async function createFilamentType(data: z.infer<typeof FilamentTypeSchema>) {
+    const supabase = await createSupabaseClient();
+
+    const validation = FilamentTypeSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
+    }
+
+    const { error } = await supabase.from("tipos_filamentos").insert(validation.data);
+
+    if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+            return { success: false, error: "Esse tipo de filamento já existe." };
+        }
+        return { success: false, error: "Erro ao criar o tipo de filamento." };
+    }
+
+    revalidatePath("/servicos/cadastros");
+    return { success: true };
+}
 
 export async function getFilamentTypes(): Promise<FilamentType[]> {
-  return mockFilamentTypes;
+  const supabase = await createSupabaseClient();
+  const { data, error } = await supabase
+    .from("tipos_filamentos")
+    .select("*")
+    .order("tipo", { ascending: true });
+
+  if (error) {
+    console.error("Supabase error fetching filament types:", error);
+    return [];
+  }
+
+  return data || [];
 }
 
 export async function getFilamentTypeById(id: string): Promise<FilamentType | undefined> {
-  return mockFilamentTypes.find(ft => ft.id === id);
-}
-
-export async function createFilamentType(data: Omit<FilamentType, 'id'>): Promise<{ success: boolean, filamentType?: FilamentType, error?: string }> {
-  const validation = FilamentTypeSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
-  }
-  const newFilamentType: FilamentType = { ...validation.data, id: `ft_${String(Date.now())}` };
-  // Check for duplicates (case-insensitive)
-  if (mockFilamentTypes.some(ft => ft.nome.toLowerCase() === newFilamentType.nome.toLowerCase())) {
-    return { success: false, error: `O tipo de filamento "${newFilamentType.nome}" já existe.` };
-  }
-  mockFilamentTypes.push(newFilamentType);
-  return { success: true, filamentType: newFilamentType };
-}
-
-export async function updateFilamentType(id: string, data: Partial<Omit<FilamentType, 'id'>>): Promise<{ success: boolean, filamentType?: FilamentType, error?: string }> {
-  const existingFilamentType = mockFilamentTypes.find(ft => ft.id === id);
-  if (!existingFilamentType) {
-    return { success: false, error: "Tipo de filamento não encontrado" };
-  }
+  const supabase = await createSupabaseClient();
   
-  const updatedData = { ...existingFilamentType, ...data };
+  const { data, error } = await supabase
+    .from("tipos_filamentos")
+    .select("*")
+    .eq("id", id);
 
-  const validation = FilamentTypeSchema.safeParse(updatedData); 
-  if (!validation.success) {
-    return { success: false, error: validation.error.errors.map(e => e.message).join(', ') };
-  }
-  
-  // Check for duplicates if name changed (case-insensitive)
-  if (validation.data.nome.toLowerCase() !== existingFilamentType.nome.toLowerCase() && 
-      mockFilamentTypes.some(ft => ft.id !== id && ft.nome.toLowerCase() === validation.data.nome.toLowerCase())) {
-    return { success: false, error: `O tipo de filamento "${validation.data.nome}" já existe.` };
+  if (error) {
+    console.error("Supabase error fetching filament type:", error);
+    return undefined;
   }
 
-  const finalData = validation.data as FilamentType; 
-  mockFilamentTypes = mockFilamentTypes.map(ft => ft.id === id ? finalData : ft);
-  return { success: true, filamentType: finalData };
+  return data?.[0] as FilamentType | undefined;
 }
 
-export async function deleteFilamentType(id: string): Promise<{ success: boolean, error?: string }> {
-  const initialLength = mockFilamentTypes.length;
-  mockFilamentTypes = mockFilamentTypes.filter(ft => ft.id !== id);
-  if (mockFilamentTypes.length === initialLength) {
-    return { success: false, error: "Tipo de filamento não encontrado" };
-  }
-  return { success: true };
+export async function updateFilamentType(id: string, data: Partial<FilamentType>) {
+    const supabase = await createSupabaseClient();
+    const { error } = await supabase.from("tipos_filamentos").update(data).eq("id", id);
+    
+    if (error) {
+        if (error.code === '23505') {
+            return { success: false, error: "Já existe um tipo de filamento com este nome." };
+        }
+        return { success: false, error: "Erro ao atualizar o tipo de filamento." };
+    }
+
+    revalidatePath("/servicos/cadastros");
+    return { success: true };
+}
+
+export async function deleteFilamentType(id: string) {
+    const supabase = await createSupabaseClient();
+
+    // Verificar se há filamentos associados a este tipo
+    const { data: filamentos, error: filamentoError } = await supabase
+        .from('filamentos')
+        .select('id')
+        .eq('tipo_id', id)
+        .limit(1);
+
+    if (filamentoError) {
+        return { success: false, error: "Erro ao verificar filamentos associados." };
+    }
+    if (filamentos && filamentos.length > 0) {
+        return { success: false, error: "Não é possível excluir o tipo, pois existem filamentos associados a ele." };
+    }
+
+    const { error } = await supabase.from("tipos_filamentos").delete().eq("id", id);
+
+    if (error) {
+        return { success: false, error: "Erro ao excluir o tipo de filamento." };
+    }
+
+    revalidatePath("/servicos/cadastros");
+    return { success: true };
 }

@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Suprimir avisos de hidratação */
+@layer base {
+  /* Estilos para elementos com fdprocessedid */
+  [fdprocessedid] {
+    /* Forçar re-render para evitar problemas de hidratação */
+    contain: layout style paint;
+  }
+}
+
+/* Configurações de fonte */
+.font-heading {
+  font-family: 'PT Sans', sans-serif;
+}
+
+.font-body {
+  font-family: 'PT Sans', sans-serif;
+}
+
+/* Suprimir avisos de hidratação via CSS */
+@media (prefers-reduced-motion: no-preference) {
+  [fdprocessedid] {
+    transition: none;
+  }
+}
+
 body {
   font-family: 'PT Sans', Arial, Helvetica, sans-serif;
 }

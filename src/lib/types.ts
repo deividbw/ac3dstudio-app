@@ -1,71 +1,88 @@
-
 export interface Filament {
   id: string;
-  tipo: string; // Ex: PLA, ABS, PETG
+  user_id?: string;
+  created_at?: string;
+  marca_id?: string | null;
+  tipo_id: string;
+  modelo?: string | null;
   cor: string;
-  densidade: number; // g/cm³, usado para calcular peso a partir do volume se necessário
-  marcaId?: string; // ID da marca
-  modelo?: string; // Ex: PLA+, Standard
-  temperaturaBicoIdeal?: number; // em °C
-  temperaturaMesaIdeal?: number; // em °C
-  precoPorKg?: number; // R$/kg - Essencial para o cálculo de custo do material
-  quantidadeEstoqueGramas?: number; // Nova propriedade para quantidade em estoque
+  temperatura_bico_ideal?: number;
+  temperatura_mesa_ideal?: number;
+  notas_filamento?: string;
+  densidade?: number;
+  quantidade_estoque_gramas?: number;
+  preco_por_kg?: number;
+  marca_nome?: string;
+  tipo_nome?: string;
 }
 
 export interface Printer {
   id: string;
-  marcaId?: string; // ID da marca
-  modelo?: string;
-  custoAquisicao: number;
-  taxaDepreciacaoHora: number; // R$/hora - Custo por hora da impressora (depreciação)
-  custoEnergiaKwh: number; // R$/kWh - Custo da energia (padrão do sistema ou específico da impressora se implementado)
-  vidaUtilAnos: number;
-  horasTrabalhoDia: number;
+  user_id?: string;
+  created_at?: string;
+  marca_id?: string | null;
+  modelo?: string | null;
+  valor_equipamento: number;
+  consumo_energia_w?: number | null;
+  vida_util_anos: number;
+  trabalho_horas_dia: number;
+  depreciacao_calculada?: number | null;
 }
 
 export interface ProductCostBreakdown {
-  custoMaterialCalculado: number;
-  custoImpressaoCalculado: number;
-  custoTotalProducaoCalculado: number;
-  lucroCalculado: number;
-  precoVendaCalculado: number;
+  custo_material: number;
+  custo_impressao: number;
+  custo_total_producao: number;
+  lucro: number;
+  preco_venda: number;
 }
 
-export interface Product {
-  id:string;
-  nome: string;
+export type Product = {
+  id: string;
+  user_id?: string;
+  created_at?: string;
+  nome_produto: string;
   descricao?: string;
-  filamentoId: string;
-  impressoraId: string;
-  tempoImpressaoHoras: number;
-  pesoGramas: number;
-  imageUrl?: string;
-  custoModelagem: number;
-  custosExtras: number;
-  margemLucroPercentual: number;
-  custoDetalhado?: ProductCostBreakdown;
-}
+  impressora_id: string;
+  filamento_id: string;
+  peso_peca_g: number;
+  tempo_impressao_h: number;
+  image_url?: string;
+  custo_modelagem?: number;
+  custos_extras?: number;
+  percentual_lucro?: number;
+  custo_total_calculado?: number;
+  preco_venda_calculado?: number;
+  custo_detalhado?: ProductCostBreakdown;
+  marca_nome?: string;
+  tipo_nome?: string;
+  filamento_cor?: string;
+  impressora_nome?: string;
+};
 
 export interface Brand {
   id: string;
-  nome: string;
+  nome_marca: string;
+  created_at?: string;
+  created_by_user_id?: string;
 }
 
 export interface FilamentType {
   id: string;
-  nome: string;
+  tipo: string;
+  created_at?: string;
 }
 
 export interface PowerOverride {
   id: string;
-  printerId: string;
-  printerName: string;
-  filamentTypeId: string;
-  filamentTypeName: string;
-  powerWatts: number;
+  printer_id: string;
+  printer_name: string;
+  filament_type_id: string;
+  filament_type_name: string;
+  power_watts: number;
 }
 
-export type SortableOverrideField = 'printerName' | 'filamentTypeName' | 'powerWatts';
+export type SortableOverrideField = 'printer_name' | 'filament_type_name' | 'power_watts';
 
 // Tipos para Orçamento
 export const OrcamentoStatusOptions = ["Pendente", "Aprovado", "Rejeitado", "Concluído"] as const;
@@ -73,22 +90,22 @@ export type OrcamentoStatus = typeof OrcamentoStatusOptions[number];
 
 export interface Orcamento {
   id: string;
-  nomeOrcamento: string;
-  clienteNome: string;
-  dataCriacao: string; // ISO string date
+  nome_orcamento: string;
+  cliente_nome: string;
+  data_criacao: string; // ISO string date
   status: OrcamentoStatus;
   observacao?: string;
   itens: OrcamentoItem[]; // Array de itens do orçamento
-  valorTotalCalculado: number;
+  valor_total_calculado: number;
 }
 
 export interface OrcamentoItem {
   id: string; // uuid ou similar para o item dentro do orçamento
-  produtoId: string;
-  produtoNome: string;
+  produto_id: string;
+  produto_nome: string;
   quantidade: number;
-  valorUnitario: number; // Preço do produto no momento da adição ao orçamento
-  valorTotalItem: number;
+  valor_unitario: number; // Preço do produto no momento da adição ao orçamento
+  valor_total_item: number;
 }
 
 // --- Novas definições para Perfis e Permissões ---
@@ -115,3 +132,9 @@ export interface RoleConfig {
 
 export type RolesConfig = Record<UserRole, RoleConfig>;
 // --- Fim das novas definições ---
+
+export type Produto = Product;
+export type Filamento = Filament;
+export type Impressora = Printer;
+export type Marca = Brand;
+export type TipoFilamento = FilamentType;

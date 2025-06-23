@@ -1,10 +1,9 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, ListTree } from 'lucide-react';
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,13 +20,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PageHeader } from '@/components/PageHeader';
-import { FilamentTypeForm } from './FilamentTypeForm'; // New Form
+import { FilamentTypeForm } from './FilamentTypeForm';
 import type { FilamentType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  getFilamentTypes as mockGetFilamentTypes, 
-  deleteFilamentType as mockDeleteFilamentType 
-} from '@/lib/actions/filamentType.actions'; // New actions
+import { getFilamentTypes, deleteFilamentType } from '@/lib/actions/filamentType.actions';
 import {
   Table,
   TableBody,
@@ -40,6 +36,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export function FilamentTypesTab() {
   const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingFilamentType, setEditingFilamentType] = useState<FilamentType | null>(null);
   const [deletingFilamentTypeId, setDeletingFilamentTypeId] = useState<string | null>(null);
@@ -48,9 +45,16 @@ export function FilamentTypesTab() {
   const [filterNome, setFilterNome] = useState("");
 
   const loadFilamentTypes = useCallback(async () => {
-    const data = await mockGetFilamentTypes(); 
-    setFilamentTypes(data);
-  }, []);
+    setIsLoading(true);
+    try {
+      const data = await getFilamentTypes(); 
+      setFilamentTypes(data);
+    } catch (error) {
+      toast({ title: "Erro ao carregar tipos", description: "Não foi possível buscar os dados.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     loadFilamentTypes();
@@ -58,21 +62,21 @@ export function FilamentTypesTab() {
 
   const filteredFilamentTypes = useMemo(() => {
     return filamentTypes.filter(ft => 
-      (filterNome === "" || ft.nome.toLowerCase().includes(filterNome.toLowerCase()))
-    ).sort((a,b) => a.nome.localeCompare(b.nome)); // Sort alphabetically
+      (filterNome === "" || ft.tipo.toLowerCase().includes(filterNome.toLowerCase()))
+    );
   }, [filamentTypes, filterNome]);
 
   const handleFormSuccess = () => {
-    loadFilamentTypes();
     setIsFormOpen(false);
     setEditingFilamentType(null);
+    loadFilamentTypes();
   };
-
+  
   const openEditDialog = (ft: FilamentType) => {
     setEditingFilamentType(ft);
     setIsFormOpen(true);
   };
-
+  
   const openDeleteDialog = (ftId: string) => {
     setDeletingFilamentTypeId(ftId);
   };
@@ -80,12 +84,12 @@ export function FilamentTypesTab() {
   const confirmDelete = async () => {
     if (!deletingFilamentTypeId) return;
     
-    const result = await mockDeleteFilamentType(deletingFilamentTypeId);
+    const result = await deleteFilamentType(deletingFilamentTypeId);
     if (result.success) {
       toast({ title: "Sucesso", description: "Tipo de filamento excluído.", variant: "success" });
       loadFilamentTypes();
     } else {
-      toast({ title: "Erro", description: result.error || "Não foi possível excluir o tipo de filamento.", variant: "destructive" });
+      toast({ title: "Erro", description: result.error || "Não foi possível excluir o tipo.", variant: "destructive" });
     }
     setDeletingFilamentTypeId(null);
   };
@@ -93,21 +97,20 @@ export function FilamentTypesTab() {
   return (
     <div className="space-y-4">
       <PageHeader title="Gerenciar Tipos de Filamento" backButtonHref="/servicos">
-        <Dialog open={isFormOpen} onOpenChange={(isOpen) => {
+        <Dialog open={isFormOpen} onOpenChange={(isOpen: boolean) => {
           setIsFormOpen(isOpen);
           if (!isOpen) setEditingFilamentType(null);
         }}>
           <DialogTrigger asChild>
-            <Button size="sm" onClick={() => { setEditingFilamentType(null); setIsFormOpen(true); }}>
+            <Button onClick={() => { setEditingFilamentType(null); setIsFormOpen(true); }}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Tipo
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
             <FilamentTypeForm 
-              filamentType={editingFilamentType} 
+              filamentType={editingFilamentType}
               onSuccess={handleFormSuccess}
-              onCancel={() => { setIsFormOpen(false); setEditingFilamentType(null); }}
             />
           </DialogContent>
         </Dialog>
@@ -125,44 +128,37 @@ export function FilamentTypesTab() {
           </div>
 
           <div className="mb-3 text-sm text-muted-foreground">
-            Exibindo {filteredFilamentTypes.length} de {filamentTypes.length} tipo(s) de filamento.
+             {isLoading ? "Carregando..." : `Exibindo ${filteredFilamentTypes.length} de ${filamentTypes.length} tipo(s).`}
           </div>
       
-          {filteredFilamentTypes.length === 0 && filamentTypes.length > 0 ? (
-             <div className="p-6 text-center text-muted-foreground">
-              Nenhum tipo de filamento encontrado com os filtros aplicados.
-            </div>
-          ) : filteredFilamentTypes.length === 0 && filamentTypes.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground flex flex-col items-center space-y-2">
-              <ListTree className="h-10 w-10 text-muted-foreground" />
-              <span>Nenhum tipo de filamento cadastrado ainda.</span>
+          {isLoading ? (
+            <div className="p-6 text-center">Carregando...</div>
+          ) : filteredFilamentTypes.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">
+              {filamentTypes.length > 0 ? "Nenhum tipo encontrado com os filtros." : "Nenhum tipo de filamento cadastrado."}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-2 py-2 font-semibold uppercase">Nome do Tipo</TableHead>
+                  <TableHead className="px-2 py-2 font-semibold uppercase">Tipo</TableHead>
                   <TableHead className="w-[100px] px-2 py-2 text-center font-semibold uppercase">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredFilamentTypes.map((ft) => (
                   <TableRow key={ft.id}>
-                    <TableCell className="font-medium px-2 py-1.5">{ft.nome}</TableCell>
+                    <TableCell className="font-medium px-2 py-1.5">{ft.tipo}</TableCell>
                     <TableCell className="px-2 py-1.5 text-center">
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="mr-1 h-8 w-8 text-yellow-500 hover:bg-yellow-100 hover:text-yellow-600 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-400" 
                         onClick={() => openEditDialog(ft)}
+                        className="mr-1 h-8 w-8 text-yellow-500 hover:bg-yellow-100 hover:text-yellow-600 dark:hover:bg-yellow-500/20 dark:hover:text-yellow-400 bg-transparent"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400"
                         onClick={() => openDeleteDialog(ft.id)}
+                        className="h-8 w-8 text-red-500 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20 dark:hover:text-red-400 bg-transparent"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -175,7 +171,7 @@ export function FilamentTypesTab() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!deletingFilamentTypeId} onOpenChange={(isOpen) => { if (!isOpen) setDeletingFilamentTypeId(null); }}>
+      <AlertDialog open={!!deletingFilamentTypeId} onOpenChange={(isOpen: boolean) => { if (!isOpen) setDeletingFilamentTypeId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>

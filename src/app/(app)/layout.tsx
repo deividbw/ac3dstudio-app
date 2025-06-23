@@ -1,6 +1,14 @@
 import { MobileTopBar } from '@/components/MobileTopBar';
 import { BottomNav } from '@/components/BottomNav';
 import React from 'react';
+import type { Viewport } from 'next';
+
+export const viewport: Viewport = {
+  themeColor: '#26E600',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export default function AppLayout({
   children,

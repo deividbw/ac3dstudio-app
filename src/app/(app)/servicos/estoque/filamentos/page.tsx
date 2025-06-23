@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -17,12 +16,12 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import type { Filament, Brand } from '@/lib/types';
-import { getFilaments, updateFilamentStockBatch } from '@/lib/actions/filament.actions';
+import { getFilaments, addFilamentStockEntry } from '@/lib/actions/filament.actions';
 import { getBrands } from '@/lib/actions/brand.actions';
-import { Plus, PackageSearch, Filter, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react'; // Changed Edit to Plus
+import { Plus, PackageSearch, Filter, ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import { FilamentStockUpdateDialog } from './components/FilamentStockUpdateDialog';
 
-type SortableField = 'marcaId' | 'tipo' | 'cor' | 'modelo';
+type SortableField = 'marca_nome' | 'tipo_nome' | 'cor' | 'modelo';
 
 export default function FilamentStockPage() {
   const [filaments, setFilaments] = useState<Filament[]>([]);
@@ -33,7 +32,7 @@ export default function FilamentStockPage() {
   const [filterTipo, setFilterTipo] = useState("");
   const [filterCor, setFilterCor] = useState("");
 
-  const [sortField, setSortField] = useState<SortableField>('marcaId');
+  const [sortField, setSortField] = useState<SortableField>('marca_nome');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
@@ -60,10 +59,10 @@ export default function FilamentStockPage() {
     loadData();
   }, [loadData]);
 
-  const getBrandNameById = useCallback((brandId?: string) => {
+  const getBrandNameById = useCallback((brandId?: string | null) => {
     if (!brandId) return "N/A";
     const brand = brands.find(b => b.id === brandId);
-    return brand ? brand.nome : "Desconhecida";
+    return brand ? brand.nome_marca : "Desconhecida";
   }, [brands]);
 
   const handleSort = (field: SortableField) => {
@@ -77,7 +76,7 @@ export default function FilamentStockPage() {
 
   const sortedAndFilteredFilaments = useMemo(() => {
     let items = filaments.filter(f =>
-      (filterTipo === "" || f.tipo.toLowerCase().includes(filterTipo.toLowerCase())) &&
+      (filterTipo === "" || (f.tipo_nome && f.tipo_nome.toLowerCase().includes(filterTipo.toLowerCase()))) &&
       (filterCor === "" || f.cor.toLowerCase().includes(filterCor.toLowerCase()))
     );
 
@@ -87,13 +86,13 @@ export default function FilamentStockPage() {
         let valB: string | number = '';
 
         switch (sortField) {
-          case 'marcaId':
-            valA = getBrandNameById(a.marcaId)?.toLowerCase() || '';
-            valB = getBrandNameById(b.marcaId)?.toLowerCase() || '';
+          case 'marca_nome':
+            valA = a.marca_nome?.toLowerCase() || '';
+            valB = b.marca_nome?.toLowerCase() || '';
             break;
-          case 'tipo':
-            valA = a.tipo.toLowerCase();
-            valB = b.tipo.toLowerCase();
+          case 'tipo_nome':
+            valA = a.tipo_nome?.toLowerCase() || '';
+            valB = b.tipo_nome?.toLowerCase() || '';
             break;
           case 'cor':
             valA = a.cor.toLowerCase();
@@ -113,38 +112,46 @@ export default function FilamentStockPage() {
       });
     }
     return items;
-  }, [filaments, filterTipo, filterCor, sortField, sortDirection, getBrandNameById]);
+  }, [filaments, filterTipo, filterCor, sortField, sortDirection]);
 
   const handleOpenStockUpdateDialog = (filament: Filament) => {
     setEditingFilamentForStock(filament);
     setIsStockUpdateDialogOpen(true);
   };
 
-  const handleSaveStockUpdate = async (update: { id: string; novaQuantidadeCompradaGramas?: number; novoPrecoKg?: number }) => {
-    if (!update.novaQuantidadeCompradaGramas && !update.novoPrecoKg && update.novaQuantidadeCompradaGramas !==0 && update.novoPrecoKg !==0) {
-      toast({ title: "Nenhuma Alteração", description: "Nenhuma quantidade ou preço foi fornecido para atualização.", variant: "default" });
+  const handleSaveStockUpdate = async (update: { 
+    id: string; 
+    novaQuantidadeCompradaGramas?: number; 
+    novoPrecoKg?: number;
+  }) => {
+    const { id, novaQuantidadeCompradaGramas, novoPrecoKg } = update;
+    
+    if (!novaQuantidadeCompradaGramas || !novoPrecoKg) {
+      toast({ title: "Dados Incompletos", description: "É necessário fornecer a quantidade e o novo preço.", variant: "destructive" });
       return;
     }
+
     setIsLoading(true);
     try {
-      const result = await updateFilamentStockBatch([update]);
-      if (result.success && result.updatedCount > 0) {
-        toast({ title: "Estoque Atualizado", description: `Filamento atualizado com sucesso.`, variant: "success" });
-        loadData();
-      } else if (result.errors && result.errors.length > 0) {
-         toast({ title: "Erro ao Atualizar", description: result.errors[0].error, variant: "destructive" });
-      } else if (!result.success) {
-         toast({ title: "Erro ao Atualizar", description: "Não foi possível atualizar o filamento.", variant: "destructive" });
+      const result = await addFilamentStockEntry(id, novaQuantidadeCompradaGramas, novoPrecoKg);
+      
+      if (result.success) {
+        toast({ title: "Entrada de Estoque Registrada", description: "O estoque foi atualizado com sucesso.", variant: "success" });
+        loadData(); // Recarrega os dados para mostrar a atualização
+      } else {
+         toast({ title: "Erro ao Registrar Entrada", description: result.error || "Não foi possível registrar a entrada no estoque.", variant: "destructive" });
       }
     } catch (error) {
-      console.error("Failed to update stock:", error);
-      toast({ title: "Erro Inesperado", description: "Ocorreu um problema ao tentar atualizar o estoque.", variant: "destructive" });
+      console.error("Failed to create stock entry:", error);
+      toast({ title: "Erro Inesperado", description: "Ocorreu um problema ao tentar registrar a entrada.", variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setIsStockUpdateDialogOpen(false);
+      setEditingFilamentForStock(null);
     }
   };
 
-  const formatCurrency = (value?: number) => {
+  const formatCurrency = (value?: number | null) => {
     if (value === undefined || value === null || Number.isNaN(value)) return "N/A";
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -202,13 +209,13 @@ export default function FilamentStockPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="min-w-[120px] px-2 py-2 font-semibold uppercase">
-                       <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('marcaId')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('marcaId'); }} aria-label="Sort by Marca">
-                        Marca <span className="ml-1">{renderSortIcon('marcaId')}</span>
+                       <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('marca_nome')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('marca_nome'); }} aria-label="Sort by Marca">
+                        Marca <span className="ml-1">{renderSortIcon('marca_nome')}</span>
                       </div>
                     </TableHead>
                     <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">
-                      <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('tipo')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('tipo'); }} aria-label="Sort by Tipo">
-                        Tipo <span className="ml-1">{renderSortIcon('tipo')}</span>
+                      <div className="flex items-center cursor-pointer hover:text-foreground" onClick={() => handleSort('tipo_nome')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSort('tipo_nome'); }} aria-label="Sort by Tipo">
+                        Tipo <span className="ml-1">{renderSortIcon('tipo_nome')}</span>
                       </div>
                     </TableHead>
                     <TableHead className="min-w-[100px] px-2 py-2 font-semibold uppercase">
@@ -229,16 +236,14 @@ export default function FilamentStockPage() {
                 <TableBody>
                   {sortedAndFilteredFilaments.map((f) => (
                     <TableRow key={f.id}>
-                      <TableCell className="font-medium px-2 py-1.5">{getBrandNameById(f.marcaId)}</TableCell>
-                      <TableCell className="px-2 py-1.5">{f.tipo}</TableCell>
+                      <TableCell className="font-medium px-2 py-1.5">{f.marca_nome || getBrandNameById(f.marca_id)}</TableCell>
+                      <TableCell className="px-2 py-1.5">{f.tipo_nome}</TableCell>
                       <TableCell className="px-2 py-1.5">{f.cor}</TableCell>
                       <TableCell className="px-2 py-1.5">{f.modelo || "N/A"}</TableCell>
                       <TableCell className="text-right px-2 py-1.5">{(f.quantidadeEstoqueGramas || 0).toLocaleString('pt-BR')}</TableCell>
                       <TableCell className="text-right px-2 py-1.5">{formatCurrency(f.precoPorKg)}</TableCell>
                       <TableCell className="text-center px-2 py-1.5">
                         <Button
-                          variant="ghost"
-                          size="icon"
                           className="h-8 w-8 text-green-600 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-500/20 dark:hover:text-green-400"
                           onClick={() => handleOpenStockUpdateDialog(f)}
                           title="Adicionar Estoque / Atualizar Preço"
@@ -257,9 +262,8 @@ export default function FilamentStockPage() {
       {editingFilamentForStock && (
         <FilamentStockUpdateDialog
             isOpen={isStockUpdateDialogOpen}
-            onOpenChange={setIsStockUpdateDialogOpen}
+            onClose={() => setIsStockUpdateDialogOpen(false)}
             filament={editingFilamentForStock}
-            brands={brands}
             onSave={handleSaveStockUpdate}
         />
       )}
