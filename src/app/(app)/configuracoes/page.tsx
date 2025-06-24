@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -34,13 +33,45 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import type { Printer, FilamentType, Brand, PowerOverride, SortableOverrideField, UserRole, Permission, RolesConfig } from '@/lib/types';
-import { getimpressoras } from '@/lib/actions/printer.actions';
+import { getImpressoras } from '@/lib/actions/printer.actions';
 import { getFilamentTypes } from '@/lib/actions/filamentType.actions';
 import { getmarcas } from '@/lib/actions/brand.actions';
 import { getPowerOverrides, savePowerOverride, getKwhValue, saveKwhValue as saveGlobalKwhValue } from '@/lib/actions/powerOverride.actions';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLES_CONFIG as staticRolesConfig, PERMISSION_DESCRIPTIONS, ALL_PERMISSIONS } from '@/config/roles';
 import { Badge } from '@/components/ui/badge';
+// TESTE DE IMPORTS - Remova após o debug!
+console.log("PageHeader:", typeof PageHeader);
+console.log("Card:", typeof Card);
+console.log("CardContent:", typeof CardContent);
+console.log("CardDescription:", typeof CardDescription);
+console.log("CardHeader:", typeof CardHeader);
+console.log("CardTitle:", typeof CardTitle);
+console.log("CardFooter:", typeof CardFooter);
+console.log("Icons:", typeof Icons);
+console.log("Input:", typeof Input);
+console.log("Label:", typeof Label);
+console.log("Button:", typeof Button);
+console.log("Accordion:", typeof Accordion);
+console.log("AccordionContent:", typeof AccordionContent);
+console.log("AccordionItem:", typeof AccordionItem);
+console.log("AccordionTrigger:", typeof AccordionTrigger);
+console.log("Select:", typeof Select);
+console.log("SelectContent:", typeof SelectContent);
+console.log("SelectItem:", typeof SelectItem);
+console.log("SelectTrigger:", typeof SelectTrigger);
+console.log("SelectValue:", typeof SelectValue);
+console.log("Table:", typeof Table);
+console.log("TableBody:", typeof TableBody);
+console.log("TableCell:", typeof TableCell);
+console.log("TableHead:", typeof TableHead);
+console.log("TableHeader:", typeof TableHeader);
+console.log("TableRow:", typeof TableRow);
+console.log("Checkbox:", typeof Checkbox);
+console.log("useToast:", typeof useToast);
+console.log("Separator:", typeof Separator);
+console.log("useAuth:", typeof useAuth);
+console.log("Badge:", typeof Badge);
 
 export default function ConfiguracoesPage() {
   const [kwhValue, setKwhValue] = useState("0.75");
@@ -57,7 +88,7 @@ export default function ConfiguracoesPage() {
   const [configuredOverrides, setConfiguredOverrides] = useState<PowerOverride[]>([]);
 
   const [filterConfiguredPrinterName, setFilterConfiguredPrinterName] = useState("");
-  const [sortConfigOverrides, setSortConfigOverrides] = useState<{ key: SortableOverrideField; direction: 'ascending' | 'descending' }>({ key: 'printerName', direction: 'ascending' });
+  const [sortConfigOverrides, setSortConfigOverrides] = useState<{ key: SortableOverrideField; direction: 'ascending' | 'descending' }>({ key: 'printer_name', direction: 'ascending' });
 
   // Estado para gerenciar as configurações de perfis editáveis
   const [editableRolesConfig, setEditableRolesConfig] = useState<RolesConfig>(() => JSON.parse(JSON.stringify(staticRolesConfig)));
@@ -71,7 +102,7 @@ export default function ConfiguracoesPage() {
   const loadConfigData = useCallback(async () => {
     try {
       const [impressorasDataRes, filamentTypesDataRes, marcasRes, powerOverridesDataRes, currentKwhValueRes] = await Promise.all([
-        getimpressoras(),
+        getImpressoras(),
         getFilamentTypes(),
         getmarcas(),
         getPowerOverrides(),
@@ -99,11 +130,11 @@ export default function ConfiguracoesPage() {
   const getBrandNameById = useCallback((brandId?: string) => {
     if (!brandId) return "";
     const brand = marcasData.find(b => b.id === brandId);
-    return brand ? brand.nome : "Marca Desconhecida";
+    return brand ? brand.nome_marca : "Marca Desconhecida";
   }, [marcasData]);
 
   const getPrinterDisplayName = useCallback((printer: Printer) => {
-    const brandName = getBrandNameById(printer.marcaId);
+    const brandName = getBrandNameById(printer.marca_id ?? undefined);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
     return `Impressora ID: ${printer.id}`;
@@ -170,18 +201,18 @@ export default function ConfiguracoesPage() {
     const overrideId = `${selectedPrinterId}_${selectedFilamentTypeId}`;
     const newOverride: PowerOverride = {
       id: overrideId,
-      printerId: selectedPrinterId,
-      printerName: getPrinterDisplayName(printer),
-      filamentTypeId: selectedFilamentTypeId,
-      filamentTypeName: filamentType.nome,
-      powerWatts: power,
+      printer_id: selectedPrinterId,
+      printer_name: getPrinterDisplayName(printer),
+      filament_type_id: selectedFilamentTypeId,
+      filament_type_name: filamentType.tipo,
+      power_watts: power,
     };
 
     const result = await savePowerOverride(newOverride);
     if (result.success) {
       toast({
         title: "Configuração Específica Salva",
-        description: `Potência de ${power}W para ${getPrinterDisplayName(printer)} com ${filamentType.nome} salva.`,
+        description: `Potência de ${power}W para ${getPrinterDisplayName(printer)} com ${filamentType.tipo} salva.`,
         variant: "success",
       });
       const updatedOverrides = await getPowerOverrides();
@@ -214,7 +245,7 @@ export default function ConfiguracoesPage() {
 
   const sortedAndFilteredOverrides = useMemo(() => {
     let items = configuredOverrides.filter(ov =>
-      ov.printerName.toLowerCase().includes(filterConfiguredPrinterName.toLowerCase())
+      ov.printer_name.toLowerCase().includes(filterConfiguredPrinterName.toLowerCase())
     );
 
     items.sort((a, b) => {
@@ -331,8 +362,8 @@ export default function ConfiguracoesPage() {
                             <SelectValue placeholder="Selecione um tipo" />
                           </SelectTrigger>
                           <SelectContent>
-                            {filamentTypes.sort((a,b) => a.nome.localeCompare(b.nome)).map(ft => (
-                              <SelectItem key={ft.id} value={ft.id}>{ft.nome}</SelectItem>
+                            {filamentTypes.sort((a,b) => a.tipo.localeCompare(b.tipo)).map(ft => (
+                              <SelectItem key={ft.id} value={ft.id}>{ft.tipo}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -378,33 +409,33 @@ export default function ConfiguracoesPage() {
                               <TableRow>
                                 <TableHead
                                   className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
-                                  onClick={() => handleSortOverrides('printerName')}
-                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('printerName'); }} aria-label="Sort by Impressora"
+                                  onClick={() => handleSortOverrides('printer_name')}
+                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('printer_name'); }} aria-label="Sort by Impressora"
                                 >
-                                  <div className="flex items-center">Impressora <span className="ml-1">{renderSortIcon('printerName')}</span></div>
+                                  <div className="flex items-center">Impressora <span className="ml-1">{renderSortIcon('printer_name')}</span></div>
                                 </TableHead>
                                 <TableHead
                                   className="px-3 py-2 text-xs cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
-                                  onClick={() => handleSortOverrides('filamentTypeName')}
-                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('filamentTypeName'); }} aria-label="Sort by Filamento"
+                                  onClick={() => handleSortOverrides('filament_type_name')}
+                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('filament_type_name'); }} aria-label="Sort by Filamento"
                                 >
-                                 <div className="flex items-center">Filamento <span className="ml-1">{renderSortIcon('filamentTypeName')}</span></div>
+                                 <div className="flex items-center">Filamento <span className="ml-1">{renderSortIcon('filament_type_name')}</span></div>
                                 </TableHead>
                                 <TableHead
                                   className="px-3 py-2 text-xs text-right cursor-pointer hover:text-foreground sticky top-0 bg-muted/50"
-                                  onClick={() => handleSortOverrides('powerWatts')}
-                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('powerWatts'); }} aria-label="Sort by Potência"
+                                  onClick={() => handleSortOverrides('power_watts')}
+                                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSortOverrides('power_watts'); }} aria-label="Sort by Potência"
                                 >
-                                  <div className="flex items-center justify-end">Potência (W) <span className="ml-1">{renderSortIcon('powerWatts')}</span></div>
+                                  <div className="flex items-center justify-end">Potência (W) <span className="ml-1">{renderSortIcon('power_watts')}</span></div>
                                 </TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {sortedAndFilteredOverrides.map(ov => (
                                 <TableRow key={ov.id}>
-                                  <TableCell className="px-3 py-1.5 text-xs">{ov.printerName}</TableCell>
-                                  <TableCell className="px-3 py-1.5 text-xs">{ov.filamentTypeName}</TableCell>
-                                  <TableCell className="px-3 py-1.5 text-xs text-right">{ov.powerWatts}</TableCell>
+                                  <TableCell className="px-3 py-1.5 text-xs">{ov.printer_name}</TableCell>
+                                  <TableCell className="px-3 py-1.5 text-xs">{ov.filament_type_name}</TableCell>
+                                  <TableCell className="px-3 py-1.5 text-xs text-right">{ov.power_watts}</TableCell>
                                 </TableRow>
                               ))}
                               {sortedAndFilteredOverrides.length === 0 && configuredOverrides.length > 0 && (
@@ -544,7 +575,7 @@ export default function ConfiguracoesPage() {
         <AccordionItem value="item-other-configs" className="border rounded-lg bg-card shadow-sm">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center text-lg font-semibold">
-              <Icons.configuracoes2 className="mr-3 h-6 w-6 text-primary" />
+              <Icons.Settings className="mr-3 h-6 w-6 text-primary" />
               Outras Configurações
             </div>
           </AccordionTrigger>
