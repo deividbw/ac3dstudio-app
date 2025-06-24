@@ -82,8 +82,8 @@ export default function ConfiguracoesPage() {
   const [filamentTypes, setFilamentTypes] = useState<FilamentType[]>([]);
   const [marcasData, setmarcasData] = useState<Brand[]>([]);
 
-  const [selectedPrinterId, setSelectedPrinterId] = useState<string>("");
-  const [selectedFilamentTypeId, setSelectedFilamentTypeId] = useState<string>("");
+  const [selectedPrinterId, setSelectedPrinterId] = useState<string | undefined>(undefined);
+  const [selectedFilamentTypeId, setSelectedFilamentTypeId] = useState<string | undefined>(undefined);
   const [specificPowerWatts, setSpecificPowerWatts] = useState<string>("");
   const [configuredOverrides, setConfiguredOverrides] = useState<PowerOverride[]>([]);
 
@@ -134,7 +134,7 @@ export default function ConfiguracoesPage() {
   }, [marcasData]);
 
   const getPrinterDisplayName = useCallback((printer: Printer) => {
-    const brandName = getBrandNameById(printer.marca_id ?? undefined);
+    const brandName = getBrandNameById(printer.marca_id);
     if (brandName && printer.modelo) return `${brandName} ${printer.modelo}`;
     if (printer.modelo) return printer.modelo;
     return `Impressora ID: ${printer.id}`;
@@ -217,8 +217,8 @@ export default function ConfiguracoesPage() {
       });
       const updatedOverrides = await getPowerOverrides();
       setConfiguredOverrides(updatedOverrides);
-      setSelectedPrinterId("");
-      setSelectedFilamentTypeId("");
+      setSelectedPrinterId(undefined);
+      setSelectedFilamentTypeId(undefined);
       setSpecificPowerWatts("");
     } else {
       toast({
@@ -344,7 +344,7 @@ export default function ConfiguracoesPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                       <div>
                         <Label htmlFor="selectPrinterPower" className="text-sm">Impressora*</Label>
-                        <Select value={selectedPrinterId} onValueChange={setSelectedPrinterId}>
+                        <Select value={typeof selectedPrinterId === 'string' ? selectedPrinterId : undefined} onValueChange={setSelectedPrinterId}>
                           <SelectTrigger id="selectPrinterPower" className="mt-1">
                             <SelectValue placeholder="Selecione uma impressora" />
                           </SelectTrigger>
@@ -357,7 +357,7 @@ export default function ConfiguracoesPage() {
                       </div>
                       <div>
                         <Label htmlFor="selectFilamentTypePower" className="text-sm">Tipo de Filamento*</Label>
-                        <Select value={selectedFilamentTypeId} onValueChange={setSelectedFilamentTypeId}>
+                        <Select value={typeof selectedFilamentTypeId === 'string' ? selectedFilamentTypeId : undefined} onValueChange={setSelectedFilamentTypeId}>
                           <SelectTrigger id="selectFilamentTypePower" className="mt-1">
                             <SelectValue placeholder="Selecione um tipo" />
                           </SelectTrigger>
@@ -575,7 +575,7 @@ export default function ConfiguracoesPage() {
         <AccordionItem value="item-other-configs" className="border rounded-lg bg-card shadow-sm">
           <AccordionTrigger className="px-6 py-4 hover:no-underline">
             <div className="flex items-center text-lg font-semibold">
-              <Icons.Settings className="mr-3 h-6 w-6 text-primary" />
+              <Cog className="mr-3 h-6 w-6 text-primary" />
               Outras Configurações
             </div>
           </AccordionTrigger>

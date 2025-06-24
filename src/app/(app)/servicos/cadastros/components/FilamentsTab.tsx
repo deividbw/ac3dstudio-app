@@ -283,22 +283,22 @@ export function FilamentosTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead onClick={() => handleSort('nome_marca')} className="cursor-pointer w-[200px]">
-                    Marca {renderSortIcon('nome_marca')}
+                  <TableHead onClick={() => handleSort('nome_marca')} className="cursor-pointer w-[200px] font-bold uppercase">
+                    <div className="flex items-center gap-1"><span>MARCA</span> {renderSortIcon('nome_marca')}</div>
                   </TableHead>
-                  <TableHead onClick={() => handleSort('tipo_nome')} className="cursor-pointer w-[150px]">
-                    Tipo {renderSortIcon('tipo_nome')}
+                  <TableHead onClick={() => handleSort('tipo_nome')} className="cursor-pointer w-[150px] font-bold uppercase">
+                    <div className="flex items-center gap-1"><span>TIPO</span> {renderSortIcon('tipo_nome')}</div>
                   </TableHead>
-                  <TableHead onClick={() => handleSort('cor')} className="cursor-pointer w-[180px]">
-                    Cor {renderSortIcon('cor')}
+                  <TableHead onClick={() => handleSort('cor')} className="cursor-pointer w-[180px] font-bold uppercase">
+                    <div className="flex items-center gap-1"><span>COR</span> {renderSortIcon('cor')}</div>
                   </TableHead>
-                  <TableHead onClick={() => handleSort('modelo')} className="cursor-pointer">
-                    Modelo {renderSortIcon('modelo')}
+                  <TableHead onClick={() => handleSort('modelo')} className="cursor-pointer font-bold uppercase">
+                    <div className="flex items-center gap-1"><span>MODELO</span> {renderSortIcon('modelo')}</div>
                   </TableHead>
-                  <TableHead onClick={() => handleSort('densidade')} className="cursor-pointer w-[180px]">
-                    Densidade {renderSortIcon('densidade')}
+                  <TableHead onClick={() => handleSort('densidade')} className="cursor-pointer w-[180px] font-bold uppercase">
+                    <div className="flex items-center gap-1"><span>DENSIDADE</span> {renderSortIcon('densidade')}</div>
                   </TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
+                  <TableHead className="w-[100px] font-bold uppercase">AÇÕES</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

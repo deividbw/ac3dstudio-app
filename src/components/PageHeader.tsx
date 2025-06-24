@@ -1,6 +1,5 @@
 import type React from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button'; // Import Button
 
 interface PageHeaderProps {
@@ -16,7 +15,7 @@ export function PageHeader({ title, children, backButtonHref }: PageHeaderProps)
         {backButtonHref && (
           <Link href={backButtonHref}>
             <Button className="h-8 w-8 shrink-0 border bg-background hover:bg-accent hover:text-accent-foreground">
-              <ArrowLeft className="h-5 w-5" />
+              <img src="/seta-verde.svg" alt="Voltar" width={20} height={20} className="inline-block" />
               <span className="sr-only">Voltar</span>
             </Button>
           </Link>
@@ -24,6 +23,6 @@ export function PageHeader({ title, children, backButtonHref }: PageHeaderProps)
         <h1 className="text-2xl font-bold tracking-tight text-foreground font-heading">{title}</h1>
       </div>
       {children && <div className="flex items-center gap-2">{children}</div>}
-    </div>
+   </div>
   );
 }

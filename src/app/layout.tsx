@@ -2,6 +2,7 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Added Toaster
 import { HydrationSuppressor } from "@/components/HydrationSuppressor";
+import { GlobalHeader } from '@/components/GlobalHeader';
 
 export const metadata: Metadata = {
   title: 'AC3DStudio',
@@ -99,6 +100,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
         <HydrationSuppressor />
+        <GlobalHeader />
         {children}
         <Toaster />
       </body>
